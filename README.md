@@ -81,6 +81,17 @@ Free tier má jen **100 requestů/měsíc** (~3/den). Aplikace proto:
 - počítá spotřebu v `data/price_history.json` (`_meta.skyscrapper_requests`) a
   při vyčerpání kvóty zdroj přeskočí.
 
+**Automatické řízení kvóty (od verze s adaptivním rozpočtem):**
+- Aplikace **čte RapidAPI rate-limit hlavičky** (`x-ratelimit-requests-remaining`
+  / `-limit` / `-reset`) a podle nich zná **skutečný** zbytek kvóty i čas
+  resetu – přesnější než lokální počítadlo.
+- Zbývající kvóta se **rozpočítá na zbytek období** (`remaining / dnů do
+  resetu`), takže se nevyplýtvá hned první den → dlouhodobě rovnoměrné pokrytí.
+- Při **vyčerpání kvóty (HTTP 429 / remaining 0)** se zdroj **automaticky
+  vypne do resetu** (`_meta.disabled_until`) a po uplynutí lhůty se **sám
+  zapne** – mezitím se na něj zbytečně neplýtvají requesty. Stav vidíš v denním
+  souhrnu (`Sky Scrapper: ⏸ vypnuto … do …`).
+
 > Každý zdroj je volitelný – pokud klíč chybí, zdroj se přeskočí a scan
 > pokračuje dál. V denním souhrnu vidíš, které zdroje fungovaly.
 

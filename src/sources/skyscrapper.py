@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -46,6 +46,11 @@ class SkyScrapperSource:
         self.cache_path = Path(cache_path)
         self.request_count = 0
         self._airports = self._load_airport_cache()
+        # Stav kvóty zjištěný z RapidAPI hlaviček (viz _note_quota).
+        self.quota_remaining: Optional[int] = None
+        self.quota_limit: Optional[int] = None
+        self.quota_reset_at: Optional[datetime] = None
+        self.quota_exhausted = False
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -53,6 +58,40 @@ class SkyScrapperSource:
             "x-rapidapi-key": self.rapidapi_key,
             "x-rapidapi-host": RAPIDAPI_HOST,
         }
+
+    def _note_quota(self, resp: requests.Response) -> None:
+        """Přečte RapidAPI rate-limit hlavičky (kolik requestů zbývá a za jak
+        dlouho se kvóta resetuje) – slouží k auto-vypnutí i rozpočítání."""
+        h = resp.headers
+        rem = h.get("x-ratelimit-requests-remaining")
+        lim = h.get("x-ratelimit-requests-limit")
+        rst = h.get("x-ratelimit-requests-reset")
+        if rem is not None:
+            try:
+                self.quota_remaining = int(rem)
+            except ValueError:
+                pass
+        if lim is not None:
+            try:
+                self.quota_limit = int(lim)
+            except ValueError:
+                pass
+        if rst is not None:
+            try:
+                self.quota_reset_at = datetime.now() + timedelta(seconds=float(rst))
+            except ValueError:
+                pass
+
+    def _get(self, url: str, params: dict) -> requests.Response:
+        """GET s evidencí kvóty z hlaviček a detekcí vyčerpání (HTTP 429)."""
+        resp = self.session.get(url, params=params, headers=self._headers, timeout=40)
+        self.request_count += 1
+        self._note_quota(resp)
+        if resp.status_code == 429 or self.quota_remaining == 0:
+            self.quota_exhausted = True
+        time.sleep(_REQUEST_DELAY)
+        resp.raise_for_status()
+        return resp
 
     # -- cache letišť -----------------------------------------------------
     def _load_airport_cache(self) -> dict[str, dict]:
@@ -79,18 +118,10 @@ class SkyScrapperSource:
         if iata in self._airports:
             return self._airports[iata]
         try:
-            resp = self.session.get(
-                SEARCH_AIRPORT_URL,
-                params={"query": iata, "locale": "en-US"},
-                headers=self._headers, timeout=30,
-            )
-            self.request_count += 1
-            resp.raise_for_status()
+            resp = self._get(SEARCH_AIRPORT_URL, {"query": iata, "locale": "en-US"})
         except requests.RequestException as exc:
             logger.error("Sky Scrapper searchAirport(%s) chyba: %s", iata, exc)
             return None
-        finally:
-            time.sleep(_REQUEST_DELAY)
 
         data = resp.json().get("data", [])
         for item in data:
@@ -161,17 +192,11 @@ class SkyScrapperSource:
             params["returnDate"] = return_date.isoformat()
 
         try:
-            resp = self.session.get(
-                SEARCH_FLIGHTS_URL, params=params, headers=self._headers, timeout=40
-            )
-            self.request_count += 1
-            resp.raise_for_status()
+            resp = self._get(SEARCH_FLIGHTS_URL, params)
         except requests.RequestException as exc:
             logger.error("Sky Scrapper searchFlights %s→%s chyba: %s",
                          origin, destination, exc)
             raise
-        finally:
-            time.sleep(_REQUEST_DELAY)
 
         payload = resp.json().get("data", {})
         itineraries = payload.get("itineraries", [])

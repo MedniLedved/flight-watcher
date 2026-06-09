@@ -193,6 +193,49 @@ class PriceHistory:
     def add_skyscrapper_usage(self, count: int, month: Optional[str] = None) -> None:
         self._add_usage("skyscrapper_requests", count, month)
 
+    # -- kvóty zdrojů: auto-vypnutí při vyčerpání + zjištěný stav ---------
+    def is_source_disabled(self, name: str, now: Optional[datetime] = None) -> bool:
+        """True, pokud je zdroj dočasně vypnutý (vyčerpaná kvóta) a lhůta
+        ještě neuplynula. Po uplynutí se vypnutí samo zruší (vrací False)."""
+        until = self.disabled_until(name)
+        if not until:
+            return False
+        now = now or datetime.now()
+        try:
+            return now < datetime.fromisoformat(until)
+        except ValueError:
+            return False
+
+    def disabled_until(self, name: str) -> Optional[str]:
+        return self.data.get(META_KEY, {}).get("disabled_until", {}).get(name)
+
+    def disable_source(self, name: str, until: datetime) -> None:
+        """Vypne zdroj do daného času (perzistentně, přežije běhy)."""
+        meta = self.data.setdefault(META_KEY, {})
+        meta.setdefault("disabled_until", {})[name] = until.isoformat()
+
+    def clear_disabled(self, name: str) -> None:
+        self.data.get(META_KEY, {}).get("disabled_until", {}).pop(name, None)
+
+    def record_quota(self, name: str, remaining: Optional[int],
+                     reset_at: Optional[datetime] = None,
+                     limit: Optional[int] = None) -> None:
+        """Zaznamená naposledy zjištěný stav kvóty z hlaviček API (pro
+        ‚opatrné' rozpočítání requestů na delší dobu)."""
+        meta = self.data.setdefault(META_KEY, {})
+        q = meta.setdefault("quota", {})
+        entry: dict[str, Any] = {"checked_at": datetime.now().isoformat()}
+        if remaining is not None:
+            entry["remaining"] = remaining
+        if reset_at is not None:
+            entry["reset_at"] = reset_at.isoformat()
+        if limit is not None:
+            entry["limit"] = limit
+        q[name] = entry
+
+    def get_quota(self, name: str) -> dict[str, Any]:
+        return self.data.get(META_KEY, {}).get("quota", {}).get(name, {})
+
     def _add_usage(self, meta_field: str, count: int,
                    month: Optional[str] = None) -> None:
         month = month or datetime.now().strftime("%Y-%m")

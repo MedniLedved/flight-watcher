@@ -716,3 +716,63 @@ def test_duffel_raises_after_max_429(monkeypatch):
     src = DuffelSource(token="dummy", session=_Session())
     with pytest.raises(requests.HTTPError):
         src.search("MUC", "KIX", date(2026, 9, 1))
+
+
+# -- Kvóty: auto-vypnutí + spread (#1, #2) ----------------------------------
+def test_history_disable_source_auto_expires(tmp_path):
+    from datetime import datetime, timedelta
+    from src.history import PriceHistory
+    h = PriceHistory(tmp_path / "h.json")
+    future = datetime.now() + timedelta(days=5)
+    h.disable_source("skyscrapper", future)
+    assert h.is_source_disabled("skyscrapper") is True
+    # Po uplynutí lhůty se sám zapne.
+    past = datetime.now() - timedelta(minutes=1)
+    h.disable_source("skyscrapper", past)
+    assert h.is_source_disabled("skyscrapper") is False
+
+
+def test_skyscrapper_reads_quota_headers_and_flags_429(monkeypatch, tmp_path):
+    import requests
+    from src.sources import skyscrapper as sk_mod
+    from src.sources.skyscrapper import SkyScrapperSource
+
+    monkeypatch.setattr(sk_mod.time, "sleep", lambda *a, **k: None)
+
+    class _Resp:
+        def __init__(self, status, headers):
+            self.status_code = status
+            self.headers = headers
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                err = requests.HTTPError(str(self.status_code)); err.response = self
+                raise err
+
+    class _Session:
+        def get(self, *a, **k):
+            return _Resp(429, {
+                "x-ratelimit-requests-remaining": "0",
+                "x-ratelimit-requests-limit": "100",
+                "x-ratelimit-requests-reset": "3600",
+            })
+
+    src = SkyScrapperSource(rapidapi_key="x", session=_Session(),
+                            cache_path=tmp_path / "ap.json")
+    # resolve_airport pohltí výjimku a vrátí None, ale kvóta se zaznamená.
+    assert src.resolve_airport("FRA") is None
+    assert src.quota_exhausted is True
+    assert src.quota_remaining == 0
+    assert src.quota_limit == 100
+    assert src.quota_reset_at is not None
+
+
+def test_spread_budget_divides_over_remaining_days():
+    from datetime import datetime, timedelta
+    from src.scanner import _spread_budget
+    now = datetime(2026, 6, 9)
+    reset = (now + timedelta(days=9)).isoformat()  # ~10 dní vč. dneška
+    # 100 zbývá / 10 dní ≈ 10 za běh
+    assert _spread_budget(100, reset, now=now) == 10
+    assert _spread_budget(0, reset, now=now) == 0
+    # Bez reset hlavičky → konzervativně vše až dnes (days_left=1).
+    assert _spread_budget(5, None, now=now) == 5

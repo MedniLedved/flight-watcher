@@ -20,7 +20,7 @@ import logging
 import math
 import os
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from .airport_stats import (
@@ -91,6 +91,33 @@ def _window_bounds(year: int, months: list[int]) -> tuple[date, date]:
     last_day = _calendar.monthrange(year, last_month)[1]
     last = date(year, last_month, last_day)
     return first, last
+
+
+def _first_of_next_month(today: Optional[date] = None) -> datetime:
+    """První den příštího měsíce v 00:00 – fallback reset kvóty, když API
+    nepošle hlavičku reset."""
+    today = today or date.today()
+    year = today.year + (1 if today.month == 12 else 0)
+    month = 1 if today.month == 12 else today.month + 1
+    return datetime(year, month, 1)
+
+
+def _spread_budget(remaining: int, reset_at_iso: Optional[str],
+                   now: Optional[datetime] = None) -> int:
+    """Rozpočítá zbývající kvótu na zbytek období → ‚opatrné' čerpání a
+    dlouhodobé optimum (nevyplýtvá vše první den). Vrací počet requestů, který
+    si lze dovolit v tomto běhu (min. 1, pokud něco zbývá)."""
+    if remaining <= 0:
+        return 0
+    now = now or datetime.now()
+    days_left = 1
+    if reset_at_iso:
+        try:
+            reset = datetime.fromisoformat(reset_at_iso)
+            days_left = max(1, (reset - now).days + 1)
+        except ValueError:
+            days_left = 1
+    return max(1, remaining // days_left)
 
 
 def _best_weekday(wd_data: dict[int, dict]) -> Optional[int]:
@@ -334,8 +361,38 @@ class Scanner:
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
             return False
+        # Vyčerpaná kvóta → zdroj je dočasně vypnutý (sám se zapne po resetu).
+        if self.history.is_source_disabled("skyscrapper"):
+            return False
+        # Pokud RapidAPI hlavičky hlásí zbývající requesty, věř jim (přesnější
+        # než lokální měsíční počítadlo) a rozpočítej je na zbytek období.
+        quota = self.history.get_quota("skyscrapper")
+        remaining = quota.get("remaining")
+        if remaining is not None:
+            if remaining <= 0:
+                return False
+            per_run = _spread_budget(remaining, quota.get("reset_at"))
+            if self.skyscrapper.request_count >= per_run:
+                return False
+            return True
         used = self.history.skyscrapper_usage() + self.skyscrapper.request_count
         return used < SKYSCRAPPER_MONTHLY_LIMIT
+
+    def _update_skyscrapper_quota(self) -> None:
+        """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
+        resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
+        sk = self.skyscrapper
+        if sk.quota_remaining is not None or sk.quota_reset_at is not None:
+            self.history.record_quota(
+                "skyscrapper", sk.quota_remaining, sk.quota_reset_at, sk.quota_limit
+            )
+        if sk.quota_exhausted:
+            until = sk.quota_reset_at or _first_of_next_month()
+            self.history.disable_source("skyscrapper", until)
+            logger.warning(
+                "Sky Scrapper: kvóta vyčerpána → vypínám do %s (pak se sám zapne)",
+                until.isoformat(timespec="minutes"),
+            )
 
     @staticmethod
     def _add_nights(d: date, nights: int) -> date:
@@ -574,6 +631,7 @@ class Scanner:
             self.history.add_amadeus_usage(self.amadeus.request_count)
         if self.skyscrapper:
             self.history.add_skyscrapper_usage(self.skyscrapper.request_count)
+            self._update_skyscrapper_quota()
 
         # Denní souhrn.
         self._send_summary(all_flights, source_status, len(routes))
@@ -668,10 +726,21 @@ class Scanner:
                 f"{AMADEUS_MONTHLY_LIMIT} requestů tento měsíc"
             )
         if self.skyscrapper:
-            stats["skyscrapper"] = (
-                f"Sky Scrapper využití: {self.history.skyscrapper_usage()}/"
-                f"{SKYSCRAPPER_MONTHLY_LIMIT} requestů tento měsíc"
-            )
+            if self.history.is_source_disabled("skyscrapper"):
+                until = self.history.disabled_until("skyscrapper") or "?"
+                stats["skyscrapper"] = (
+                    f"Sky Scrapper: ⏸ vypnuto (vyčerpaná kvóta) do {until[:16]}"
+                )
+            else:
+                quota = self.history.get_quota("skyscrapper")
+                rem = quota.get("remaining")
+                if rem is not None:
+                    stats["skyscrapper"] = f"Sky Scrapper: zbývá {rem} requestů (dle API)"
+                else:
+                    stats["skyscrapper"] = (
+                        f"Sky Scrapper využití: {self.history.skyscrapper_usage()}/"
+                        f"{SKYSCRAPPER_MONTHLY_LIMIT} requestů tento měsíc"
+                    )
         # Statistika letišť dle podílu dealů (vč. dnešních záznamů) – seřazeno
         # od nejakčnějšího. Reflektuje dynamicky upravenou prioritu.
         airport_stats = self.history.airport_stats(threshold=threshold)
