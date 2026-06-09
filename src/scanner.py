@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import calendar as _calendar
 import logging
+import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from typing import Any, Optional
 
@@ -44,6 +46,11 @@ logger = logging.getLogger(__name__)
 
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
+
+# Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
+# (Duffel, Travelpayouts). ~100 volání tak netrvá 15+ min sekvenčně.
+# Lze přepsat přes env SCAN_MAX_WORKERS; rozumné rozmezí 4–8 (víc = riziko 429).
+SCAN_MAX_WORKERS = max(1, int(os.getenv("SCAN_MAX_WORKERS", "6")))
 
 
 def _window_bounds(year: int, months: list[int]) -> tuple[date, date]:
@@ -189,33 +196,50 @@ class Scanner:
         return_date, return_origin, return_destination, route_name).
 
         budget_check (callable→bool) volitelně zastaví smyčku při vyčerpání
-        kvóty zdroje."""
+        kvóty zdroje. Zdroje bez kvóty (budget_check=None) běží paralelně,
+        aby ~100 volání netrvalo 15+ minut sekvenčně.
+        """
         results: list[FlightResult] = []
         try:
             origins, dests = trim_airports(
                 legs["out_origins"], legs["out_dests"], limit
             )
             in_o, in_d = legs["in_origins"], legs["in_dests"]
+
+            # Sestav seznam kombinací (origin, destination, return_o, return_d).
+            combos = []
             for o in origins:
-                if budget_check and not budget_check():
-                    logger.warning("%s: vyčerpána kvóta, scan trasy zkrácen",
-                                   source_name)
-                    break
                 for d in dests:
-                    if budget_check and not budget_check():
-                        break
                     r_origin = in_o[0] if is_openjaw and in_o else d
                     r_dest = in_d[0] if is_openjaw and in_d else o
-                    try:
-                        results += source.search(
-                            origin=o, destination=d,
-                            departure_date=depart, return_date=ret,
-                            return_origin=r_origin, return_destination=r_dest,
-                            route_name=name,
-                        )
-                    except Exception as exc:  # noqa: BLE001
-                        logger.error("%s %s %s→%s: %s",
-                                     source_name, name, o, d, exc)
+                    combos.append((o, d, r_origin, r_dest))
+
+            def _one(combo):
+                o, d, r_origin, r_dest = combo
+                try:
+                    return source.search(
+                        origin=o, destination=d,
+                        departure_date=depart, return_date=ret,
+                        return_origin=r_origin, return_destination=r_dest,
+                        route_name=name,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.error("%s %s %s→%s: %s", source_name, name, o, d, exc)
+                    return []
+
+            if budget_check is None:
+                # Bez kvótového limitu → paralelně (výrazně rychlejší).
+                with ThreadPoolExecutor(max_workers=SCAN_MAX_WORKERS) as pool:
+                    for res in pool.map(_one, combos):
+                        results += res
+            else:
+                # S kvótou → sekvenčně, ať lze průběžně kontrolovat budget.
+                for combo in combos:
+                    if not budget_check():
+                        logger.warning("%s: vyčerpána kvóta, scan trasy zkrácen",
+                                       source_name)
+                        break
+                    results += _one(combo)
             logger.info("%s %s: %d nabídek", source_name, name, len(results))
         except Exception as exc:  # noqa: BLE001
             logger.error("%s scan selhal pro %s: %s", source_name, name, exc)
