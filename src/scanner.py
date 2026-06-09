@@ -34,6 +34,8 @@ from .sources.amadeus import AmadeusSource
 from .sources.cestujlevne import CestujLevneSource
 from .sources.duffel import DuffelSource
 from .sources.jacks import JacksFlightClubSource
+from .sources.miles_and_more import MilesAndMoreSource
+from .sources.miles_and_more import should_run_today as mm_should_run_today
 from .sources.secret_flying import SecretFlyingSource
 from .sources.skyscrapper import SkyScrapperSource
 from .sources.travelpayouts import TravelpayoutsSource
@@ -270,6 +272,22 @@ class Scanner:
         except Exception as exc:  # noqa: BLE001
             logger.error("Jack's selhal: %s", exc)
             status["jacks"] = False
+
+        # Miles & More mileage bargains – jen 1. kalendářní den v měsíci
+        # (award nabídky se mění měsíčně).
+        if mm_should_run_today():
+            try:
+                mm = MilesAndMoreSource(
+                    api_url=self.settings.milesandmore_api_url,
+                    ignore_robots=self.settings.milesandmore_ignore_robots,
+                ).fetch()
+                deals += mm
+                status["miles_and_more"] = True
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Miles & More selhal: %s", exc)
+                status["miles_and_more"] = False
+        else:
+            logger.info("Miles & More: přeskočeno (kontrola jen 1. v měsíci)")
 
         return deals, status
 

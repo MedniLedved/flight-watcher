@@ -122,6 +122,7 @@ class TelegramNotifier:
             "secretflying.com": "Secret Flying",
             "cestujlevne.com": "Cestujlevně",
             "jacksflightclub.com": "Jack's Flight Club",
+            "miles-and-more.com": "Miles & More (mileage bargain)",
         }.get(deal.source, deal.source)
         lines = [
             f"🔥 <b>DEAL – {e(source_title)}</b>",
@@ -130,6 +131,8 @@ class TelegramNotifier:
         ]
         if deal.price_eur:
             lines.append(f"💶 Cca {deal.price_eur:.0f} EUR")
+        if deal.summary:
+            lines.append(f"ℹ️ {e(deal.summary)}")
         if deal.published:
             lines.append(f"📅 Publikováno: {deal.published.isoformat()}")
         lines.append(f"🌐 Zdroj: {e(deal.source)}")
@@ -165,6 +168,7 @@ class TelegramNotifier:
             "secret_flying": "Secret Flying",
             "cestujlevne": "Cestujlevně",
             "jacks": "Jack's",
+            "miles_and_more": "Miles & More",
         }
         for key, label in labels.items():
             if key in source_status:

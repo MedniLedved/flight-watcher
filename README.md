@@ -30,6 +30,8 @@ přes RapidAPI**.
 - **Cestujlevně.cz** (RSS, ceny v Kč → EUR)
 - **Jack's Flight Club** (scraping veřejných dealů – nejkřehčí, viz
   [Troubleshooting](#troubleshooting))
+- **Miles & More – mileage bargains** (award nabídky placené *mílemi*; kontrola
+  **jen 1. kalendářní den v měsíci**, protože se mění měsíčně)
 
 Výsledky se porovnají s historií cen (`data/price_history.json`) a prahem.
 Při nové nízké ceně přijde **alert s ASCII kalendářem** odletu/příletu;
@@ -197,6 +199,17 @@ Jack's nemá veřejné API a scrapuje se HTML:
 - V každém případě to **nezastaví** zbytek scanu; v souhrnu uvidíš
   `Jack's ✗ (chyba)`.
 
+**Miles & More mileage bargains nic nevrací:**
+- Kontrola běží **jen 1. dne v měsíci** – jindy se zdroj záměrně přeskočí
+  (v logu `Miles & More: přeskočeno`).
+- Stránka je **JavaScriptová SPA s anti-bot ochranou** a nemá veřejné API,
+  takže HTML scraping je best-effort (může vrátit prázdno).
+- Pokud `robots.txt` scraping zakazuje, zdroj ho ve výchozím stavu respektuje
+  a přeskočí. Pro osobní monitoring lze nastavit `MILESANDMORE_IGNORE_ROBOTS=true`
+  (vědomý opt-in).
+- Nejspolehlivější je najít skutečný JSON endpoint nabídek (DevTools → Network)
+  a nastavit ho přes `MILESANDMORE_API_URL` – pak se parsuje JSON místo HTML.
+
 **Žádné ceny v souhrnu** – zkontroluj, že máš nastavené API klíče a (u
 Amadeus) že nejsi na syntetickém testovacím prostředí (`AMADEUS_ENV`).
 
@@ -208,7 +221,7 @@ Nainstaluj `pip install -r requirements.txt`.
 
 ```
 src/
-  sources/        # datové zdroje (duffel, skyscrapper, amadeus, travelpayouts, RSS, scraping)
+  sources/        # zdroje (duffel, skyscrapper, amadeus, travelpayouts, RSS, scraping, miles_and_more)
   config.py       # konfigurace, letiště, rate-limity, trim_airports
   calendar_renderer.py  # ASCII kalendář pro Telegram
   history.py      # historie cen + anti-duplicita alertů + Amadeus počítadlo

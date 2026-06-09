@@ -251,3 +251,40 @@ def test_format_airport_stats_no_data_section():
     stats = {"MUC": {"count": 5, "avg": 400, "min": 380, "median": 400}}
     lines = format_airport_stats(airports, stats)
     assert any("Bez dostatku dat" in ln and "XXX" in ln for ln in lines)
+
+
+# -- Miles & More mileage bargains -----------------------------------------
+def test_mm_should_run_only_first_of_month():
+    from datetime import date as _d
+    from src.sources.miles_and_more import should_run_today
+    assert should_run_today(_d(2026, 9, 1))
+    assert not should_run_today(_d(2026, 9, 2))
+    assert not should_run_today(_d(2026, 9, 30))
+
+
+def test_mm_extract_miles():
+    from src.sources.miles_and_more import _extract_miles
+    assert _extract_miles("Tokyo for 35,000 miles return") == 35000
+    assert _extract_miles("Osaka ab 42.000 Meilen") == 42000
+    assert _extract_miles("no price here") is None
+
+
+def test_mm_matches_japan():
+    from src.sources.miles_and_more import _matches_japan
+    assert _matches_japan("Europe to Tokyo award special")
+    assert _matches_japan("Nach Osaka mit 50% Rabatt")
+    assert not _matches_japan("Europe to New York deal")
+
+
+def test_mm_deals_from_api_payload():
+    from src.sources.miles_and_more import MilesAndMoreSource
+    src = MilesAndMoreSource(api_url="http://example/api")
+    payload = {"offers": [
+        {"destination": "Tokyo", "miles": "35,000 miles", "from": "Europe"},
+        {"destination": "New York", "miles": "30,000 miles"},
+    ]}
+    deals = src._deals_from_offers(payload)
+    assert len(deals) == 1
+    assert deals[0].source == "miles-and-more.com"
+    assert deals[0].price_eur is None
+    assert "Tokyo" in deals[0].title

@@ -39,6 +39,8 @@ jobs:
           TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MILESANDMORE_API_URL: ${{ vars.MILESANDMORE_API_URL }}
+          MILESANDMORE_IGNORE_ROBOTS: ${{ vars.MILESANDMORE_IGNORE_ROBOTS }}
         run: python -m src.scanner
 
       - name: Save price history

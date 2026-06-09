@@ -121,6 +121,12 @@ class Settings:
     price_threshold_eur: float = 550.0
     log_level: str = "INFO"
     czk_eur_rate: float = 25.0
+    # Volitelný JSON endpoint Miles & More mileage bargains (pokud se objeví);
+    # bez něj se scrapuje HTML stránka.
+    milesandmore_api_url: str | None = None
+    # Opt-in: ignorovat robots.txt u Miles & More (vědomé rozhodnutí uživatele
+    # pro osobní měsíční monitoring). Výchozí False = robots.txt se ctí.
+    milesandmore_ignore_robots: bool = False
 
     # routes.yaml
     routes_config: dict[str, Any] = field(default_factory=dict)
@@ -152,6 +158,11 @@ class Settings:
             price_threshold_eur=threshold,
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             czk_eur_rate=float(os.getenv("CZK_EUR_RATE", "25")),
+            milesandmore_api_url=os.getenv("MILESANDMORE_API_URL"),
+            milesandmore_ignore_robots=(
+                os.getenv("MILESANDMORE_IGNORE_ROBOTS", "false").lower()
+                in ("1", "true", "yes")
+            ),
             routes_config=routes_config,
         )
 
