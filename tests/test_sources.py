@@ -515,6 +515,28 @@ def test_format_weekday_stats_returns_lines_with_best_day():
     assert any("+80" in l for l in lines)  # Friday 380 vs Monday 300 = +80
 
 
+def test_format_weekday_stats_diffs_against_cheapest_not_most_deals():
+    """#4: rozdíly se počítají proti NEJLEVNĚJŠÍMU dni, ne proti dni s nejvíc
+    dealy → žádné záporné rozdíly, i když nejvíc dealů má dražší den."""
+    from src.airport_stats import format_weekday_stats
+    stats = {
+        "depart": {
+            # Pátek má nejvíc dealů (50 %), ale vyšší medián (480).
+            4: {"deal_rate": 0.5, "count": 6, "deals": 3, "deal_median": 480.0, "all_median": 480.0},
+            # Úterý má míň dealů (30 %), ale je NEJLEVNĚJŠÍ (450).
+            1: {"deal_rate": 0.3, "count": 6, "deals": 2, "deal_median": 450.0, "all_median": 450.0},
+        },
+        "return": {},
+    }
+    lines = format_weekday_stats(stats)
+    text = "\n".join(lines)
+    assert "💰" in text and "ÚT" in text          # úterý = nejlevnější
+    assert "nejlevnější" in text
+    assert "+30 EUR" in text                       # pátek 480 vs úterý 450
+    assert "🏆" in text                            # pátek = nejvíc dealů
+    assert "-" not in text.replace("–", "")        # žádný záporný rozdíl
+
+
 # -- coverage_weights (recency decay) --------------------------------------
 def test_coverage_weights_decays_old_observations():
     import tempfile, os

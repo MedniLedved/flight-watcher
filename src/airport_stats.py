@@ -129,26 +129,32 @@ def format_weekday_stats(weekday_stats: dict[str, dict[int, dict]]) -> list[str]
         # Potřebujeme alespoň 2 dny s daty a celkový počet záznamů >= 5.
         if len(wd_data) < 2 or sum(s["count"] for s in wd_data.values()) < 5:
             continue
-        # Seřaď dny dle deal_rate sestupně, tiebreaker medián vzestupně.
-        sorted_days = sorted(wd_data.items(), key=lambda it: deal_sort_key(it[1]))
-        best_wd, best_s = sorted_days[0]
-        best_median = effective_median(best_s)
-        lines.append(f"📅 <b>Nejlevnější den – {title}:</b>")
-        best_pct = best_s["deal_rate"] * 100
-        lines.append(
-            f"  🏆 {_WEEKDAY_CZ[best_wd].upper()}: "
-            f"{best_pct:.0f} % dealů, medián {best_median:.0f} EUR"
+        # Baseline pro EUR-rozdíly = SKUTEČNĚ nejlevnější den (nejnižší medián),
+        # aby rozdíly byly vždy ≥ 0 ("o kolik dražší"). 💰 značí nejlevnější,
+        # 🏆 den s nejvyšším podílem dealů (deal frequency). Dny řadíme dle
+        # podílu dealů (původní záměr), rozdíl je ale vůči nejlevnějšímu dni.
+        cheapest_wd, cheapest_s = min(
+            wd_data.items(), key=lambda it: effective_median(it[1])
         )
-        for wd, s in sorted_days[1:]:
-            if s["count"] < 2:
+        cheapest_median = effective_median(cheapest_s)
+        best_deals_wd = min(wd_data.items(), key=lambda it: deal_sort_key(it[1]))[0]
+        sorted_days = sorted(wd_data.items(), key=lambda it: deal_sort_key(it[1]))
+        lines.append(f"📅 <b>Nejlevnější den – {title}:</b>")
+        for wd, s in sorted_days:
+            if s["count"] < 2 and wd != cheapest_wd:
                 continue
             dm = effective_median(s)
-            diff = dm - best_median
-            diff_str = f"+{diff:.0f}" if diff >= 0 else f"{diff:.0f}"
-            pct = s["deal_rate"] * 100
+            diff = dm - cheapest_median
+            diff_str = "nejlevnější" if abs(diff) < 0.5 else f"+{diff:.0f} EUR"
+            marker = ""
+            if wd == cheapest_wd:
+                marker = "💰 "
+            elif wd == best_deals_wd:
+                marker = "🏆 "
             lines.append(
-                f"  {_WEEKDAY_CZ[wd]}: {pct:.0f} % dealů, "
-                f"medián {dm:.0f} EUR ({diff_str} EUR vs. {_WEEKDAY_CZ[best_wd]})"
+                f"  {marker}{_WEEKDAY_CZ[wd].upper()}: "
+                f"{s['deal_rate'] * 100:.0f} % dealů, "
+                f"medián {dm:.0f} EUR ({diff_str})"
             )
     return lines
 
