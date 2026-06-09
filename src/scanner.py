@@ -54,9 +54,11 @@ AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
-# (Duffel, Travelpayouts). ~100 volání tak netrvá 15+ min sekvenčně.
-# Lze přepsat přes env SCAN_MAX_WORKERS; rozumné rozmezí 4–8 (víc = riziko 429).
-SCAN_MAX_WORKERS = max(1, int(os.getenv("SCAN_MAX_WORKERS", "6")))
+# (Duffel, Travelpayouts). Paralelizace zkracuje ~100 volání z 15+ min, ale
+# moc vláken naráz spustí Duffel rate-limit (HTTP 429). Default 3 je
+# kompromis; Duffel navíc retryuje 429 s backoffem (viz duffel.py). Lze
+# přepsat přes env SCAN_MAX_WORKERS.
+SCAN_MAX_WORKERS = max(1, int(os.getenv("SCAN_MAX_WORKERS", "3")))
 
 # Kolik kombinací (odlet, návrat) prohledat za jeden běh. Termíny denně
 # rotují napříč celým oknem, takže se postupně pokryje celé období i různé

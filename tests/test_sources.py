@@ -634,3 +634,63 @@ def test_coverage_weights_splits_origin_and_dest_roles():
     assert "MUC" in cov["origin"] and "MUC" not in cov["dest"]
     assert "KIX" in cov["dest"] and "KIX" not in cov["origin"]
     assert cov["airport"]["MUC"] > 0 and cov["airport"]["KIX"] > 0
+
+
+# -- Duffel 429 retry --------------------------------------------------------
+def test_duffel_retries_on_429_then_succeeds(monkeypatch):
+    """Duffel po HTTP 429 počká a zkusí znovu (bez reálného čekání)."""
+    import requests
+    from src.sources import duffel as duffel_mod
+    from src.sources.duffel import DuffelSource
+
+    monkeypatch.setattr(duffel_mod.time, "sleep", lambda *a, **k: None)
+
+    calls = {"n": 0}
+
+    class _Resp:
+        def __init__(self, status):
+            self.status_code = status
+            self.headers = {}
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                err = requests.HTTPError(f"{self.status_code}")
+                err.response = self
+                raise err
+        def json(self):
+            return {"data": {"offers": []}}
+
+    class _Session:
+        def post(self, *a, **k):
+            calls["n"] += 1
+            return _Resp(429 if calls["n"] < 3 else 200)
+
+    src = DuffelSource(token="dummy", session=_Session())
+    out = src.search("MUC", "KIX", date(2026, 9, 1), return_date=date(2026, 9, 13))
+    assert out == []          # prázdné nabídky, ale bez výjimky
+    assert calls["n"] == 3     # 2× 429, pak úspěch
+
+
+def test_duffel_raises_after_max_429(monkeypatch):
+    """Po vyčerpání pokusů 429 propadne výjimka (trasa se zaloguje jako chyba)."""
+    import pytest
+    import requests
+    from src.sources import duffel as duffel_mod
+    from src.sources.duffel import DuffelSource
+
+    monkeypatch.setattr(duffel_mod.time, "sleep", lambda *a, **k: None)
+
+    class _Resp:
+        status_code = 429
+        headers: dict = {}
+        def raise_for_status(self):
+            err = requests.HTTPError("429")
+            err.response = self
+            raise err
+
+    class _Session:
+        def post(self, *a, **k):
+            return _Resp()
+
+    src = DuffelSource(token="dummy", session=_Session())
+    with pytest.raises(requests.HTTPError):
+        src.search("MUC", "KIX", date(2026, 9, 1))

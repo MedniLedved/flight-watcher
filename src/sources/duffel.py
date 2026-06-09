@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.duffel.com/air/offer_requests"
 DUFFEL_VERSION = "v2"
 _REQUEST_DELAY = 0.5
+# Retry na rate-limit (HTTP 429) a dočasné výpadky (5xx) s exponenciálním
+# backoffem. Duffel při paralelních voláních snadno vrátí 429 – místo ztráty
+# trasy počkáme a zkusíme znovu (respektujeme i hlavičku Retry-After).
+_RETRY_STATUSES = {429, 500, 502, 503, 504}
+_MAX_RETRIES = 4
+_BACKOFF_BASE = 2.0  # s: 2, 4, 8, 16
 
 
 class DuffelSource:
@@ -85,16 +91,7 @@ class DuffelSource:
         # return_offers=true (výchozí) → nabídky přijdou rovnou v odpovědi.
         params = {"return_offers": "true", "supplier_timeout": "15000"}
 
-        try:
-            resp = self.session.post(
-                BASE_URL, json=body, headers=headers, params=params, timeout=40
-            )
-            resp.raise_for_status()
-        except requests.RequestException as exc:
-            logger.error("Duffel chyba %s→%s: %s", origin, destination, exc)
-            raise
-        finally:
-            time.sleep(_REQUEST_DELAY)
+        resp = self._post_with_retry(body, headers, params, origin, destination)
 
         payload = resp.json().get("data", {})
         offers = payload.get("offers", [])
@@ -105,6 +102,53 @@ class DuffelSource:
         results = [r for r in results if r is not None]
         results.sort(key=lambda r: r.price)
         return results[:max_results]
+
+    def _post_with_retry(self, body, headers, params, origin, destination):
+        """POST s retry na 429/5xx (exponenciální backoff, respektuje
+        Retry-After). Po vyčerpání pokusů vyhodí poslední výjimku."""
+        last_exc: Optional[Exception] = None
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                resp = self.session.post(
+                    BASE_URL, json=body, headers=headers, params=params, timeout=40
+                )
+                resp.raise_for_status()
+                return resp
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else None
+                last_exc = exc
+                if status in _RETRY_STATUSES and attempt < _MAX_RETRIES:
+                    wait = self._retry_after(exc.response) or _BACKOFF_BASE * (2 ** attempt)
+                    logger.warning(
+                        "Duffel %s→%s: HTTP %s, pokus %d/%d, čekám %.0f s",
+                        origin, destination, status, attempt + 1, _MAX_RETRIES, wait,
+                    )
+                    time.sleep(wait)
+                    continue
+                logger.error("Duffel chyba %s→%s: %s", origin, destination, exc)
+                raise
+            except requests.RequestException as exc:
+                last_exc = exc
+                logger.error("Duffel chyba %s→%s: %s", origin, destination, exc)
+                raise
+            finally:
+                time.sleep(_REQUEST_DELAY)
+        # Sem se nedostaneme (poslední pokus buď vrátí, nebo raise), ale pro
+        # jistotu:
+        raise last_exc if last_exc else RuntimeError("Duffel: neznámá chyba")
+
+    @staticmethod
+    def _retry_after(resp) -> Optional[float]:
+        """Sekundy z hlavičky Retry-After (číslo), jinak None."""
+        if resp is None:
+            return None
+        raw = resp.headers.get("Retry-After")
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
 
     def _parse_offer(self, offer: dict, origin: str, destination: str,
                      route_name: str) -> Optional[FlightResult]:
