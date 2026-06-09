@@ -1,0 +1,56 @@
+# Nastavení hlídaných tras
+# Formát open-jaw: from_airports → to_airports, nezávisle tam a zpět
+
+price_threshold_eur: 550  # Upozornit pokud cena klesne pod tuto hodnotu
+
+# Evropská letiště (v pořadí priority – méně prioritní se ořežou první při rate limitech)
+european_airports: ["MUC", "PRG", "VIE", "FRA", "NUE", "MXP", "FCO", "BUD", "AMS", "FMM"]
+
+# Japonská letiště (v pořadí priority)
+japanese_airports: ["HND", "NRT", "KIX", "ITM", "NGO"]
+
+routes:
+  # Standardní zpáteční lety (všechna evropská → všechna japonská, ořezáno dle limitů)
+  - name: "Evropa → Japonsko zpáteční"
+    type: roundtrip
+    origins: all_european      # použij plný seznam european_airports
+    destinations: all_japanese # použij plný seznam japanese_airports
+
+  # Open-jaw: odlet z jednoho japonského, přílety do jiného evropského
+  - name: "Evropa → Osaka / Tokio → Evropa"
+    type: openjaw
+    outbound:
+      origins: all_european
+      destinations: ["KIX", "ITM"]   # přiletět do Osaky
+    inbound:
+      origins: ["HND", "NRT"]        # odletět z Tokia
+      destinations: all_european
+
+  - name: "Evropa → Tokio / Osaka → Evropa"
+    type: openjaw
+    outbound:
+      origins: all_european
+      destinations: ["HND", "NRT"]   # přiletět do Tokia
+    inbound:
+      origins: ["KIX", "ITM"]        # odletět z Osaky
+      destinations: all_european
+
+  # Multi-city: přiletět do jednoho japonského města, odletět z jiného
+  - name: "Evropa → Nagoja / Osaka → Evropa"
+    type: openjaw
+    outbound:
+      origins: all_european
+      destinations: ["NGO"]
+    inbound:
+      origins: ["KIX", "ITM"]
+      destinations: all_european
+
+# Časová okna hledání
+search_windows:
+  - year: 2026
+    months: [9, 10, 11, 12]  # Září až prosinec 2026
+
+# Délka pobytu
+stay_length:
+  min_nights: 12
+  max_nights: 25

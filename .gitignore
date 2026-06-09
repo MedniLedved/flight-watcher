@@ -1,0 +1,17 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Price history is committed for GitHub Actions persistence.
+# If you prefer to keep it local-only, uncomment the next line:
+# data/price_history.json

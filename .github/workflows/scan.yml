@@ -1,0 +1,45 @@
+name: Japan Flight Scan
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # Každý den v 7:00 UTC (8:00/9:00 CET/CEST)
+  workflow_dispatch:        # Možnost spustit manuálně z GitHub UI
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore price history
+        uses: actions/cache@v4
+        with:
+          path: data/price_history.json
+          key: price-history-${{ github.run_id }}
+          restore-keys: price-history-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scanner
+        env:
+          KIWI_API_KEY: ${{ secrets.KIWI_API_KEY }}
+          AMADEUS_CLIENT_ID: ${{ secrets.AMADEUS_CLIENT_ID }}
+          AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
+          AMADEUS_ENV: ${{ vars.AMADEUS_ENV }}
+          TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m src.scanner
+
+      - name: Save price history
+        uses: actions/cache@v4
+        with:
+          path: data/price_history.json
+          key: price-history-${{ github.run_id }}
