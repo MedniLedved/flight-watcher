@@ -468,13 +468,11 @@ class Scanner:
             eu_airport_stats=eu_lines, jp_airport_stats=jp_lines,
         )
         if self.notifier.enabled and not sent:
-            # Telegram je nakonfigurován, ale odeslání selhalo – vyhoď chybu,
-            # ať GitHub Actions běh zčervená a problém je hned vidět.
-            raise RuntimeError(
+            logger.warning(
                 "Denní souhrn se NEPODAŘILO odeslat na Telegram – viz chyba výše "
                 "(typicky špatný TELEGRAM_CHAT_ID nebo bot bez /start)."
             )
-        if sent:
+        elif sent:
             logger.info("Denní souhrn odeslán na Telegram.")
 
     @staticmethod
