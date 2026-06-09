@@ -95,11 +95,14 @@ class TelegramNotifier:
             in_to = f"{airport_name(flight.return_destination)} ({flight.return_destination})"
             lines.append(f"🛬 {e(in_from)} → {e(in_to)}")
 
-        lines.append(f"🗓 Odlet: {_fmt_date(flight.depart_date)}")
-        if flight.return_date:
-            lines.append(f"🗓 Návrat: {_fmt_date(flight.return_date)}")
+        has_calendar = bool(flight.depart_date and flight.return_date)
+        # Termíny vypisuj jen bez kalendáře – v kalendáři jsou vidět (🛫/🛬).
+        if not has_calendar:
+            lines.append(f"🗓 Odlet: {_fmt_date(flight.depart_date)}")
+            if flight.return_date:
+                lines.append(f"🗓 Návrat: {_fmt_date(flight.return_date)}")
         if flight.nights is not None:
-            lines.append(f"⏳ Délka pobytu: {flight.nights} dní")
+            lines.append(f"⏳ Délka pobytu: {flight.nights} nocí")
 
         price_line = f"💶 Cena: {flight.price:.0f} {flight.currency}"
         if delta is not None and delta != 0:
@@ -115,15 +118,16 @@ class TelegramNotifier:
         if flight.airlines:
             lines.append(f"🛩 Aerolinky: {e(', '.join(flight.airlines))}")
         if flight.deep_link:
-            lines.append(f'🔗 <a href="{e(flight.deep_link)}">Koupit letenku</a>')
+            link_label = ("Zobrazit na Google Flights"
+                          if "google.com" in flight.deep_link
+                          else "Koupit letenku")
+            lines.append(f'🔗 <a href="{e(flight.deep_link)}">{link_label}</a>')
 
-        if flight.depart_date and flight.return_date:
+        if has_calendar:
             cal = render_calendar(flight.depart_date, flight.return_date)
             lines.append("")
             lines.append(f"<code>{e(cal)}</code>")
 
-        lines.append("")
-        lines.append(f"⏱ Nalezeno: {datetime.now().strftime('%d.%m. %H:%M')}")
         return self._send("\n".join(lines))
 
     # -- 2. Deal alert (RSS) ---------------------------------------------

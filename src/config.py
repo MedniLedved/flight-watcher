@@ -62,6 +62,9 @@ AIRPORT_NAMES = {
     "ITM": "Osaka",
     "NGO": "Nagoja",
     "FUK": "Fukuoka",
+    # City kódy (Duffel je někdy vrací na úrovni slice) – jen pro zobrazení.
+    "OSA": "Osaka (město)",
+    "TYO": "Tokio (město)",
 }
 
 # Maximální počty kombinací origin×destination na jeden denní běh

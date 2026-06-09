@@ -14,7 +14,7 @@ def test_render_calendar_single_month():
     cal = render_calendar(date(2026, 9, 5), date(2026, 9, 20))
     assert "Září 2026" in cal
     assert "Po Út St Čt Pá So Ne" in cal
-    assert "✈" in cal
+    assert "🛫" in cal
     assert "🛬" in cal
 
 

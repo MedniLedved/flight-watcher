@@ -4,7 +4,7 @@ Generuje monospace mřížku měsíců od měsíce odletu po měsíc příletu.
 Používá pouze stdlib: calendar, datetime.
 
 Značení:
-* datum odletu  -> symbol ✈ za číslem dne (bez mezery)
+* datum odletu  -> symbol 🛫 za číslem dne (bez mezery)
 * datum příletu -> symbol 🛬 za číslem dne (bez mezery)
 * dny strávené v Japonsku (mezi odletem a příletem) -> '·' před číslem dne
 """
@@ -48,23 +48,6 @@ def _japan_days(depart: date, ret: date) -> set[date]:
     return days
 
 
-def _format_cell(day: int, year: int, month: int, depart: date,
-                 ret: date, japan: set[date]) -> str:
-    """Naformátuje jednu buňku dne na šířku 2 znaků + případný marker."""
-    if day == 0:
-        return "  "
-    current = date(year, month, day)
-    num = f"{day:>2}"
-    if current == depart:
-        return f"{num}✈"
-    if current == ret:
-        return f"{num}🛬"
-    if current in japan:
-        # '·' před číslem jako indikátor dne v Japonsku
-        return f"·{day:>2}".rjust(3)[-3:] if day >= 10 else f"·{day}"
-    return num
-
-
 def _render_single_month(year: int, month: int, depart: date,
                          ret: date, japan: set[date]) -> list[str]:
     """Vrátí seznam řádků (string) pro jeden měsíc."""
@@ -78,7 +61,7 @@ def _render_single_month(year: int, month: int, depart: date,
         else:
             current = date(year, month, day)
             if current == depart:
-                cell = f"{day:>2}✈"
+                cell = f"{day:>2}🛫"
             elif current == ret:
                 cell = f"{day:>2}🛬"
             elif current in japan:
@@ -95,7 +78,7 @@ def _render_single_month(year: int, month: int, depart: date,
 
 
 def _join_week(cells: list[str]) -> str:
-    """Spojí buňky týdne. Markery (✈/🛬) zabírají navíc, proto fixní padding
+    """Spojí buňky týdne. Markery (🛫/🛬) zabírají navíc, proto fixní padding
     na 2 viditelné znaky čísla + mezera."""
     parts = []
     for c in cells:

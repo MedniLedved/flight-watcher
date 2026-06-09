@@ -19,7 +19,7 @@ import calendar as _calendar
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Optional
 
 from .airport_stats import format_airport_stats, rank_airports
@@ -51,6 +51,11 @@ SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
 # (Duffel, Travelpayouts). ~100 volání tak netrvá 15+ min sekvenčně.
 # Lze přepsat přes env SCAN_MAX_WORKERS; rozumné rozmezí 4–8 (víc = riziko 429).
 SCAN_MAX_WORKERS = max(1, int(os.getenv("SCAN_MAX_WORKERS", "6")))
+
+# Kolik kombinací (odlet, návrat) prohledat za jeden běh. Termíny denně
+# rotují napříč celým oknem, takže se postupně pokryje celé období i různé
+# délky pobytu, aniž by jeden běh dělal stovky requestů navíc.
+SCAN_DATE_SAMPLES = max(1, int(os.getenv("SCAN_DATE_SAMPLES", "2")))
 
 
 def _window_bounds(year: int, months: list[int]) -> tuple[date, date]:
@@ -106,6 +111,7 @@ class Scanner:
 
         self.request_count = 0
         self.api_count = 0  # počet zapojených API zdrojů
+        self.scanned_date_pairs: list[tuple[date, date]] = []
 
     # -- Trasy ------------------------------------------------------------
     def _legs_for_route(self, route: dict[str, Any]) -> dict[str, list[str]]:
@@ -136,17 +142,21 @@ class Scanner:
         }
         date_from, date_to = _window_bounds(window["year"], window["months"])
         stay = self.settings.stay_length
-        depart = date_from
-        ret = self._add_nights(depart, stay["min_nights"])
+        date_pairs = self._pick_scan_dates(date_from, date_to, stay)
+        self.scanned_date_pairs = date_pairs
         results: list[FlightResult] = []
 
-        # --- Duffel (primární náhrada za Kiwi) ---
+        # --- Duffel (primární náhrada za Kiwi) – všechny vzorky termínů ---
         if self.duffel:
-            results += self._scan_per_combo(
-                self.duffel, "duffel", legs, is_openjaw,
-                depart, ret, name,
-                limit=RATE_LIMIT_COMBINATIONS["duffel"],
-            )
+            for depart, ret in date_pairs:
+                results += self._scan_per_combo(
+                    self.duffel, "duffel", legs, is_openjaw,
+                    depart, ret, name,
+                    limit=RATE_LIMIT_COMBINATIONS["duffel"],
+                )
+
+        # Kvótované zdroje šetří requesty → jen první (hlavní) termín.
+        depart, ret = date_pairs[0]
 
         # --- Sky Scrapper / RapidAPI (pozor na 100 req/měsíc) ---
         if self.skyscrapper and self._skyscrapper_has_budget():
@@ -259,8 +269,35 @@ class Scanner:
 
     @staticmethod
     def _add_nights(d: date, nights: int) -> date:
-        from datetime import timedelta
         return d + timedelta(days=nights)
+
+    @staticmethod
+    def _pick_scan_dates(date_from: date, date_to: date, stay: dict,
+                         samples: int = SCAN_DATE_SAMPLES,
+                         today: Optional[date] = None) -> list[tuple[date, date]]:
+        """Vybere kombinace (odlet, návrat) pro dnešní běh.
+
+        Termíny deterministicky rotují podle dnešního data: každý den se
+        prohledá jiná část okna a jiná délka pobytu, takže se během pár
+        týdnů pokryje celé období – bez stovek requestů v jednom běhu.
+        """
+        today = today or date.today()
+        min_n = stay.get("min_nights", 12)
+        max_n = stay.get("max_nights", min_n)
+        start = max(date_from, today + timedelta(days=1))
+        last_depart = max(date_to - timedelta(days=min_n), start)
+        span = (last_depart - start).days + 1
+        seed = today.toordinal()
+        pairs: list[tuple[date, date]] = []
+        for i in range(samples):
+            # Vzorky rozprostřené rovnoměrně po okně, denně posunuté.
+            offset = (seed + i * max(span // samples, 1)) % span
+            depart = start + timedelta(days=offset)
+            nights = min_n + ((seed + i) % (max_n - min_n + 1))
+            ret = min(depart + timedelta(days=nights), date_to)
+            if (depart, ret) not in pairs:
+                pairs.append((depart, ret))
+        return pairs
 
     @staticmethod
     def _deduplicate(results: list[FlightResult]) -> list[FlightResult]:
@@ -390,12 +427,12 @@ class Scanner:
         threshold = self.settings.price_threshold_eur
         for f in flights:
             key = f.route_key()
+            # Alert jen pod prahem – dražší výsledky se pouze zaznamenají
+            # do historie (pro statistiky letišť a trendy).
             below_threshold = f.price < threshold
-            is_low = self.history.is_new_low(key, f.price)
             delta = self.history.price_delta(key, f.price)
 
-            # Zaznamenej do historie vždy.
-            should_send = (below_threshold or is_low) and self.history.should_alert(
+            should_send = below_threshold and self.history.should_alert(
                 key, f.price
             )
             self.history.record(key, f.price, f.source, f.depart_date)
@@ -411,16 +448,22 @@ class Scanner:
 
     def _send_summary(self, flights: list[FlightResult],
                       source_status: dict[str, bool], route_count: int) -> None:
-        # Sestav nejlepší ceny na route_key.
+        threshold = self.settings.price_threshold_eur
+        # Sestav nejlepší ceny na route_key – jen pod prahem, dražší nezajímají.
         best: dict[str, FlightResult] = {}
+        cheapest_over: Optional[FlightResult] = None
         for f in flights:
+            if f.price >= threshold:
+                if cheapest_over is None or f.price < cheapest_over.price:
+                    cheapest_over = f
+                continue
             key = f.route_key()
             if key not in best or f.price < best[key].price:
                 best[key] = f
 
         summary_lines: list[str] = []
         for key, f in sorted(best.items(), key=lambda kv: kv[1].price)[:10]:
-            nights = f"{f.nights} dní" if f.nights is not None else "?"
+            nights_part = f", {f.nights} nocí" if f.nights is not None else ""
             label = {
                 "duffel": "Duffel", "skyscrapper": "Sky Scrapper",
                 "amadeus": "Amadeus", "travelpayouts": "Travelpayouts",
@@ -433,26 +476,39 @@ class Scanner:
                 trend = f" ⬆️ +{delta:.0f} EUR"
             route_disp = self._route_display(f)
             summary_lines.append(
-                f"{route_disp}: {f.price:.0f} EUR, {nights} ({label}){trend}"
+                f"{route_disp}: {f.price:.0f} EUR{nights_part} ({label}){trend}"
+            )
+        if not summary_lines and cheapest_over is not None:
+            summary_lines.append(
+                f"Žádná cena pod prahem {threshold:.0f} EUR (nejlevnější "
+                f"nalezená: {self._route_display(cheapest_over)} za "
+                f"{cheapest_over.price:.0f} EUR)"
             )
 
-        amadeus_used = self.history.amadeus_usage()
-        sky_used = self.history.skyscrapper_usage()
         total_requests = route_count * max(self.api_count, 1)
         stats = {
             "scans": (
                 f"Celkem scanů dnes: {route_count} tras × "
                 f"{self.api_count} API = ~{total_requests} requestů"
             ),
-            "amadeus": (
-                f"Amadeus využití: {amadeus_used}/{AMADEUS_MONTHLY_LIMIT} "
-                f"requestů tento měsíc"
-            ),
-            "skyscrapper": (
-                f"Sky Scrapper využití: {sky_used}/{SKYSCRAPPER_MONTHLY_LIMIT} "
-                f"requestů tento měsíc"
-            ),
         }
+        if self.scanned_date_pairs:
+            terms = ", ".join(
+                f"{d.strftime('%d.%m.')}–{r.strftime('%d.%m.')}"
+                for d, r in self.scanned_date_pairs
+            )
+            stats["dates"] = f"🔎 Dnes prověřené termíny: {terms}"
+        # Počítadla kvót jen u skutečně zapojených zdrojů.
+        if self.amadeus:
+            stats["amadeus"] = (
+                f"Amadeus využití: {self.history.amadeus_usage()}/"
+                f"{AMADEUS_MONTHLY_LIMIT} requestů tento měsíc"
+            )
+        if self.skyscrapper:
+            stats["skyscrapper"] = (
+                f"Sky Scrapper využití: {self.history.skyscrapper_usage()}/"
+                f"{SKYSCRAPPER_MONTHLY_LIMIT} requestů tento měsíc"
+            )
         # Statistika letišť dle cen (vč. dnešních záznamů) – seřazeno
         # od nejlevnějšího. Reflektuje dynamicky upravenou prioritu.
         airport_stats = self.history.airport_stats()

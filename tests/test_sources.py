@@ -132,6 +132,66 @@ def test_duffel_parse_offer_missing_price_returns_none():
     assert src._parse_offer({"slices": []}, "MUC", "KIX", "Test") is None
 
 
+def test_duffel_prefers_segment_airports_over_city_slice():
+    # Duffel na slice vrací city kódy (OSA = Osaka). Konkrétní letiště
+    # musí přijít ze segmentů, jinak se rozbijí statistiky letišť.
+    src = DuffelSource(token="dummy")
+    offer = {
+        "total_amount": "500.00",
+        "total_currency": "EUR",
+        "slices": [
+            {
+                "origin": {"iata_code": "NUE"},
+                "destination": {"iata_code": "OSA"},
+                "segments": [{
+                    "departing_at": "2026-09-01T08:00:00",
+                    "origin": {"iata_code": "NUE"},
+                    "destination": {"iata_code": "KIX"},
+                }],
+            },
+            {
+                "origin": {"iata_code": "OSA"},
+                "destination": {"iata_code": "NUE"},
+                "segments": [{
+                    "departing_at": "2026-09-13T10:00:00",
+                    "origin": {"iata_code": "KIX"},
+                    "destination": {"iata_code": "NUE"},
+                }],
+            },
+        ],
+    }
+    r = src._parse_offer(offer, "NUE", "KIX", "Test")
+    assert r.destination == "KIX"      # ne city kód OSA
+    assert r.return_origin == "KIX"
+    assert r.deep_link.startswith("https://www.google.com/travel/flights")
+    assert "2026-09-01" in r.deep_link
+
+
+# -- Rotace termínů hledání --------------------------------------------------
+def test_pick_scan_dates_within_window():
+    from src.scanner import Scanner
+    stay = {"min_nights": 12, "max_nights": 25}
+    pairs = Scanner._pick_scan_dates(
+        date(2026, 9, 1), date(2026, 12, 31), stay,
+        samples=3, today=date(2026, 6, 9),
+    )
+    assert pairs
+    for dep, ret in pairs:
+        assert date(2026, 9, 1) <= dep <= date(2026, 12, 31)
+        assert dep < ret <= date(2026, 12, 31)
+        assert 12 <= (ret - dep).days <= 25
+
+
+def test_pick_scan_dates_rotates_daily():
+    from src.scanner import Scanner
+    stay = {"min_nights": 12, "max_nights": 25}
+    a = Scanner._pick_scan_dates(date(2026, 9, 1), date(2026, 12, 31), stay,
+                                 samples=2, today=date(2026, 6, 9))
+    b = Scanner._pick_scan_dates(date(2026, 9, 1), date(2026, 12, 31), stay,
+                                 samples=2, today=date(2026, 6, 10))
+    assert a != b  # každý den jiné termíny → postupné pokrytí okna
+
+
 # -- Sky Scrapper parsing --------------------------------------------------
 def test_skyscrapper_parse_itinerary(tmp_path):
     src = SkyScrapperSource(rapidapi_key="dummy",

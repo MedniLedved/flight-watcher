@@ -66,7 +66,25 @@ class SecretFlyingSource:
     def fetch(self, max_age_days: int = 48 // 24) -> list[DealResult]:
         """Vrátí dealy odpovídající filtrům. max_age_days výchozí 2 dny."""
         import feedparser  # lazy import – volitelná závislost
-        feed = feedparser.parse(self.feed_url)
+        import requests
+
+        # Feed stahujeme sami s prohlížečovým User-Agentem – výchozí UA
+        # feedparseru server blokuje (vrací HTML chybovou stránku, která
+        # pak padá na "not well-formed (invalid token)").
+        headers = {
+            "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/124.0 Safari/537.36"),
+            "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+        }
+        try:
+            resp = requests.get(self.feed_url, headers=headers, timeout=30)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logger.error("Secret Flying feed se nepodařilo stáhnout: %s", exc)
+            raise RuntimeError("Secret Flying feed nedostupný") from exc
+
+        feed = feedparser.parse(resp.content)
         if getattr(feed, "bozo", 0) and not feed.entries:
             logger.error("Secret Flying feed se nepodařilo načíst: %s",
                          getattr(feed, "bozo_exception", "neznámá chyba"))

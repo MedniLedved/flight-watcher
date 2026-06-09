@@ -19,6 +19,7 @@ import logging
 import time
 from datetime import date, datetime
 from typing import Optional
+from urllib.parse import quote_plus
 
 import requests
 
@@ -128,20 +129,61 @@ class DuffelSource:
             if carrier.get("iata_code"):
                 airlines.add(carrier["iata_code"])
 
+        # Letiště ber ze segmentů (konkrétní letiště), ne ze slice – tam Duffel
+        # vrací city kódy (OSA = Osaka město, TYO = Tokio), které by rozbily
+        # statistiky letišť i zobrazení tras.
+        o_code = (self._seg_place(out_segs[0], "origin") if out_segs else None) \
+            or self._slice_origin(out_slice, origin)
+        d_code = (self._seg_place(out_segs[-1], "destination") if out_segs else None) \
+            or self._slice_destination(out_slice, destination)
+        r_o = (self._seg_place(in_segs[0], "origin") if in_segs else None) \
+            or (self._slice_origin(in_slice, "") if in_slice else "")
+        r_d = (self._seg_place(in_segs[-1], "destination") if in_segs else None) \
+            or (self._slice_destination(in_slice, "") if in_slice else "")
+        depart_date = self._seg_date(out_segs[0]) if out_segs else None
+        return_date = self._seg_date(in_segs[0]) if in_segs else None
+
         return FlightResult(
             price=price,
             currency=currency,
-            origin=self._slice_origin(out_slice, origin),
-            destination=self._slice_destination(out_slice, destination),
-            return_origin=self._slice_origin(in_slice, "") if in_slice else "",
-            return_destination=self._slice_destination(in_slice, "") if in_slice else "",
-            depart_date=self._seg_date(out_segs[0]) if out_segs else None,
-            return_date=self._seg_date(in_segs[0]) if in_segs else None,
+            origin=o_code,
+            destination=d_code,
+            return_origin=r_o,
+            return_destination=r_d,
+            depart_date=depart_date,
+            return_date=return_date,
             airlines=sorted(airlines),
             source=self.name,
-            deep_link="",  # Duffel je booking API – přímý nákupní odkaz není
+            # Duffel je booking API bez veřejného nákupního odkazu – sestavíme
+            # vyhledávací odkaz na Google Flights pro stejnou trasu a termín.
+            deep_link=self._google_flights_link(
+                o_code, d_code, depart_date, return_date, r_o, r_d
+            ),
             route_name=route_name,
         )
+
+    @staticmethod
+    def _google_flights_link(origin: str, destination: str,
+                             depart: Optional[date], ret: Optional[date],
+                             return_origin: str = "",
+                             return_destination: str = "") -> str:
+        if not (origin and destination and depart):
+            return ""
+        q = f"flights from {origin} to {destination} on {depart.isoformat()}"
+        openjaw = return_origin and return_destination and (
+            return_origin != destination or return_destination != origin
+        )
+        if ret and openjaw:
+            q += (f" and from {return_origin} to {return_destination} "
+                  f"on {ret.isoformat()}")
+        elif ret:
+            q += f" returning {ret.isoformat()}"
+        return "https://www.google.com/travel/flights?q=" + quote_plus(q)
+
+    @staticmethod
+    def _seg_place(seg: dict, key: str) -> Optional[str]:
+        place = seg.get(key) or {}
+        return place.get("iata_code") if isinstance(place, dict) else None
 
     @staticmethod
     def _slice_origin(slc: dict, fallback: str) -> str:
