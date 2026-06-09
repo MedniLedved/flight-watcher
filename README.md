@@ -137,6 +137,25 @@ Vše se konfiguruje v `config/routes.yaml`:
 - `search_windows` – roky a měsíce hledání
 - `stay_length` – min/max počet nocí
 
+### Dynamická priorita letišť podle historických cen
+
+Aplikace se **učí z historie**: před každým scanem spočítá průměrnou
+pozorovanou cenu pro každé letiště (`src/airport_stats.py`) a **přeřadí
+primární letiště** tak, aby ta statisticky levnější byla na začátku seznamu.
+Díky tomu při ořezání podle rate limitů (viz níže) přežijí právě levná
+letiště, zatímco drahá se odřežou první.
+
+- Bere se v potaz jen letiště s alespoň **3 pozorováními** (`MIN_SAMPLES`);
+  letiště s málo daty si drží původní pořadí z `routes.yaml`.
+- Pořadí se přepisuje za běhu (neměníš `routes.yaml`), takže priorita se
+  postupně sama vylaďuje, jak přibývá historie.
+
+**Kde to vidíš:** v **denním Telegram souhrnu** je sekce *„Priorita letišť
+dle historických cen"* – letiště od nejlevnějšího (💚) po nejdražší (💸)
+s průměrnou cenou, minimem a počtem pozorování `n`. Letiště bez dostatku dat
+jsou vypsána zvlášť. V logu scanu se navíc zaloguje přeřazení
+(`Priorita EU letišť přeřazena dle cen: … → …`).
+
 ### Adaptivní ořezávání podle rate limitů
 
 Každý zdroj má limit kombinací `origin × destination` na jeden běh

@@ -142,7 +142,9 @@ class TelegramNotifier:
     # -- 3. Denní souhrn -------------------------------------------------
     def send_daily_summary(self, summary_lines: list[str],
                            source_status: dict[str, bool],
-                           stats: dict[str, str]) -> bool:
+                           stats: dict[str, str],
+                           eu_airport_stats: Optional[list[str]] = None,
+                           jp_airport_stats: Optional[list[str]] = None) -> bool:
         e = html.escape
         now = datetime.now()
         month_gen = CZECH_MONTHS_GEN[now.month]
@@ -171,6 +173,21 @@ class TelegramNotifier:
         if status_parts:
             lines.append("RSS zdroje: " + " | ".join(status_parts))
 
+        # Statistika letišť dle cen – která jsou statisticky levná/drahá.
+        # Letiště se podle toho dynamicky přeřazují (levná mají přednost při
+        # ořezávání dle rate limitů).
+        if eu_airport_stats or jp_airport_stats:
+            lines.append("")
+            lines.append("📈 <b>Priorita letišť dle historických cen</b> "
+                         "(💚 levné → 💸 drahé):")
+            if eu_airport_stats:
+                lines.append("<b>Evropa:</b>")
+                lines.extend(f"  {e(line)}" for line in eu_airport_stats)
+            if jp_airport_stats:
+                lines.append("<b>Japonsko:</b>")
+                lines.extend(f"  {e(line)}" for line in jp_airport_stats)
+
+        lines.append("")
         for stat in stats.values():
             lines.append(e(stat))
 

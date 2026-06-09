@@ -20,6 +20,7 @@ import logging
 from datetime import date
 from typing import Any, Optional
 
+from .airport_stats import format_airport_stats, rank_airports
 from .config import (
     RATE_LIMIT_COMBINATIONS,
     Settings,
@@ -272,9 +273,35 @@ class Scanner:
 
         return deals, status
 
+    # -- Dynamická priorita letišť ---------------------------------------
+    def _apply_dynamic_priority(self) -> dict[str, dict[str, float]]:
+        """Přeřadí primární letiště podle historických cen (levná dopředu).
+        Vrací spočítanou statistiku (pro zobrazení v souhrnu)."""
+        stats = self.history.airport_stats()
+        eu_before = self.settings.european_airports
+        jp_before = self.settings.japanese_airports
+        eu_after = rank_airports(eu_before, stats)
+        jp_after = rank_airports(jp_before, stats)
+
+        # Přepiš pořadí v konfiguraci → promítne se do resolve_airport_list
+        # (all_european / all_japanese) a tím i do trim_airports.
+        self.settings.routes_config["european_airports"] = eu_after
+        self.settings.routes_config["japanese_airports"] = jp_after
+
+        if eu_after != eu_before:
+            logger.info("Priorita EU letišť přeřazena dle cen: %s → %s",
+                        eu_before, eu_after)
+        if jp_after != jp_before:
+            logger.info("Priorita JP letišť přeřazena dle cen: %s → %s",
+                        jp_before, jp_after)
+        return stats
+
     # -- Hlavní běh -------------------------------------------------------
     def run(self) -> None:
         logger.info("=== Japan Flight Tracker – start scanu ===")
+        # Dynamicky přeřaď letiště podle historických cen PŘED scanem,
+        # aby levnější letiště přežila ořezání dle rate limitů.
+        airport_stats = self._apply_dynamic_priority()
         self.api_count = sum(
             1 for s in (self.duffel, self.skyscrapper, self.amadeus,
                         self.travelpayouts) if s
@@ -375,7 +402,20 @@ class Scanner:
                 f"requestů tento měsíc"
             ),
         }
-        self.notifier.send_daily_summary(summary_lines, source_status, stats)
+        # Statistika letišť dle cen (vč. dnešních záznamů) – seřazeno
+        # od nejlevnějšího. Reflektuje dynamicky upravenou prioritu.
+        airport_stats = self.history.airport_stats()
+        eu_lines = format_airport_stats(
+            self.settings.european_airports, airport_stats
+        )
+        jp_lines = format_airport_stats(
+            self.settings.japanese_airports, airport_stats
+        )
+
+        self.notifier.send_daily_summary(
+            summary_lines, source_status, stats,
+            eu_airport_stats=eu_lines, jp_airport_stats=jp_lines,
+        )
 
     @staticmethod
     def _route_display(f: FlightResult) -> str:

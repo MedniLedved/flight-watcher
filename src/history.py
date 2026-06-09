@@ -170,3 +170,46 @@ class PriceHistory:
     # -- iterace pro souhrn ----------------------------------------------
     def routes(self) -> list[tuple[str, dict[str, Any]]]:
         return [(k, v) for k, v in self.data.items() if k != META_KEY]
+
+    # -- statistika cen per letiště --------------------------------------
+    @staticmethod
+    def _airports_from_key(route_key: str) -> list[str]:
+        """Z route_key (např. 'MUC-KIX-roundtrip' nebo 'MUC-KIX-NRT-openjaw')
+        vytáhne zúčastněná letiště (bez koncového typu)."""
+        parts = route_key.split("-")
+        if parts and parts[-1] in ("roundtrip", "openjaw"):
+            parts = parts[:-1]
+        return [p for p in parts if p]
+
+    def airport_stats(self) -> dict[str, dict[str, float]]:
+        """Spočítá statistiku pozorovaných cen pro každé letiště napříč všemi
+        trasami v historii. Vrací {kód: {count, avg, min, median}}.
+
+        Cena trasy se přičítá každému letišti, které se na trase podílí –
+        slouží jako proxy pro to, jak "levné" letiště bývá.
+        """
+        acc: dict[str, list[float]] = {}
+        for key, entry in self.routes():
+            airports = self._airports_from_key(key)
+            for h in entry.get("history", []):
+                price = h.get("price")
+                if price is None:
+                    continue
+                for a in airports:
+                    acc.setdefault(a, []).append(float(price))
+
+        stats: dict[str, dict[str, float]] = {}
+        for a, prices in acc.items():
+            ordered = sorted(prices)
+            n = len(ordered)
+            if n % 2:
+                median = ordered[n // 2]
+            else:
+                median = (ordered[n // 2 - 1] + ordered[n // 2]) / 2
+            stats[a] = {
+                "count": n,
+                "avg": sum(prices) / n,
+                "min": min(prices),
+                "median": median,
+            }
+        return stats

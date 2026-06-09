@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from datetime import date
 
+from src.airport_stats import format_airport_stats, rank_airports
 from src.config import RATE_LIMIT_COMBINATIONS, trim_airports
+from src.history import PriceHistory
 from src.sources import FlightResult
 from src.sources.cestujlevne import CestujLevneSource
 from src.sources.duffel import DuffelSource
@@ -183,3 +185,69 @@ def test_travelpayouts_parse_item():
     assert r.price == 510.0
     assert r.depart_date == date(2026, 9, 10)
     assert r.deep_link.startswith("https://")
+
+
+# -- Dynamická priorita letišť dle cen -------------------------------------
+def test_airport_stats_aggregation(tmp_path):
+    h = PriceHistory(path=tmp_path / "h.json")
+    # MUC vychází levně, FRA draho.
+    h.record("MUC-KIX-roundtrip", 400, "duffel")
+    h.record("MUC-KIX-roundtrip", 420, "duffel")
+    h.record("MUC-NRT-roundtrip", 440, "duffel")
+    h.record("FRA-KIX-roundtrip", 700, "duffel")
+    h.record("FRA-NRT-roundtrip", 720, "duffel")
+    h.record("FRA-HND-roundtrip", 740, "duffel")
+    stats = h.airport_stats()
+    assert stats["MUC"]["count"] == 3
+    assert stats["MUC"]["avg"] < stats["FRA"]["avg"]
+    assert stats["MUC"]["min"] == 400
+
+
+def test_airport_stats_openjaw_key(tmp_path):
+    h = PriceHistory(path=tmp_path / "h.json")
+    h.record("MUC-KIX-NRT-openjaw", 500, "duffel")
+    stats = h.airport_stats()
+    # Všechna tři letiště se započtou.
+    assert set(["MUC", "KIX", "NRT"]).issubset(stats.keys())
+
+
+def test_rank_airports_cheap_first():
+    airports = ["FRA", "MUC", "VIE"]
+    stats = {
+        "FRA": {"count": 5, "avg": 700},
+        "MUC": {"count": 5, "avg": 400},
+        "VIE": {"count": 5, "avg": 550},
+    }
+    assert rank_airports(airports, stats) == ["MUC", "VIE", "FRA"]
+
+
+def test_rank_airports_insufficient_data_keeps_order():
+    airports = ["FRA", "MUC", "VIE"]
+    # MUC má dost dat (levné), ostatní málo → MUC dopředu, zbytek původní pořadí.
+    stats = {
+        "MUC": {"count": 5, "avg": 400},
+        "FRA": {"count": 1, "avg": 300},  # málo dat, nepředbíhá
+        "VIE": {"count": 2, "avg": 350},
+    }
+    assert rank_airports(airports, stats, min_samples=3) == ["MUC", "FRA", "VIE"]
+
+
+def test_format_airport_stats_markers():
+    airports = ["MUC", "VIE", "FRA"]
+    stats = {
+        "MUC": {"count": 5, "avg": 400, "min": 380, "median": 400},
+        "VIE": {"count": 5, "avg": 550, "min": 500, "median": 550},
+        "FRA": {"count": 5, "avg": 700, "min": 650, "median": 700},
+    }
+    lines = format_airport_stats(airports, stats)
+    assert lines[0].startswith("💚")   # nejlevnější = MUC
+    assert "MUC" in lines[0]
+    assert lines[-1].startswith("💸")  # nejdražší = FRA
+    assert "FRA" in lines[-1]
+
+
+def test_format_airport_stats_no_data_section():
+    airports = ["MUC", "XXX"]
+    stats = {"MUC": {"count": 5, "avg": 400, "min": 380, "median": 400}}
+    lines = format_airport_stats(airports, stats)
+    assert any("Bez dostatku dat" in ln and "XXX" in ln for ln in lines)
