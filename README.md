@@ -14,10 +14,15 @@ Aplikace má dvě vrstvy zdrojů:
   `slices` *(náhrada za Kiwi Tequila – viz [poznámka](#proč-ne-kiwi))*
 - **Sky Scrapper (RapidAPI)** – Skyscanner data; ⚠️ free tier jen
   **100 requestů/měsíc**, proto se používá velmi úsporně
-- **Amadeus Self-Service API** – nativní open-jaw přes POST
-  `originDestinations`
 - **Travelpayouts Data API** – cache (až 7 dní stará), slouží jako záloha a
   pro detekci cenových trendů
+- **Amadeus Self-Service API** *(volitelný)* – nativní open-jaw přes POST
+  `originDestinations`. ⚠️ **Bez nastavených klíčů se přeskakuje** a
+  **API končí 17. 7. 2026** (viz [sunset](#amadeus-volitelný--brzy-končí)).
+  Aplikace funguje plně i bez něj.
+
+> **Minimálně stačí Duffel** (vrstva 1) + Telegram. Každý další zdroj je
+> volitelný – chybí-li klíč, zdroj se přeskočí a scan pokračuje dál.
 
 ### Proč ne Kiwi?
 
@@ -54,13 +59,13 @@ python -m pytest
 
 ## Získání API klíčů
 
-| Zdroj | Kde získat | Proměnná(é) |
-|-------|-----------|-------------|
-| Duffel | https://duffel.com → registrace → Dashboard → Developers → Access tokens (token `duffel_test_...` pro test, `duffel_live_...` pro produkci) | `DUFFEL_TOKEN` |
-| Sky Scrapper | https://rapidapi.com/apiheya/api/sky-scrapper → Subscribe (Basic/Free) → zkopíruj `X-RapidAPI-Key` | `RAPIDAPI_KEY` |
-| Amadeus | https://developers.amadeus.com → My Self-Service Workspace → New App | `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` |
-| Travelpayouts | https://www.travelpayouts.com → Dashboard → API tokens | `TRAVELPAYOUTS_TOKEN` |
-| Telegram bot | viz [Nastavení Telegram bota](#nastavení-telegram-bota) | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
+| Zdroj | Povinný? | Kde získat | Proměnná(é) |
+|-------|----------|-----------|-------------|
+| Duffel | **doporučeno** (hlavní zdroj) | https://duffel.com → registrace → Dashboard → Developers → Access tokens (token `duffel_test_...` pro test, `duffel_live_...` pro produkci) | `DUFFEL_TOKEN` |
+| Sky Scrapper | volitelný | https://rapidapi.com/apiheya/api/sky-scrapper → Subscribe (Basic/Free) → zkopíruj `X-RapidAPI-Key` | `RAPIDAPI_KEY` |
+| Travelpayouts | volitelný | https://www.travelpayouts.com → Dashboard → API tokens | `TRAVELPAYOUTS_TOKEN` |
+| Amadeus | volitelný, **končí 17. 7. 2026** | https://developers.amadeus.com → My Self-Service Workspace → New App | `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` |
+| Telegram bot | **povinný** (notifikace) | viz [Nastavení Telegram bota](#nastavení-telegram-bota) | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
 
 ### Duffel: test vs. produkce
 
@@ -79,7 +84,16 @@ Free tier má jen **100 requestů/měsíc** (~3/den). Aplikace proto:
 > Každý zdroj je volitelný – pokud klíč chybí, zdroj se přeskočí a scan
 > pokračuje dál. V denním souhrnu vidíš, které zdroje fungovaly.
 
-### Amadeus: test vs. produkce
+### Amadeus (volitelný – brzy končí)
+
+> ⚠️ **Amadeus Self-Service API bude ukončeno 17. července 2026.** Vzhledem
+> k blížícímu se konci ho **nedoporučujeme nově nasazovat** – aplikace běží
+> plně bez něj na Duffelu (+ volitelně Sky Scrapper / Travelpayouts).
+> **Bez nastavených `AMADEUS_CLIENT_ID`/`AMADEUS_CLIENT_SECRET` se zdroj
+> automaticky přeskakuje** (v denním souhrnu se vůbec neobjeví). Kód zůstává
+> funkční jako volitelný zdroj a je v něm označen komentáři `TODO(sunset)`.
+
+Pokud ho přesto chceš dočasně používat:
 
 - `AMADEUS_ENV=test` (výchozí) → `test.api.amadeus.com`, **syntetická data**
 - `AMADEUS_ENV=production` → `api.amadeus.com`, **reálné ceny** (stejný klíč,
@@ -89,11 +103,6 @@ Free tier má limit **2 000 requestů/měsíc**. Aplikace cachuje výsledky
 (stejný dotaz se neopakuje do 6 hodin) a počítá spotřebu v
 `data/price_history.json` (`_meta.amadeus_requests`).
 
-> ⚠️ **Amadeus sunset:** Self-Service API bude ukončeno **17. července 2026**.
-> Po tomto datu se spolehni na Duffel/Sky Scrapper/Travelpayouts jako primární
-> zdroje, nebo přejdi na placený Amadeus Enterprise. V kódu jsou označeny
-> `TODO(sunset)` komentáře.
-
 ## Nastavení GitHub Actions
 
 Workflow `.github/workflows/scan.yml` běží denně v **7:00 UTC** a lze ho
@@ -101,17 +110,20 @@ spustit i ručně (*Actions → Japan Flight Scan → Run workflow*).
 
 V repozitáři nastav **Settings → Secrets and variables → Actions**:
 
-Secrets:
+Secrets – **povinné minimum**:
 - `DUFFEL_TOKEN`
-- `RAPIDAPI_KEY`
-- `AMADEUS_CLIENT_ID`
-- `AMADEUS_CLIENT_SECRET`
-- `TRAVELPAYOUTS_TOKEN`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 
+Secrets – **volitelné** (chybí-li, zdroj se přeskočí):
+- `RAPIDAPI_KEY` (Sky Scrapper)
+- `TRAVELPAYOUTS_TOKEN`
+- `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` *(končí 17. 7. 2026 – viz výše)*
+
 Variables (volitelné):
 - `AMADEUS_ENV` = `test` nebo `production`
+- ladění plánovače: `SCAN_DATE_SAMPLES`, `SCAN_EXPLORE_FRACTION`,
+  `SCAN_COLD_START_TARGET_WEEKDAY`, `SCAN_COLD_START_TARGET_AIRPORT`
 
 ### Perzistence historie cen
 
@@ -119,7 +131,8 @@ Variables (volitelné):
 mechanismy** pro jistotu:
 
 1. Soubor je **commitován** v repozitáři (počáteční stav).
-2. Workflow používá `actions/cache@v4` pro předání mezi běhy.
+2. Workflow používá `actions/cache@v5` pro předání mezi běhy (krok „Save
+   price history" má `if: always()`, ať se historie uloží i při chybě scanu).
 
 Pokud chceš historii držet jen v gitu, můžeš odebrat cache kroky a místo
 toho po scanu soubor commitovat (např. `git add data/ && git commit && git
@@ -286,16 +299,22 @@ Nainstaluj `pip install -r requirements.txt`.
 ```
 src/
   sources/        # zdroje (duffel, skyscrapper, amadeus, travelpayouts, RSS, scraping, miles_and_more)
-  config.py       # konfigurace, letiště, rate-limity, trim_airports
+  config.py       # konfigurace, letiště, rate-limity, trim_airports, CZECH_WEEKDAYS
+  airport_stats.py # statistiky letišť/dnů (deal_sort_key, priority_order, format_*)
   calendar_renderer.py  # ASCII kalendář pro Telegram
-  history.py      # historie cen + anti-duplicita alertů + Amadeus počítadlo
-  notifier.py     # Telegram zprávy (3 typy)
+  history.py      # historie cen + anti-duplicita + coverage/weekday statistiky + počítadla kvót
+  notifier.py     # Telegram zprávy (3 typy, dělení dlouhých zpráv)
   scanner.py      # hlavní orchestrátor (python -m src.scanner)
 config/routes.yaml
 data/price_history.json
 .github/workflows/scan.yml
 tests/
+AGENTS.md         # pokyny pro AI coding agenty (konvence, architektura, invarianty)
 ```
+
+> Pracuješ na kódu s AI agentem (Claude Code apod.)? Přečti si
+> [`AGENTS.md`](AGENTS.md) – shrnuje příkazy, architekturu a invarianty,
+> které nesmí rozbít.
 
 ## Bezpečnost
 
