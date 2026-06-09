@@ -165,6 +165,35 @@ s podílem cen pod prahem (`12/40`) a mediánem dealu. Letiště bez dostatku da
 jsou vypsána zvlášť. V logu scanu se navíc zaloguje přeřazení
 (`Priorita EU letišť přeřazena dle cen: … → …`).
 
+### Chytré plánování vzorkování (coverage-driven)
+
+Databáze se plní **cíleně**, ne náhodně. Místo slepé rotace termínů
+plánovač před každým scanem spočítá z historie **vážené pokrytí** (recency
+decay – staré ceny „vyhasínají" s poločasem 30 dní, viz
+`COVERAGE_HALFLIFE_DAYS`) pro čtyři faktory: **den odletu** (7), **den
+návratu** (7) a **letiště** odletu/příletu.
+
+**Greedy zaplňování nejřidších buněk.** Den návratu je řiditelný přes počet
+nocí (`(den_odletu + nocí) mod 7`), takže lze cíleně trefit libovolnou
+dvojici den-odletu × den-návratu. Plánovač vybírá termíny tak, aby maximálně
+snížil deficit pokrytí napříč faktory – díky tomu se **všech 7 dnů odletu i
+návratu a všechna letiště pokryjí za ~7–10 dní** (oproti ~3–4 týdnům
+u náhodné rotace, kde se plýtvá na překryvy).
+
+**Dvě fáze (explore → exploit):**
+- **Studený start** – dokud nemá každý den / letiště aspoň
+  `SCAN_COLD_START_TARGET` (3) vážených pozorování, jede se čistě podle
+  deficitu (rovnoměrné pokrytí).
+- **Ladění** – `SCAN_EXPLORE_FRACTION` (30 %) rozpočtu drží čerstvost
+  (převzorkování vyhaslých buněk), zbytek **exploituje** nejakčnější dny
+  a letiště (vyšší `deal_rate`), aby se zpřesnily odhady a chytly nové
+  propady cen.
+
+Letiště s nedostatečným čerstvým pokrytím se navíc řadí **dopředu** (přežijí
+ořezání dle rate limitů), takže rychle nasbírají data. Vše je laditelné přes
+env proměnné `SCAN_DATE_SAMPLES`, `SCAN_COLD_START_TARGET`,
+`SCAN_EXPLORE_FRACTION`.
+
 ### Adaptivní ořezávání podle rate limitů
 
 Každý zdroj má limit kombinací `origin × destination` na jeden běh

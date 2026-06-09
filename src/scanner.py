@@ -22,7 +22,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from typing import Any, Optional
 
-from .airport_stats import format_airport_stats, format_weekday_stats, rank_airports
+from .airport_stats import (
+    format_airport_stats,
+    format_weekday_stats,
+    priority_order,
+    rank_airports,
+)
 from .config import (
     RATE_LIMIT_COMBINATIONS,
     Settings,
@@ -57,6 +62,14 @@ SCAN_MAX_WORKERS = max(1, int(os.getenv("SCAN_MAX_WORKERS", "6")))
 # délky pobytu, aniž by jeden běh dělal stovky requestů navíc.
 SCAN_DATE_SAMPLES = max(1, int(os.getenv("SCAN_DATE_SAMPLES", "2")))
 
+# Plánování vzorkování (coverage-driven greedy + recency decay).
+# Studený start: dokud nemá každý den v týdnu / letiště aspoň tolik vážených
+# pozorování, jede se čistě podle deficitu (rovnoměrné pokrytí). Pak se
+# rozpočet dělí EXPLORE_FRACTION na průzkum (čerstvost) a zbytek na exploit
+# (převzorkování nejakčnějších dnů/letišť).
+COLD_START_TARGET = max(0.0, float(os.getenv("SCAN_COLD_START_TARGET", "3")))
+EXPLORE_FRACTION = min(1.0, max(0.0, float(os.getenv("SCAN_EXPLORE_FRACTION", "0.3"))))
+
 
 def _window_bounds(year: int, months: list[int]) -> tuple[date, date]:
     """Vrátí (první den prvního měsíce, poslední den posledního měsíce)."""
@@ -65,6 +78,20 @@ def _window_bounds(year: int, months: list[int]) -> tuple[date, date]:
     last_day = _calendar.monthrange(year, last_month)[1]
     last = date(year, last_month, last_day)
     return first, last
+
+
+def _best_weekday(wd_data: dict[int, dict]) -> Optional[int]:
+    """Den v týdnu s nejvyšší deal frequency (tiebreaker levnější medián).
+    Vrací None, pokud nejsou data."""
+    if not wd_data:
+        return None
+    def _key(item):
+        wd, s = item
+        dm = s.get("deal_median")
+        if dm is None:
+            dm = s.get("all_median", float("inf"))
+        return (-s.get("deal_rate", 0.0), dm)
+    return min(wd_data.items(), key=_key)[0]
 
 
 class Scanner:
@@ -112,6 +139,10 @@ class Scanner:
         self.request_count = 0
         self.api_count = 0  # počet zapojených API zdrojů
         self.scanned_date_pairs: list[tuple[date, date]] = []
+        # Plánovací stav (naplní se v run() před scanem tras).
+        self.coverage: dict[str, dict] = {}
+        self.best_depart_wd: Optional[int] = None
+        self.best_return_wd: Optional[int] = None
 
     # -- Trasy ------------------------------------------------------------
     def _legs_for_route(self, route: dict[str, Any]) -> dict[str, list[str]]:
@@ -142,7 +173,12 @@ class Scanner:
         }
         date_from, date_to = _window_bounds(window["year"], window["months"])
         stay = self.settings.stay_length
-        date_pairs = self._pick_scan_dates(date_from, date_to, stay)
+        date_pairs = self._plan_scan_dates(
+            date_from, date_to, stay,
+            coverage=self.coverage,
+            best_depart_wd=self.best_depart_wd,
+            best_return_wd=self.best_return_wd,
+        )
         self.scanned_date_pairs = date_pairs
         results: list[FlightResult] = []
 
@@ -272,31 +308,89 @@ class Scanner:
         return d + timedelta(days=nights)
 
     @staticmethod
-    def _pick_scan_dates(date_from: date, date_to: date, stay: dict,
+    def _plan_scan_dates(date_from: date, date_to: date, stay: dict,
+                         coverage: Optional[dict] = None,
+                         best_depart_wd: Optional[int] = None,
+                         best_return_wd: Optional[int] = None,
                          samples: int = SCAN_DATE_SAMPLES,
                          today: Optional[date] = None) -> list[tuple[date, date]]:
-        """Vybere kombinace (odlet, návrat) pro dnešní běh.
+        """Coverage-driven výběr kombinací (odlet, návrat) pro dnešní běh.
 
-        Termíny deterministicky rotují podle dnešního data: každý den se
-        prohledá jiná část okna a jiná délka pobytu, takže se během pár
-        týdnů pokryje celé období – bez stovek requestů v jednom běhu.
+        Greedy zaplňuje nejřidší buňky pokrytí (den odletu × den návratu).
+        ``coverage`` jsou vážená (recency-decayed) počítadla z historie
+        (``PriceHistory.coverage_weights``). Den návratu je řiditelný přes
+        počet nocí: pro odlet ve dni ``a`` a ``n`` nocí padne návrat na
+        ``(a+n) % 7``; rozsah nocí > 7 umožní trefit libovolný den návratu.
+
+        Fáze:
+        - **studený start** (některý den má vážené pokrytí < COLD_START_TARGET)
+          → všechny vzorky podle deficitu (rovnoměrné pokrytí),
+        - **lazení** → EXPLORE_FRACTION vzorků na deficit (čerstvost), zbytek na
+          exploit (trefit ``best_depart_wd`` / ``best_return_wd`` =
+          historicky nejakčnější dny).
         """
         today = today or date.today()
+        coverage = coverage or {}
+        dep_cov = dict(coverage.get("depart_wd", {}) or {})
+        ret_cov = dict(coverage.get("return_wd", {}) or {})
         min_n = stay.get("min_nights", 12)
         max_n = stay.get("max_nights", min_n)
         start = max(date_from, today + timedelta(days=1))
         last_depart = max(date_to - timedelta(days=min_n), start)
-        span = (last_depart - start).days + 1
-        seed = today.toordinal()
+        span = (last_depart - start).days
+        if span < 0:  # okno už (skoro) prošlo
+            ret = min(start + timedelta(days=min_n), date_to)
+            return [(start, ret)]
+
+        def _deficit(cov: dict, wd: int) -> float:
+            return max(0.0, COLD_START_TARGET - cov.get(wd, 0.0))
+
+        cold = (
+            min((dep_cov.get(i, 0.0) for i in range(7)), default=0.0) < COLD_START_TARGET
+            or min((ret_cov.get(i, 0.0) for i in range(7)), default=0.0) < COLD_START_TARGET
+        )
+
         pairs: list[tuple[date, date]] = []
+        picked: list[date] = []
         for i in range(samples):
-            # Vzorky rozprostřené rovnoměrně po okně, denně posunuté.
-            offset = (seed + i * max(span // samples, 1)) % span
-            depart = start + timedelta(days=offset)
-            nights = min_n + ((seed + i) % (max_n - min_n + 1))
-            ret = min(depart + timedelta(days=nights), date_to)
-            if (depart, ret) not in pairs:
-                pairs.append((depart, ret))
+            # Deterministický, ale dlouhodobě EXPLORE_FRACTION průzkumných slotů.
+            slot = today.toordinal() * samples + i
+            explore = cold or (slot % 10) < round(EXPLORE_FRACTION * 10)
+            best: Optional[tuple[float, date, date]] = None
+            for off in range(span + 1):
+                depart = start + timedelta(days=off)
+                dwd = depart.weekday()
+                for nights in range(min_n, max_n + 1):
+                    ret = depart + timedelta(days=nights)
+                    if ret > date_to:
+                        break
+                    rwd = ret.weekday()
+                    if explore:
+                        score = _deficit(dep_cov, dwd) + _deficit(ret_cov, rwd)
+                    else:
+                        score = 0.0
+                        if best_depart_wd is not None and dwd == best_depart_wd:
+                            score += 2.0
+                        if best_return_wd is not None and rwd == best_return_wd:
+                            score += 2.0
+                        # mezi shodnými dny ber méně pokryté (čerstvost)
+                        score -= 0.01 * (dep_cov.get(dwd, 0.0) + ret_cov.get(rwd, 0.0))
+                    # rozprostři vzorky po okně – odměň vzdálenost od už vybraných
+                    if picked:
+                        nearest = min(abs((depart - p).days) for p in picked)
+                        score += 0.001 * nearest
+                    if (depart, ret) in pairs:
+                        continue
+                    if best is None or score > best[0]:
+                        best = (score, depart, ret)
+            if best is None:
+                break
+            _, depart, ret = best
+            pairs.append((depart, ret))
+            picked.append(depart)
+            # Promítni výběr do pokrytí, ať druhý vzorek necílí stejnou buňku.
+            dep_cov[depart.weekday()] = dep_cov.get(depart.weekday(), 0.0) + 1.0
+            ret_cov[ret.weekday()] = ret_cov.get(ret.weekday(), 0.0) + 1.0
         return pairs
 
     @staticmethod
@@ -368,10 +462,13 @@ class Scanner:
         stats = self.history.airport_stats(
             threshold=self.settings.price_threshold_eur
         )
+        airport_cov = self.coverage.get("airport", {})
         eu_before = self.settings.european_airports
         jp_before = self.settings.japanese_airports
-        eu_after = rank_airports(eu_before, stats)
-        jp_after = rank_airports(jp_before, stats)
+        # priority_order dává nedostatečně prozkoumaná letiště dopředu
+        # (průzkum), jinak řadí dle deal_rate (exploit).
+        eu_after = priority_order(eu_before, stats, airport_cov, COLD_START_TARGET)
+        jp_after = priority_order(jp_before, stats, airport_cov, COLD_START_TARGET)
 
         # Přepiš pořadí v konfiguraci → promítne se do resolve_airport_list
         # (all_european / all_japanese) a tím i do trim_airports.
@@ -389,6 +486,14 @@ class Scanner:
     # -- Hlavní běh -------------------------------------------------------
     def run(self) -> None:
         logger.info("=== Japan Flight Tracker – start scanu ===")
+        # Spočítej pokrytí (recency-decayed) a nejakčnější dny PŘED scanem –
+        # řídí jak prioritu letišť, tak greedy výběr termínů.
+        self.coverage = self.history.coverage_weights()
+        wd_stats = self.history.weekday_stats(
+            threshold=self.settings.price_threshold_eur
+        )
+        self.best_depart_wd = _best_weekday(wd_stats.get("depart", {}))
+        self.best_return_wd = _best_weekday(wd_stats.get("return", {}))
         # Dynamicky přeřaď letiště podle historických cen PŘED scanem,
         # aby levnější letiště přežila ořezání dle rate limitů.
         airport_stats = self._apply_dynamic_priority()

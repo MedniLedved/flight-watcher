@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 HISTORY_RETENTION_DAYS = 90
 ALERT_DEDUPE_HOURS = 24
 META_KEY = "_meta"
+# Poločas rozpadu váhy pozorování pro výpočet pokrytí (dny). Pozorování
+# starší ~poločasu má poloviční váhu → staré ceny postupně „vyhasínají"
+# a plánovač je znovu navštíví, aby data zůstala čerstvá.
+COVERAGE_HALFLIFE_DAYS = 30.0
 
 
 class PriceHistory:
@@ -226,6 +230,51 @@ class PriceHistory:
                 }
         return result
 
+    # -- pokrytí vzorkování (recency-decayed) ----------------------------
+    def coverage_weights(
+        self, halflife_days: float = COVERAGE_HALFLIFE_DAYS,
+        today: Optional[date] = None,
+    ) -> dict[str, dict]:
+        """Vážené pokrytí jednotlivých faktorů, počítané přímo z historie.
+
+        Každé pozorování přispívá vahou ``0.5 ** (věk_dní / halflife_days)`` –
+        staré ceny „vyhasínají", takže buňka, která nebyla dlouho vzorkována,
+        klesne a algoritmus plánování ji znovu navštíví (drží data čerstvá).
+
+        Vrací::
+
+            {
+              "depart_wd": {0..6: vážený počet},
+              "return_wd": {0..6: vážený počet},
+              "airport":   {kód: vážený počet},
+            }
+        """
+        today = today or date.today()
+        cov: dict[str, dict] = {
+            "depart_wd": {i: 0.0 for i in range(7)},
+            "return_wd": {i: 0.0 for i in range(7)},
+            "airport": {},
+        }
+        for key, entry in self.routes():
+            airports = self._airports_from_key(key)
+            for h in entry.get("history", []):
+                w = _decay_weight(h.get("date"), today, halflife_days)
+                if w <= 0:
+                    continue
+                for field, covkey in (("depart_date", "depart_wd"),
+                                      ("return_date", "return_wd")):
+                    raw = h.get(field)
+                    if not raw:
+                        continue
+                    try:
+                        wd = datetime.strptime(raw, "%Y-%m-%d").weekday()
+                    except ValueError:
+                        continue
+                    cov[covkey][wd] += w
+                for a in airports:
+                    cov["airport"][a] = cov["airport"].get(a, 0.0) + w
+        return cov
+
     # -- iterace pro souhrn ----------------------------------------------
     def routes(self) -> list[tuple[str, dict[str, Any]]]:
         return [(k, v) for k, v in self.data.items() if k != META_KEY]
@@ -282,6 +331,22 @@ class PriceHistory:
                 stats[a]["deal_rate"] = len(deals) / n
                 stats[a]["deal_median"] = _median(deals) if deals else None
         return stats
+
+
+def _decay_weight(raw_date: Optional[str], today: date,
+                  halflife_days: float) -> float:
+    """Váha pozorování podle stáří (0.5 na poločas). Záznam bez data nebo
+    s nečitelným datem se počítá plnou vahou (1.0)."""
+    if not raw_date:
+        return 1.0
+    try:
+        d = datetime.strptime(raw_date, "%Y-%m-%d").date()
+    except ValueError:
+        return 1.0
+    age = (today - d).days
+    if age <= 0:
+        return 1.0
+    return 0.5 ** (age / halflife_days)
 
 
 def _median(ordered: list[float]) -> float:

@@ -1,7 +1,7 @@
 """Testy pro datové zdroje a pomocné funkce konfigurace."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from src.airport_stats import format_airport_stats, rank_airports
 from src.config import RATE_LIMIT_COMBINATIONS, trim_airports
@@ -167,11 +167,11 @@ def test_duffel_prefers_segment_airports_over_city_slice():
     assert "2026-09-01" in r.deep_link
 
 
-# -- Rotace termínů hledání --------------------------------------------------
-def test_pick_scan_dates_within_window():
+# -- Plánování termínů (coverage-driven) -------------------------------------
+def test_plan_scan_dates_within_window():
     from src.scanner import Scanner
     stay = {"min_nights": 12, "max_nights": 25}
-    pairs = Scanner._pick_scan_dates(
+    pairs = Scanner._plan_scan_dates(
         date(2026, 9, 1), date(2026, 12, 31), stay,
         samples=3, today=date(2026, 6, 9),
     )
@@ -182,14 +182,40 @@ def test_pick_scan_dates_within_window():
         assert 12 <= (ret - dep).days <= 25
 
 
-def test_pick_scan_dates_rotates_daily():
+def test_plan_scan_dates_cold_start_fills_uncovered_weekdays():
+    """Studený start: druhý vzorek necílí stejný den odletu jako první."""
     from src.scanner import Scanner
     stay = {"min_nights": 12, "max_nights": 25}
-    a = Scanner._pick_scan_dates(date(2026, 9, 1), date(2026, 12, 31), stay,
-                                 samples=2, today=date(2026, 6, 9))
-    b = Scanner._pick_scan_dates(date(2026, 9, 1), date(2026, 12, 31), stay,
-                                 samples=2, today=date(2026, 6, 10))
-    assert a != b  # každý den jiné termíny → postupné pokrytí okna
+    # Prázdné pokrytí → vše má deficit → greedy pokrývá různé dny.
+    pairs = Scanner._plan_scan_dates(
+        date(2026, 9, 1), date(2026, 12, 31), stay,
+        coverage={}, samples=2, today=date(2026, 6, 9),
+    )
+    assert len(pairs) == 2
+    dep_weekdays = {dep.weekday() for dep, _ in pairs}
+    assert len(dep_weekdays) == 2  # dva různé dny odletu
+
+
+def test_plan_scan_dates_exploit_targets_best_weekday():
+    """Po studeném startu míří exploit vzorek na nejakčnější den."""
+    from src.scanner import Scanner
+    stay = {"min_nights": 12, "max_nights": 25}
+    # Nasyť pokrytí nad COLD_START_TARGET, aby se vyplo cold-start.
+    full = {i: 10.0 for i in range(7)}
+    coverage = {"depart_wd": dict(full), "return_wd": dict(full), "airport": {}}
+    # Najdi den, kdy aspoň jeden slot není explore (deterministicky dle data).
+    saw_best = False
+    for d in range(20):
+        today = date(2026, 6, 9) + timedelta(days=d)
+        pairs = Scanner._plan_scan_dates(
+            date(2026, 9, 1), date(2026, 12, 31), stay,
+            coverage=coverage, best_depart_wd=2, best_return_wd=4,
+            samples=2, today=today,
+        )
+        if any(dep.weekday() == 2 and ret.weekday() == 4 for dep, ret in pairs):
+            saw_best = True
+            break
+    assert saw_best
 
 
 # -- Sky Scrapper parsing --------------------------------------------------
@@ -487,3 +513,40 @@ def test_format_weekday_stats_returns_lines_with_best_day():
     assert any("PO" in l for l in lines)  # best day Monday shown uppercased
     assert any("+50" in l for l in lines)  # Wednesday 350 vs Monday 300 = +50
     assert any("+80" in l for l in lines)  # Friday 380 vs Monday 300 = +80
+
+
+# -- coverage_weights (recency decay) --------------------------------------
+def test_coverage_weights_decays_old_observations():
+    import tempfile, os
+    from src.history import PriceHistory
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    try:
+        h = PriceHistory(path)
+        today = date(2026, 6, 9)
+        # Čerstvé pozorování (dnes) vs. staré (60 dní = 2 poločasy → ~0.25).
+        h.record("FRA-NRT-roundtrip", 400, "duffel", on_date=today,
+                 depart_date=date(2026, 9, 7), return_date=date(2026, 9, 21))
+        h.record("FRA-NRT-roundtrip", 400, "duffel",
+                 on_date=today - timedelta(days=60),
+                 depart_date=date(2026, 9, 8), return_date=date(2026, 9, 22))
+        cov = h.coverage_weights(halflife_days=30, today=today)
+        # Pondělí (depart 2026-09-07) plná váha ~1.0
+        assert abs(cov["depart_wd"][0] - 1.0) < 0.01
+        # Úterý (depart 2026-09-08, staré 60 dní) ~0.25
+        assert abs(cov["depart_wd"][1] - 0.25) < 0.02
+        assert cov["airport"]["FRA"] > cov["depart_wd"][1]  # FRA má obě pozorování
+    finally:
+        os.unlink(path)
+
+
+def test_priority_order_puts_undersampled_first():
+    from src.airport_stats import priority_order
+    airports = ["FRA", "MUC", "PRG"]
+    stats = {
+        "FRA": {"count": 10, "deal_rate": 0.5, "deal_median": 400, "median": 400, "avg": 500, "min": 380, "deals": 5},
+        "MUC": {"count": 10, "deal_rate": 0.1, "deal_median": 450, "median": 450, "avg": 600, "min": 420, "deals": 1},
+    }
+    cov = {"FRA": 10.0, "MUC": 10.0, "PRG": 0.0}  # PRG neprozkoumané
+    order = priority_order(airports, stats, cov, cold_target=3.0)
+    assert order[0] == "PRG"  # neprozkoumané dopředu

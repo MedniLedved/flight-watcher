@@ -55,6 +55,27 @@ def rank_airports(airports: list[str], stats: dict[str, dict],
     return rated + rest
 
 
+def priority_order(airports: list[str], stats: dict[str, dict],
+                   airport_coverage: dict[str, float],
+                   cold_target: float, min_samples: int = MIN_SAMPLES) -> list[str]:
+    """Pořadí letišť pro scan: nejdřív průzkum, pak exploitace.
+
+    Letiště s nedostatečným *čerstvým* pokrytím (vážený počet < ``cold_target``)
+    se dají DOPŘEDU (vzestupně dle pokrytí = nejméně prozkoumaná první), aby
+    rychle nasbírala data a přežila ořezání dle rate limitů. Zbytek se seřadí
+    klasicky podle ``deal_rate`` (rank_airports). Jakmile mají všechna letiště
+    dost dat, ``under`` je prázdný a vrací se čistě exploit pořadí.
+    """
+    under = sorted(
+        (a for a in airports if airport_coverage.get(a, 0.0) < cold_target),
+        key=lambda a: airport_coverage.get(a, 0.0),
+    )
+    under_set = set(under)
+    ranked = [a for a in rank_airports(airports, stats, min_samples)
+              if a not in under_set]
+    return under + ranked
+
+
 def format_airport_stats(airports: list[str], stats: dict[str, dict],
                          min_samples: int = MIN_SAMPLES) -> list[str]:
     """Vytvoří řádky pro zobrazení uživateli – letiště od nejakčnějšího po
