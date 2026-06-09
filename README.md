@@ -139,13 +139,20 @@ Vše se konfiguruje v `config/routes.yaml`:
 - `search_windows` – roky a měsíce hledání
 - `stay_length` – min/max počet nocí
 
-### Dynamická priorita letišť podle historických cen
+### Dynamická priorita letišť podle podílu dealů
 
-Aplikace se **učí z historie**: před každým scanem spočítá průměrnou
-pozorovanou cenu pro každé letiště (`src/airport_stats.py`) a **přeřadí
-primární letiště** tak, aby ta statisticky levnější byla na začátku seznamu.
-Díky tomu při ořezání podle rate limitů (viz níže) přežijí právě levná
-letiště, zatímco drahá se odřežou první.
+Aplikace se **učí z historie**: před každým scanem spočítá pro každé letiště
+**podíl pozorování pod prahem** (`deal_rate` v `src/airport_stats.py`)
+a **přeřadí primární letiště** tak, aby ta nejakčnější byla na začátku
+seznamu. Díky tomu při ořezání podle rate limitů (viz níže) přežijí právě
+letiště, která nejčastěji generují dealy.
+
+**Proč podíl dealů, a ne průměrná cena?** Letiště může mít vysoký průměr
+(drahé základní ceny), ale zároveň hodně výprodejů pod prahem – a právě o ty
+nám jde. Průměr by takové letiště nespravedlivě potopil. `deal_rate` je
+odolný vůči drahým outlierům a přímo modeluje cíl aplikace (najít dealy).
+Tiebreaker je **medián cen dealů** (levnější dealy = lepší); letiště zatím
+bez dealů se řadí dle celkového mediánu.
 
 - Bere se v potaz jen letiště s alespoň **3 pozorováními** (`MIN_SAMPLES`);
   letiště s málo daty si drží původní pořadí z `routes.yaml`.
@@ -153,8 +160,8 @@ letiště, zatímco drahá se odřežou první.
   postupně sama vylaďuje, jak přibývá historie.
 
 **Kde to vidíš:** v **denním Telegram souhrnu** je sekce *„Priorita letišť
-dle historických cen"* – letiště od nejlevnějšího (💚) po nejdražší (💸)
-s průměrnou cenou, minimem a počtem pozorování `n`. Letiště bez dostatku dat
+dle podílu dealů"* – letiště od nejakčnějšího (💚) po nejméně akční (💸)
+s podílem cen pod prahem (`12/40`) a mediánem dealu. Letiště bez dostatku dat
 jsou vypsána zvlášť. V logu scanu se navíc zaloguje přeřazení
 (`Priorita EU letišť přeřazena dle cen: … → …`).
 

@@ -197,8 +197,8 @@ class TelegramNotifier:
         # ořezávání dle rate limitů).
         if eu_airport_stats or jp_airport_stats:
             lines.append("")
-            lines.append("📈 <b>Priorita letišť dle historických cen</b> "
-                         "(💚 levné → 💸 drahé):")
+            lines.append("📈 <b>Priorita letišť dle podílu dealů</b> "
+                         "(💚 nejvíc akčních → 💸 nejmíň):")
             if eu_airport_stats:
                 lines.append("<b>Evropa:</b>")
                 lines.extend(f"  {e(line)}" for line in eu_airport_stats)

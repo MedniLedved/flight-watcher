@@ -365,7 +365,9 @@ class Scanner:
     def _apply_dynamic_priority(self) -> dict[str, dict[str, float]]:
         """Přeřadí primární letiště podle historických cen (levná dopředu).
         Vrací spočítanou statistiku (pro zobrazení v souhrnu)."""
-        stats = self.history.airport_stats()
+        stats = self.history.airport_stats(
+            threshold=self.settings.price_threshold_eur
+        )
         eu_before = self.settings.european_airports
         jp_before = self.settings.japanese_airports
         eu_after = rank_airports(eu_before, stats)
@@ -509,9 +511,9 @@ class Scanner:
                 f"Sky Scrapper využití: {self.history.skyscrapper_usage()}/"
                 f"{SKYSCRAPPER_MONTHLY_LIMIT} requestů tento měsíc"
             )
-        # Statistika letišť dle cen (vč. dnešních záznamů) – seřazeno
-        # od nejlevnějšího. Reflektuje dynamicky upravenou prioritu.
-        airport_stats = self.history.airport_stats()
+        # Statistika letišť dle podílu dealů (vč. dnešních záznamů) – seřazeno
+        # od nejakčnějšího. Reflektuje dynamicky upravenou prioritu.
+        airport_stats = self.history.airport_stats(threshold=threshold)
         eu_lines = format_airport_stats(
             self.settings.european_airports, airport_stats
         )

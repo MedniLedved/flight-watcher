@@ -181,12 +181,21 @@ class PriceHistory:
             parts = parts[:-1]
         return [p for p in parts if p]
 
-    def airport_stats(self) -> dict[str, dict[str, float]]:
+    def airport_stats(
+        self, threshold: Optional[float] = None
+    ) -> dict[str, dict[str, float]]:
         """Spočítá statistiku pozorovaných cen pro každé letiště napříč všemi
-        trasami v historii. Vrací {kód: {count, avg, min, median}}.
+        trasami v historii. Vrací {kód: {count, avg, min, median, ...}}.
 
         Cena trasy se přičítá každému letišti, které se na trase podílí –
-        slouží jako proxy pro to, jak "levné" letiště bývá.
+        slouží jako proxy pro to, jak "akční" letiště bývá.
+
+        Je-li zadán ``threshold`` (práh pro deal), přidá navíc:
+        - ``deals``       – počet pozorování pod prahem,
+        - ``deal_rate``   – podíl pozorování pod prahem (0–1),
+        - ``deal_median`` – medián cen pod prahem (None, pokud žádné nejsou).
+        Tato metrika lépe modeluje cíl aplikace (najít dealy) než průměr –
+        letiště s mnoha akčními letenkami se prosadí i přes vysoký průměr.
         """
         acc: dict[str, list[float]] = {}
         for key, entry in self.routes():
@@ -202,14 +211,25 @@ class PriceHistory:
         for a, prices in acc.items():
             ordered = sorted(prices)
             n = len(ordered)
-            if n % 2:
-                median = ordered[n // 2]
-            else:
-                median = (ordered[n // 2 - 1] + ordered[n // 2]) / 2
             stats[a] = {
                 "count": n,
                 "avg": sum(prices) / n,
                 "min": min(prices),
-                "median": median,
+                "median": _median(ordered),
             }
+            if threshold is not None:
+                deals = [p for p in ordered if p < threshold]
+                stats[a]["deals"] = len(deals)
+                stats[a]["deal_rate"] = len(deals) / n
+                stats[a]["deal_median"] = _median(deals) if deals else None
         return stats
+
+
+def _median(ordered: list[float]) -> float:
+    """Medián z předem seřazeného seznamu (prázdný → 0.0)."""
+    n = len(ordered)
+    if n == 0:
+        return 0.0
+    if n % 2:
+        return ordered[n // 2]
+    return (ordered[n // 2 - 1] + ordered[n // 2]) / 2
