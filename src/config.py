@@ -103,6 +103,20 @@ def airport_name(code: str) -> str:
     return AIRPORT_NAMES.get(code.upper(), code.upper())
 
 
+def _parse_json_env(name: str) -> dict:
+    """Načte env proměnnou jako JSON objekt; při chybě/prázdnu vrátí {}."""
+    import json
+    raw = os.getenv(name)
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+        return value if isinstance(value, dict) else {}
+    except (json.JSONDecodeError, ValueError):
+        logger.warning("%s není platný JSON – ignoruji", name)
+        return {}
+
+
 @dataclass
 class Settings:
     """Konfigurace načtená z prostředí (.env) a routes.yaml."""
@@ -127,6 +141,9 @@ class Settings:
     # Opt-in: ignorovat robots.txt u Miles & More (vědomé rozhodnutí uživatele
     # pro osobní měsíční monitoring). Výchozí False = robots.txt se ctí.
     milesandmore_ignore_robots: bool = False
+    # Volitelné HTTP hlavičky pro Miles & More jako JSON řetězec, typicky
+    # {"Cookie": "..."} z přihlášené prohlížečové relace pro průchod anti-botem.
+    milesandmore_headers: dict = field(default_factory=dict)
 
     # routes.yaml
     routes_config: dict[str, Any] = field(default_factory=dict)
@@ -163,6 +180,7 @@ class Settings:
                 os.getenv("MILESANDMORE_IGNORE_ROBOTS", "false").lower()
                 in ("1", "true", "yes")
             ),
+            milesandmore_headers=_parse_json_env("MILESANDMORE_HEADERS"),
             routes_config=routes_config,
         )
 

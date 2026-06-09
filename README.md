@@ -200,15 +200,34 @@ Jack's nemá veřejné API a scrapuje se HTML:
   `Jack's ✗ (chyba)`.
 
 **Miles & More mileage bargains nic nevrací:**
-- Kontrola běží **jen 1. dne v měsíci** – jindy se zdroj záměrně přeskočí
-  (v logu `Miles & More: přeskočeno`).
-- Stránka je **JavaScriptová SPA s anti-bot ochranou** a nemá veřejné API,
-  takže HTML scraping je best-effort (může vrátit prázdno).
-- Pokud `robots.txt` scraping zakazuje, zdroj ho ve výchozím stavu respektuje
-  a přeskočí. Pro osobní monitoring lze nastavit `MILESANDMORE_IGNORE_ROBOTS=true`
-  (vědomý opt-in).
-- Nejspolehlivější je najít skutečný JSON endpoint nabídek (DevTools → Network)
-  a nastavit ho přes `MILESANDMORE_API_URL` – pak se parsuje JSON místo HTML.
+
+Kontrola běží **jen 1. dne v měsíci** – jindy se zdroj záměrně přeskočí
+(v logu `Miles & More: přeskočeno`). Zdroj zkouší data získat **ve třech
+krocích** v tomto pořadí:
+
+1. **Explicitní JSON endpoint** z `MILESANDMORE_API_URL` (zachyť ho ve svém
+   prohlížeči: DevTools → Network → filtr XHR při načtení sekce „mileage
+   bargains", zkopíruj Request URL).
+2. **Auto-pokus o AEM `.model.json`** – M&M běží na Adobe Experience Manager,
+   kde komponenty bývají dostupné jako JSON (`…/flights.model.json`).
+3. **Scraping HTML** stránky (best-effort).
+
+> ⚠️ **Důležité zjištění:** doména `miles-and-more.com` je za **Akamai
+> anti-bot ochranou**, která vrací **403 i na obyčejný serverový požadavek**
+> (ověřeno proti živému serveru) – a to jak pro HTML, tak pro `.model.json`.
+> Plain `requests` z GitHub Actions tedy nejspíš dostane 403 také.
+>
+> **Jediná spolehlivá cesta** je předat hlavičky z přihlášené prohlížečové
+> relace přes `MILESANDMORE_HEADERS` (JSON), typicky `Cookie`:
+> ```
+> MILESANDMORE_HEADERS={"Cookie": "zkopírovaná_cookie_z_prohlížeče"}
+> ```
+> Cookie postav jako **GitHub Actions Secret** (obsahuje session). Bez ní
+> zdroj 403 zaloguje, označí se v souhrnu jako `Miles & More ✗` a scan
+> pokračuje dál.
+
+Pokud `robots.txt` scraping zakazuje, zdroj ho ve výchozím stavu respektuje;
+pro osobní monitoring lze nastavit `MILESANDMORE_IGNORE_ROBOTS=true`.
 
 **Žádné ceny v souhrnu** – zkontroluj, že máš nastavené API klíče a (u
 Amadeus) že nejsi na syntetickém testovacím prostředí (`AMADEUS_ENV`).

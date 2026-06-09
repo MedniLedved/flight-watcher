@@ -288,3 +288,30 @@ def test_mm_deals_from_api_payload():
     assert deals[0].source == "miles-and-more.com"
     assert deals[0].price_eur is None
     assert "Tokyo" in deals[0].title
+
+
+def test_mm_model_json_candidate_derivation():
+    from src.sources.miles_and_more import MilesAndMoreSource
+    src = MilesAndMoreSource(
+        page_url="https://www.miles-and-more.com/de/en/spend/flights.html#mileagebargains"
+    )
+    cands = src._model_json_candidates()
+    assert "https://www.miles-and-more.com/de/en/spend/flights.model.json" in cands
+
+
+def test_mm_deals_from_nested_aem_tree():
+    from src.sources.miles_and_more import MilesAndMoreSource
+    src = MilesAndMoreSource()
+    # Bez čistého 'offers' seznamu – vnořený AEM strom.
+    payload = {
+        ":items": {
+            "root": {
+                "card1": {"title": "Europe to Tokyo for 35,000 miles"},
+                "card2": {"title": "Europe to New York 30,000 miles"},
+            }
+        }
+    }
+    deals = src._deals_from_offers(payload)
+    assert len(deals) == 1
+    assert "Tokyo" in deals[0].title
+    assert deals[0].source == "miles-and-more.com"

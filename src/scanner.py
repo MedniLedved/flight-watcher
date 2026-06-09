@@ -280,6 +280,7 @@ class Scanner:
                 mm = MilesAndMoreSource(
                     api_url=self.settings.milesandmore_api_url,
                     ignore_robots=self.settings.milesandmore_ignore_robots,
+                    extra_headers=self.settings.milesandmore_headers,
                 ).fetch()
                 deals += mm
                 status["miles_and_more"] = True
