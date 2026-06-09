@@ -441,3 +441,49 @@ def test_mm_air_offers_empty_origins_allowed():
     deals = src._deals_from_air_offers([offer])
     assert len(deals) == 1
     assert deals[0].source == "miles-and-more.com"
+
+
+# -- weekday_stats ---------------------------------------------------------
+def test_weekday_stats_best_day_has_highest_deal_rate():
+    from src.history import PriceHistory
+    from datetime import date
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    try:
+        h = PriceHistory(path)
+        # Monday (2026-06-08 = Monday) – 3 cheap flights
+        for price in [300, 310, 290]:
+            h.record("FRA-NRT-roundtrip", price, "duffel",
+                     depart_date=date(2026, 6, 8), return_date=date(2026, 6, 22))
+        # Wednesday (2026-06-10 = Wednesday) – 1 cheap, 2 expensive
+        h.record("FRA-NRT-roundtrip", 310, "duffel",
+                 depart_date=date(2026, 6, 10), return_date=date(2026, 6, 24))
+        h.record("FRA-NRT-roundtrip", 600, "duffel",
+                 depart_date=date(2026, 6, 10), return_date=date(2026, 6, 24))
+        h.record("FRA-NRT-roundtrip", 700, "duffel",
+                 depart_date=date(2026, 6, 10), return_date=date(2026, 6, 24))
+
+        stats = h.weekday_stats(threshold=500)
+        dep = stats["depart"]
+        # Monday (0) should have deal_rate 1.0, Wednesday (2) should have 1/3
+        assert dep[0]["deal_rate"] == 1.0
+        assert abs(dep[2]["deal_rate"] - 1/3) < 0.01
+    finally:
+        os.unlink(path)
+
+
+def test_format_weekday_stats_returns_lines_with_best_day():
+    from src.airport_stats import format_weekday_stats
+    stats = {
+        "depart": {
+            0: {"deal_rate": 1.0, "count": 5, "deals": 5, "deal_median": 300.0, "all_median": 300.0},
+            2: {"deal_rate": 0.3, "count": 5, "deals": 2, "deal_median": 350.0, "all_median": 600.0},
+            4: {"deal_rate": 0.2, "count": 5, "deals": 1, "deal_median": 380.0, "all_median": 700.0},
+        },
+        "return": {},
+    }
+    lines = format_weekday_stats(stats)
+    assert any("PO" in l for l in lines)  # best day Monday shown uppercased
+    assert any("+50" in l for l in lines)  # Wednesday 350 vs Monday 300 = +50
+    assert any("+80" in l for l in lines)  # Friday 380 vs Monday 300 = +80

@@ -82,6 +82,53 @@ def format_airport_stats(airports: list[str], stats: dict[str, dict],
     return lines
 
 
+_WEEKDAY_CZ = ["po", "út", "st", "čt", "pá", "so", "ne"]
+
+
+def format_weekday_stats(weekday_stats: dict[str, dict[int, dict]]) -> list[str]:
+    """Formátuje statistiku dní v týdnu pro Telegram.
+
+    Pro každý směr (odlet / přílet) vypíše nejlepší den a pro ostatní dny
+    rozdíl mediánu dealu oproti nejlepšímu dni (v EUR).
+
+    Vrací prázdný seznam, pokud nejsou dostatečná data.
+    """
+    lines: list[str] = []
+    labels = [("depart", "Odlet"), ("return", "Přílet")]
+    for field, title in labels:
+        wd_data = weekday_stats.get(field, {})
+        # Potřebujeme alespoň 2 dny s daty a celkový počet záznamů >= 5.
+        if len(wd_data) < 2 or sum(s["count"] for s in wd_data.values()) < 5:
+            continue
+        # Seřaď dny dle deal_rate sestupně, tiebreaker deal_median vzestupně.
+        def _key(item):
+            wd, s = item
+            dm = s["deal_median"] if s["deal_median"] is not None else s["all_median"]
+            return (-s["deal_rate"], dm)
+        sorted_days = sorted(wd_data.items(), key=_key)
+        best_wd, best_s = sorted_days[0]
+        best_median = (best_s["deal_median"] if best_s["deal_median"] is not None
+                       else best_s["all_median"])
+        lines.append(f"📅 <b>Nejlevnější den – {title}:</b>")
+        best_pct = best_s["deal_rate"] * 100
+        lines.append(
+            f"  🏆 {_WEEKDAY_CZ[best_wd].upper()}: "
+            f"{best_pct:.0f} % dealů, medián {best_median:.0f} EUR"
+        )
+        for wd, s in sorted_days[1:]:
+            if s["count"] < 2:
+                continue
+            dm = s["deal_median"] if s["deal_median"] is not None else s["all_median"]
+            diff = dm - best_median
+            diff_str = f"+{diff:.0f}" if diff >= 0 else f"{diff:.0f}"
+            pct = s["deal_rate"] * 100
+            lines.append(
+                f"  {_WEEKDAY_CZ[wd]}: {pct:.0f} % dealů, "
+                f"medián {dm:.0f} EUR ({diff_str} EUR vs. {_WEEKDAY_CZ[best_wd]})"
+            )
+    return lines
+
+
 def _describe(s: dict) -> str:
     """Popíše letiště dle deal frequency; fallback na průměr, když práh chybí."""
     if "deal_rate" not in s:

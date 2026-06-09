@@ -162,7 +162,8 @@ class TelegramNotifier:
                            source_status: dict[str, bool],
                            stats: dict[str, str],
                            eu_airport_stats: Optional[list[str]] = None,
-                           jp_airport_stats: Optional[list[str]] = None) -> bool:
+                           jp_airport_stats: Optional[list[str]] = None,
+                           weekday_stats_lines: Optional[list[str]] = None) -> bool:
         e = html.escape
         now = datetime.now()
         month_gen = CZECH_MONTHS_GEN[now.month]
@@ -205,6 +206,10 @@ class TelegramNotifier:
             if jp_airport_stats:
                 lines.append("<b>Japonsko:</b>")
                 lines.extend(f"  {e(line)}" for line in jp_airport_stats)
+
+        if weekday_stats_lines:
+            lines.append("")
+            lines.extend(weekday_stats_lines)
 
         lines.append("")
         for stat in stats.values():

@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from typing import Any, Optional
 
-from .airport_stats import format_airport_stats, rank_airports
+from .airport_stats import format_airport_stats, format_weekday_stats, rank_airports
 from .config import (
     RATE_LIMIT_COMBINATIONS,
     Settings,
@@ -437,7 +437,9 @@ class Scanner:
             should_send = below_threshold and self.history.should_alert(
                 key, f.price
             )
-            self.history.record(key, f.price, f.source, f.depart_date)
+            self.history.record(key, f.price, f.source, f.depart_date,
+                                depart_date=f.depart_date,
+                                return_date=f.return_date)
 
             if should_send:
                 if self.notifier.send_price_alert(f, delta=delta):
@@ -520,10 +522,13 @@ class Scanner:
         jp_lines = format_airport_stats(
             self.settings.japanese_airports, airport_stats
         )
+        weekday_stats = self.history.weekday_stats(threshold=threshold)
+        wd_lines = format_weekday_stats(weekday_stats)
 
         sent = self.notifier.send_daily_summary(
             summary_lines, source_status, stats,
             eu_airport_stats=eu_lines, jp_airport_stats=jp_lines,
+            weekday_stats_lines=wd_lines,
         )
         if self.notifier.enabled and not sent:
             logger.warning(

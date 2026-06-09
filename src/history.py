@@ -83,7 +83,9 @@ class PriceHistory:
 
     # -- zápis ------------------------------------------------------------
     def record(self, route_key: str, price: float, source: str,
-               on_date: Optional[date] = None) -> None:
+               on_date: Optional[date] = None,
+               depart_date: Optional[date] = None,
+               return_date: Optional[date] = None) -> None:
         on_date = on_date or date.today()
         entry = self.data.setdefault(route_key, {
             "all_time_min": price,
@@ -96,11 +98,16 @@ class PriceHistory:
         entry["last_price"] = price
         if price < entry.get("all_time_min", price + 1):
             entry["all_time_min"] = price
-        entry.setdefault("history", []).append({
+        rec: dict = {
             "date": on_date.isoformat(),
             "price": price,
             "source": source,
-        })
+        }
+        if depart_date:
+            rec["depart_date"] = depart_date.isoformat()
+        if return_date:
+            rec["return_date"] = return_date.isoformat()
+        entry.setdefault("history", []).append(rec)
         self._prune_history(entry)
 
     def _prune_history(self, entry: dict[str, Any]) -> None:
@@ -166,6 +173,58 @@ class PriceHistory:
         meta = self.data.setdefault(META_KEY, {})
         reqs = meta.setdefault(meta_field, {})
         reqs[month] = reqs.get(month, 0) + count
+
+    # -- statistika dne v týdnu ------------------------------------------
+    def weekday_stats(
+        self, threshold: Optional[float] = None
+    ) -> dict[str, dict[int, dict]]:
+        """Statistika deal-frequency per den v týdnu (0=po … 6=ne).
+
+        Vrací dva slovníky (depart / return), každý mapuje weekday → stats dict:
+          {
+            "count": int,           # celkem pozorování
+            "deals": int,           # počet pod prahem
+            "deal_rate": float,     # podíl pod prahem
+            "deal_median": float|None,  # medián cen pod prahem
+            "all_median": float,    # medián všech cen (pro EUR-rozdíl)
+          }
+
+        Jen záznamy, kde je uloženo depart_date resp. return_date.
+        """
+        dep_acc: dict[int, list[float]] = {i: [] for i in range(7)}
+        ret_acc: dict[int, list[float]] = {i: [] for i in range(7)}
+        for _, entry in self.routes():
+            for h in entry.get("history", []):
+                price = h.get("price")
+                if price is None:
+                    continue
+                price = float(price)
+                for field, acc in (("depart_date", dep_acc), ("return_date", ret_acc)):
+                    raw = h.get(field)
+                    if not raw:
+                        continue
+                    try:
+                        wd = datetime.strptime(raw, "%Y-%m-%d").weekday()
+                    except ValueError:
+                        continue
+                    acc[wd].append(price)
+
+        result: dict[str, dict[int, dict]] = {"depart": {}, "return": {}}
+        for label, acc in (("depart", dep_acc), ("return", ret_acc)):
+            for wd, prices in acc.items():
+                if not prices:
+                    continue
+                ordered = sorted(prices)
+                n = len(ordered)
+                deals = [p for p in ordered if threshold is None or p < threshold]
+                result[label][wd] = {
+                    "count": n,
+                    "deals": len(deals),
+                    "deal_rate": len(deals) / n if n else 0.0,
+                    "deal_median": _median(sorted(deals)) if deals else None,
+                    "all_median": _median(ordered),
+                }
+        return result
 
     # -- iterace pro souhrn ----------------------------------------------
     def routes(self) -> list[tuple[str, dict[str, Any]]]:
