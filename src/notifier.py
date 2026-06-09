@@ -62,9 +62,20 @@ class TelegramNotifier:
         }
         try:
             resp = self.session.post(url, json=payload, timeout=30)
-            resp.raise_for_status()
         except requests.RequestException as exc:
-            logger.error("Telegram odeslání selhalo: %s", exc)
+            logger.error("Telegram odeslání selhalo (síť): %s", exc)
+            return False
+        if not resp.ok:
+            # Telegram vrací popis chyby v JSON (description) – vypiš ho, ať je
+            # jasné PROČ to selhalo (špatný chat_id, bot bez /start, atd.).
+            detail = resp.text
+            try:
+                detail = resp.json().get("description", detail)
+            except ValueError:
+                pass
+            logger.error(
+                "Telegram odeslání selhalo: HTTP %s – %s", resp.status_code, detail
+            )
             return False
         return True
 

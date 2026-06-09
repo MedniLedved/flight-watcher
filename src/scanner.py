@@ -66,6 +66,13 @@ class Scanner:
         self.notifier = TelegramNotifier(
             self.settings.telegram_bot_token, self.settings.telegram_chat_id
         )
+        if self.notifier.enabled:
+            logger.info("Telegram: nakonfigurován (souhrn se odešle)")
+        else:
+            logger.warning(
+                "Telegram: NENÍ nakonfigurován – chybí TELEGRAM_BOT_TOKEN nebo "
+                "TELEGRAM_CHAT_ID. Žádné zprávy se neodešlou!"
+            )
 
         # Inicializace zdrojů (jen pokud jsou credentials).
         self.duffel = (
@@ -432,10 +439,19 @@ class Scanner:
             self.settings.japanese_airports, airport_stats
         )
 
-        self.notifier.send_daily_summary(
+        sent = self.notifier.send_daily_summary(
             summary_lines, source_status, stats,
             eu_airport_stats=eu_lines, jp_airport_stats=jp_lines,
         )
+        if self.notifier.enabled and not sent:
+            # Telegram je nakonfigurován, ale odeslání selhalo – vyhoď chybu,
+            # ať GitHub Actions běh zčervená a problém je hned vidět.
+            raise RuntimeError(
+                "Denní souhrn se NEPODAŘILO odeslat na Telegram – viz chyba výše "
+                "(typicky špatný TELEGRAM_CHAT_ID nebo bot bez /start)."
+            )
+        if sent:
+            logger.info("Denní souhrn odeslán na Telegram.")
 
     @staticmethod
     def _route_display(f: FlightResult) -> str:
