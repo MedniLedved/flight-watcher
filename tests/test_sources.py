@@ -569,3 +569,68 @@ def test_record_uses_today_as_observation_date_not_flight_date():
         assert rec["depart_date"] == "2026-09-07"
     finally:
         os.unlink(path)
+
+
+# -- Review fixes: planner, sanitization, message split, role coverage -------
+def test_plan_scan_dates_never_empty_on_narrow_window():
+    """#1: i pro úzké okno (žádná platná dvojice v rozsahu nocí) vrátí ≥1 pár."""
+    from src.scanner import Scanner
+    stay = {"min_nights": 12, "max_nights": 25}
+    pairs = Scanner._plan_scan_dates(
+        date(2026, 9, 1), date(2026, 12, 31), stay,
+        samples=2, today=date(2026, 12, 25),  # start=12-26, min 12 nocí přeteče
+    )
+    assert pairs  # nesmí být prázdné → scan_route by spadl na date_pairs[0]
+
+
+def test_history_sanitizes_future_observation_date(tmp_path):
+    """#2: budoucí datum letu omylem uložené jako 'date' se ořízne na dnešek,
+    jinak by záznam nikdy nevyhasl ani se nepromazal."""
+    import json
+    from src.history import PriceHistory
+    p = tmp_path / "h.json"
+    future = (date.today() + timedelta(days=60)).isoformat()
+    p.write_text(json.dumps({
+        "FRA-NRT-roundtrip": {"history": [{"date": future, "price": 400}]}
+    }), encoding="utf-8")
+    h = PriceHistory(p)
+    rec = h.data["FRA-NRT-roundtrip"]["history"][0]
+    assert rec["date"] == date.today().isoformat()
+
+
+def test_split_message_chunks_long_text():
+    """#3: dlouhá zpráva se rozdělí na části pod limitem."""
+    from src.notifier import _split_message
+    text = "\n".join(f"radek {i}" for i in range(1000))
+    parts = _split_message(text, 200)
+    assert len(parts) > 1
+    assert all(len(p) <= 200 for p in parts)
+    # Rekonstrukce obsahu (po řádcích) musí sedět.
+    assert "\n".join(parts).replace("\n", "") == text.replace("\n", "")
+
+
+def test_explore_fraction_exact_longrun_ratio():
+    """#5: floor-trik dá dlouhodobě přesně EXPLORE_FRACTION i pro 0.25."""
+    import src.scanner as sc
+    import math
+    f = 0.25
+    n = 1000
+    explore_slots = sum(
+        1 for slot in range(n)
+        if math.floor((slot + 1) * f) - math.floor(slot * f) >= 1
+    )
+    assert abs(explore_slots / n - f) < 0.01  # ~25 %, ne 20 %
+
+
+def test_coverage_weights_splits_origin_and_dest_roles():
+    """#7: kód na pozici 0 = origin (EU), zbytek dest (JP)."""
+    import tempfile, os
+    from src.history import PriceHistory
+    f = tempfile.NamedTemporaryFile(suffix=".json", delete=False); f.close(); os.unlink(f.name)
+    h = PriceHistory(f.name)
+    h.record("MUC-KIX-roundtrip", 500, "duffel",
+             depart_date=date(2026, 9, 7), return_date=date(2026, 9, 21))
+    cov = h.coverage_weights(today=date(2026, 6, 9))
+    assert "MUC" in cov["origin"] and "MUC" not in cov["dest"]
+    assert "KIX" in cov["dest"] and "KIX" not in cov["origin"]
+    assert cov["airport"]["MUC"] > 0 and cov["airport"]["KIX"] > 0

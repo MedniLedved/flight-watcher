@@ -18,18 +18,44 @@ from typing import Optional
 import requests
 
 from .calendar_renderer import render_calendar
-from .config import airport_name
+from .config import CZECH_WEEKDAYS, airport_name
 from .sources import DealResult, FlightResult
 
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
+# Telegram limit je 4096 znaků; necháme rezervu.
+TELEGRAM_MAX_CHARS = 3900
+
+
+def _split_message(text: str, limit: int) -> list[str]:
+    """Rozdělí zprávu na části <= limit, primárně po řádcích. Velmi dlouhý
+    jeden řádek se rozsekne natvrdo (tak, aby žádná část nepřekročila limit)."""
+    if len(text) <= limit:
+        return [text]
+    parts: list[str] = []
+    buf = ""
+    for line in text.split("\n"):
+        while len(line) > limit:  # jeden řádek delší než limit → tvrdý řez
+            if buf:
+                parts.append(buf)
+                buf = ""
+            parts.append(line[:limit])
+            line = line[limit:]
+        candidate = line if not buf else f"{buf}\n{line}"
+        if len(candidate) > limit:
+            parts.append(buf)
+            buf = line
+        else:
+            buf = candidate
+    if buf:
+        parts.append(buf)
+    return parts
 
 CZECH_MONTHS_GEN = {
     1: "ledna", 2: "února", 3: "března", 4: "dubna", 5: "května", 6: "června",
     7: "července", 8: "srpna", 9: "září", 10: "října", 11: "listopadu", 12: "prosince",
 }
-CZECH_WEEKDAYS = ["po", "út", "st", "čt", "pá", "so", "ne"]
 
 
 def _fmt_date(d: Optional[date]) -> str:
@@ -53,6 +79,14 @@ class TelegramNotifier:
         if not self.enabled:
             logger.warning("Telegram není nakonfigurován – zpráva se neodešle:\n%s", text)
             return False
+        # Telegram má tvrdý limit 4096 znaků/zpráva. Delší souhrny (statistiky
+        # letišť + dny v týdnu) rozděl na více zpráv, ať se nic tiše neztratí.
+        ok = True
+        for chunk in _split_message(text, TELEGRAM_MAX_CHARS):
+            ok = self._post(chunk) and ok
+        return ok
+
+    def _post(self, text: str) -> bool:
         url = TELEGRAM_API.format(token=self.bot_token)
         payload = {
             "chat_id": self.chat_id,

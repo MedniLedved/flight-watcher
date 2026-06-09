@@ -15,6 +15,7 @@ Modul je čistě výpočetní (žádné I/O, žádná síť) a snadno testovatel
 """
 from __future__ import annotations
 
+from .config import CZECH_WEEKDAYS as _WEEKDAY_CZ
 from .config import airport_name
 
 # Minimální počet pozorování, aby se letiště bralo jako statisticky podložené.
@@ -22,18 +23,28 @@ from .config import airport_name
 MIN_SAMPLES = 3
 
 
-def _sort_key(stats: dict, airport: str):
-    """Řadicí klíč: nejdřív vyšší podíl dealů, pak levnější medián dealu.
+def effective_median(s: dict) -> float:
+    """Medián dealu; fallback na celkový medián (letiště: ``median``, dny:
+    ``all_median``), nakonec nekonečno. Sdíleno všemi řadicími klíči, ať se
+    chování nerozejde."""
+    dm = s.get("deal_median")
+    if dm is not None:
+        return dm
+    if s.get("all_median") is not None:
+        return s["all_median"]
+    return s.get("median", float("inf"))
 
-    Letiště bez dealů (deal_rate 0) se mezi sebou seřadí dle celkového
-    mediánu (blíž k prahu = perspektivnější).
-    """
-    s = stats.get(airport, {})
-    deal_rate = s.get("deal_rate", 0.0)
-    tie = s.get("deal_median")
-    if tie is None:  # žádné dealy → fallback na celkový medián
-        tie = s.get("median", float("inf"))
-    return (-deal_rate, tie)
+
+def deal_sort_key(s: dict):
+    """Společný řadicí klíč: vyšší podíl dealů dřív, pak levnější medián dealu.
+    Položky bez dealů (deal_rate 0) se řadí dle celkového mediánu (blíž k
+    prahu = perspektivnější)."""
+    return (-s.get("deal_rate", 0.0), effective_median(s))
+
+
+def _sort_key(stats: dict, airport: str):
+    """Řadicí klíč letiště – tenký obal nad ``deal_sort_key``."""
+    return deal_sort_key(stats.get(airport, {}))
 
 
 def rank_airports(airports: list[str], stats: dict[str, dict],
@@ -103,9 +114,6 @@ def format_airport_stats(airports: list[str], stats: dict[str, dict],
     return lines
 
 
-_WEEKDAY_CZ = ["po", "út", "st", "čt", "pá", "so", "ne"]
-
-
 def format_weekday_stats(weekday_stats: dict[str, dict[int, dict]]) -> list[str]:
     """Formátuje statistiku dní v týdnu pro Telegram.
 
@@ -121,15 +129,10 @@ def format_weekday_stats(weekday_stats: dict[str, dict[int, dict]]) -> list[str]
         # Potřebujeme alespoň 2 dny s daty a celkový počet záznamů >= 5.
         if len(wd_data) < 2 or sum(s["count"] for s in wd_data.values()) < 5:
             continue
-        # Seřaď dny dle deal_rate sestupně, tiebreaker deal_median vzestupně.
-        def _key(item):
-            wd, s = item
-            dm = s["deal_median"] if s["deal_median"] is not None else s["all_median"]
-            return (-s["deal_rate"], dm)
-        sorted_days = sorted(wd_data.items(), key=_key)
+        # Seřaď dny dle deal_rate sestupně, tiebreaker medián vzestupně.
+        sorted_days = sorted(wd_data.items(), key=lambda it: deal_sort_key(it[1]))
         best_wd, best_s = sorted_days[0]
-        best_median = (best_s["deal_median"] if best_s["deal_median"] is not None
-                       else best_s["all_median"])
+        best_median = effective_median(best_s)
         lines.append(f"📅 <b>Nejlevnější den – {title}:</b>")
         best_pct = best_s["deal_rate"] * 100
         lines.append(
@@ -139,7 +142,7 @@ def format_weekday_stats(weekday_stats: dict[str, dict[int, dict]]) -> list[str]
         for wd, s in sorted_days[1:]:
             if s["count"] < 2:
                 continue
-            dm = s["deal_median"] if s["deal_median"] is not None else s["all_median"]
+            dm = effective_median(s)
             diff = dm - best_median
             diff_str = f"+{diff:.0f}" if diff >= 0 else f"{diff:.0f}"
             pct = s["deal_rate"] * 100

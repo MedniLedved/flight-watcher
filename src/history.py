@@ -53,6 +53,7 @@ class PriceHistory:
                 self.data = {}
         else:
             self.data = {}
+        self._sanitize_dates()
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -118,13 +119,34 @@ class PriceHistory:
         cutoff = date.today() - timedelta(days=HISTORY_RETENTION_DAYS)
         kept = []
         for h in entry.get("history", []):
-            try:
-                hd = datetime.strptime(h["date"], "%Y-%m-%d").date()
-            except (KeyError, ValueError):
+            hd = _parse_iso(h.get("date"))
+            if hd is None:
                 continue
             if hd >= cutoff:
                 kept.append(h)
         entry["history"] = kept
+
+    def _sanitize_dates(self) -> None:
+        """Jednorázová oprava starých záznamů: dřívější (buggy) verze ukládala
+        do pole ``date`` datum LETU (budoucnost) místo data pozorování. Takové
+        záznamy by nikdy nevyhasly (decay age < 0 → váha 1.0) ani by se
+        nepromazaly (prune drží budoucí data). Budoucí ``date`` proto ořízneme
+        na dnešek (pozorování nemůže být z budoucna)."""
+        today = date.today()
+        changed = False
+        for key, entry in self.data.items():
+            if key == META_KEY or not isinstance(entry, dict):
+                continue
+            for h in entry.get("history", []):
+                hd = _parse_iso(h.get("date"))
+                if hd is not None and hd > today:
+                    h["date"] = today.isoformat()
+                    changed = True
+        if changed:
+            logger.warning(
+                "Historie: opraveno datum pozorování u starých záznamů "
+                "(budoucí datum letu omylem uložené jako datum pozorování)."
+            )
 
     # -- anti-duplicita alertů -------------------------------------------
     def should_alert(self, route_key: str, price: float) -> bool:
@@ -180,7 +202,7 @@ class PriceHistory:
 
     # -- statistika dne v týdnu ------------------------------------------
     def weekday_stats(
-        self, threshold: Optional[float] = None
+        self, threshold: float
     ) -> dict[str, dict[int, dict]]:
         """Statistika deal-frequency per den v týdnu (0=po … 6=ne).
 
@@ -204,12 +226,8 @@ class PriceHistory:
                     continue
                 price = float(price)
                 for field, acc in (("depart_date", dep_acc), ("return_date", ret_acc)):
-                    raw = h.get(field)
-                    if not raw:
-                        continue
-                    try:
-                        wd = datetime.strptime(raw, "%Y-%m-%d").weekday()
-                    except ValueError:
+                    wd = _parse_weekday(h.get(field))
+                    if wd is None:
                         continue
                     acc[wd].append(price)
 
@@ -220,7 +238,7 @@ class PriceHistory:
                     continue
                 ordered = sorted(prices)
                 n = len(ordered)
-                deals = [p for p in ordered if threshold is None or p < threshold]
+                deals = [p for p in ordered if p < threshold]
                 result[label][wd] = {
                     "count": n,
                     "deals": len(deals),
@@ -241,37 +259,47 @@ class PriceHistory:
         staré ceny „vyhasínají", takže buňka, která nebyla dlouho vzorkována,
         klesne a algoritmus plánování ji znovu navštíví (drží data čerstvá).
 
+        Letiště se sledují podle ROLE (kód na pozici 0 v route_key je odletové
+        letiště, zbytek příletová) – statistika pro EU a JP se tak nemíchá.
+
         Vrací::
 
             {
               "depart_wd": {0..6: vážený počet},
               "return_wd": {0..6: vážený počet},
-              "airport":   {kód: vážený počet},
+              "origin":    {kód: vážený počet},   # odletová (EU) letiště
+              "dest":      {kód: vážený počet},   # příletová (JP) letiště
+              "airport":   {kód: vážený počet},   # sjednocení (zpětná kompat.)
             }
         """
         today = today or date.today()
         cov: dict[str, dict] = {
             "depart_wd": {i: 0.0 for i in range(7)},
             "return_wd": {i: 0.0 for i in range(7)},
+            "origin": {},
+            "dest": {},
             "airport": {},
         }
+        decay_cache: dict[Optional[str], float] = {}  # datum se hojně opakuje
         for key, entry in self.routes():
             airports = self._airports_from_key(key)
             for h in entry.get("history", []):
-                w = _decay_weight(h.get("date"), today, halflife_days)
+                raw_obs = h.get("date")
+                w = decay_cache.get(raw_obs)
+                if w is None:
+                    w = _decay_weight(raw_obs, today, halflife_days)
+                    decay_cache[raw_obs] = w
                 if w <= 0:
                     continue
                 for field, covkey in (("depart_date", "depart_wd"),
                                       ("return_date", "return_wd")):
-                    raw = h.get(field)
-                    if not raw:
-                        continue
-                    try:
-                        wd = datetime.strptime(raw, "%Y-%m-%d").weekday()
-                    except ValueError:
+                    wd = _parse_weekday(h.get(field))
+                    if wd is None:
                         continue
                     cov[covkey][wd] += w
-                for a in airports:
+                for idx, a in enumerate(airports):
+                    role = "origin" if idx == 0 else "dest"
+                    cov[role][a] = cov[role].get(a, 0.0) + w
                     cov["airport"][a] = cov["airport"].get(a, 0.0) + w
         return cov
 
@@ -333,15 +361,29 @@ class PriceHistory:
         return stats
 
 
+def _parse_iso(raw: Optional[str]) -> Optional[date]:
+    """Naparsuje ISO datum (YYYY-MM-DD); None/nečitelné → None.
+    ``date.fromisoformat`` je ~10× rychlejší než ``strptime`` pro ISO."""
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_weekday(raw: Optional[str]) -> Optional[int]:
+    """Den v týdnu (0=po … 6=ne) z ISO data; None při chybě."""
+    d = _parse_iso(raw)
+    return d.weekday() if d is not None else None
+
+
 def _decay_weight(raw_date: Optional[str], today: date,
                   halflife_days: float) -> float:
     """Váha pozorování podle stáří (0.5 na poločas). Záznam bez data nebo
-    s nečitelným datem se počítá plnou vahou (1.0)."""
-    if not raw_date:
-        return 1.0
-    try:
-        d = datetime.strptime(raw_date, "%Y-%m-%d").date()
-    except ValueError:
+    s nečitelným datem se počítá plnou vahou (1.0). Poločas <= 0 → bez decayu."""
+    d = _parse_iso(raw_date)
+    if d is None or halflife_days <= 0:
         return 1.0
     age = (today - d).days
     if age <= 0:

@@ -68,6 +68,10 @@ AIRPORT_NAMES = {
 }
 
 # Maximální počty kombinací origin×destination na jeden denní běh
+# České zkratky dnů v týdnu (0=po … 6=ne) – sdíleno notifierem i statistikami,
+# ať se zobrazení v kalendáři a v reportech nerozejde.
+CZECH_WEEKDAYS = ["po", "út", "st", "čt", "pá", "so", "ne"]
+
 RATE_LIMIT_COMBINATIONS = {
     "duffel":        50,   # Duffel – štědrý test režim, šetříme kvótu
     "amadeus":       20,   # 2 000 req/měsíc → ~66/den, bereme méně pro jistotu

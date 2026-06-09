@@ -189,10 +189,22 @@ u náhodné rotace, kde se plýtvá na překryvy).
   a letiště (vyšší `deal_rate`), aby se zpřesnily odhady a chytly nové
   propady cen.
 
-Letiště s nedostatečným čerstvým pokrytím se navíc řadí **dopředu** (přežijí
-ořezání dle rate limitů), takže rychle nasbírají data. Vše je laditelné přes
-env proměnné `SCAN_DATE_SAMPLES`, `SCAN_COLD_START_TARGET`,
-`SCAN_EXPLORE_FRACTION`.
+Pokrytí letišť se sleduje **podle role** – odletová (EU) a příletová (JP)
+letiště mají vlastní statistiku, aby se nemíchala. Letiště s nedostatečným
+čerstvým pokrytím se navíc řadí **dopředu** (přežijí ořezání dle rate
+limitů), takže rychle nasbírají data.
+
+Laditelné přes env proměnné. **Cíle studeného startu jsou pro dny a letiště
+oddělené**, protože se plní jiným tempem: každý scan zasáhne ~všechna letiště
+(cíl naplněn za 1 den), ale jen `SCAN_DATE_SAMPLES` dnů v týdnu (cíl trvá
+~`dny × 7 / samples`). Jeden společný práh by ladění zkresloval.
+
+| Proměnná | Default | Význam |
+|----------|---------|--------|
+| `SCAN_DATE_SAMPLES` | `2` | kolik dvojic (odlet, návrat) za běh |
+| `SCAN_COLD_START_TARGET_WEEKDAY` | `3` | vážená pozorování/den v týdnu pro konec studeného startu |
+| `SCAN_COLD_START_TARGET_AIRPORT` | `3` | vážená pozorování/letiště pro konec studeného startu |
+| `SCAN_EXPLORE_FRACTION` | `0.3` | podíl průzkumných slotů ve fázi ladění (přesný pro libovolný zlomek) |
 
 ### Adaptivní ořezávání podle rate limitů
 
