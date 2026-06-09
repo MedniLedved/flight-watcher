@@ -189,6 +189,7 @@ class MilesAndMoreSource:
             "User-Agent": USER_AGENT,
             "Accept": "text/html,application/xhtml+xml",
             "Accept-Language": "en-US,en;q=0.9",
+            **self.extra_headers,  # typicky Cookie z přihlášené relace
         }
         try:
             resp = self.session.get(self.page_url, headers=headers, timeout=30)
