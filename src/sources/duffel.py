@@ -1,0 +1,167 @@
+"""Duffel API (vrstva 1 – real-time, náhrada za uzavřené Kiwi Tequila).
+
+Dokumentace: https://duffel.com/docs/api
+Endpoint: POST https://api.duffel.com/air/offer_requests
+Autentizace: header `Authorization: Bearer DUFFEL_TOKEN`
+Povinné hlavičky: `Duffel-Version: v2`, `Content-Type: application/json`.
+
+Duffel nativně podporuje open-jaw / multi-city přes pole `slices` – každý
+slice má vlastní origin/destination/departure_date. Pro zpáteční let stačí
+dva slice (tam + zpět), pro open-jaw mají slice odlišné letiště.
+
+Pozn.: Duffel má test režim (token `duffel_test_...`) se syntetickými daty
+i produkční režim (`duffel_live_...`) s reálnými cenami. Token sám určuje
+režim – není potřeba zvláštní přepínač.
+"""
+from __future__ import annotations
+
+import logging
+import time
+from datetime import date, datetime
+from typing import Optional
+
+import requests
+
+from . import FlightResult
+
+logger = logging.getLogger(__name__)
+
+BASE_URL = "https://api.duffel.com/air/offer_requests"
+DUFFEL_VERSION = "v2"
+_REQUEST_DELAY = 0.5
+
+
+class DuffelSource:
+    name = "duffel"
+
+    def __init__(self, token: str, session: Optional[requests.Session] = None):
+        self.token = token
+        self.session = session or requests.Session()
+
+    def search(
+        self,
+        origin: str,
+        destination: str,
+        departure_date: date,
+        return_date: Optional[date] = None,
+        return_origin: Optional[str] = None,
+        return_destination: Optional[str] = None,
+        adults: int = 1,
+        max_results: int = 10,
+        cabin_class: str = "economy",
+        route_name: str = "",
+    ) -> list[FlightResult]:
+        """Vytvoří offer request a vrátí nabídky jako FlightResult.
+
+        Pro open-jaw zadej return_origin/return_destination odlišné od
+        destination/origin – promítne se do druhého slice.
+        """
+        slices = [{
+            "origin": origin,
+            "destination": destination,
+            "departure_date": departure_date.isoformat(),
+        }]
+        if return_date:
+            slices.append({
+                "origin": return_origin or destination,
+                "destination": return_destination or origin,
+                "departure_date": return_date.isoformat(),
+            })
+
+        body = {
+            "data": {
+                "slices": slices,
+                "passengers": [{"type": "adult"} for _ in range(adults)],
+                "cabin_class": cabin_class,
+            }
+        }
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Duffel-Version": DUFFEL_VERSION,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        # return_offers=true (výchozí) → nabídky přijdou rovnou v odpovědi.
+        params = {"return_offers": "true", "supplier_timeout": "15000"}
+
+        try:
+            resp = self.session.post(
+                BASE_URL, json=body, headers=headers, params=params, timeout=40
+            )
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logger.error("Duffel chyba %s→%s: %s", origin, destination, exc)
+            raise
+        finally:
+            time.sleep(_REQUEST_DELAY)
+
+        payload = resp.json().get("data", {})
+        offers = payload.get("offers", [])
+        results = [
+            self._parse_offer(o, origin, destination, route_name)
+            for o in offers
+        ]
+        results = [r for r in results if r is not None]
+        results.sort(key=lambda r: r.price)
+        return results[:max_results]
+
+    def _parse_offer(self, offer: dict, origin: str, destination: str,
+                     route_name: str) -> Optional[FlightResult]:
+        try:
+            price = float(offer["total_amount"])
+        except (KeyError, ValueError, TypeError):
+            return None
+        currency = offer.get("total_currency", "EUR")
+        slices = offer.get("slices", [])
+        out_slice = slices[0] if slices else {}
+        in_slice = slices[1] if len(slices) > 1 else {}
+
+        out_segs = out_slice.get("segments", [])
+        in_segs = in_slice.get("segments", [])
+
+        airlines: set[str] = set()
+        owner = offer.get("owner", {})
+        if owner.get("iata_code"):
+            airlines.add(owner["iata_code"])
+        for seg in out_segs + in_segs:
+            carrier = seg.get("marketing_carrier") or seg.get("operating_carrier") or {}
+            if carrier.get("iata_code"):
+                airlines.add(carrier["iata_code"])
+
+        return FlightResult(
+            price=price,
+            currency=currency,
+            origin=self._slice_origin(out_slice, origin),
+            destination=self._slice_destination(out_slice, destination),
+            return_origin=self._slice_origin(in_slice, "") if in_slice else "",
+            return_destination=self._slice_destination(in_slice, "") if in_slice else "",
+            depart_date=self._seg_date(out_segs[0]) if out_segs else None,
+            return_date=self._seg_date(in_segs[0]) if in_segs else None,
+            airlines=sorted(airlines),
+            source=self.name,
+            deep_link="",  # Duffel je booking API – přímý nákupní odkaz není
+            route_name=route_name,
+        )
+
+    @staticmethod
+    def _slice_origin(slc: dict, fallback: str) -> str:
+        org = slc.get("origin") or {}
+        return org.get("iata_code", fallback) if isinstance(org, dict) else fallback
+
+    @staticmethod
+    def _slice_destination(slc: dict, fallback: str) -> str:
+        dst = slc.get("destination") or {}
+        return dst.get("iata_code", fallback) if isinstance(dst, dict) else fallback
+
+    @staticmethod
+    def _seg_date(seg: dict) -> Optional[date]:
+        value = seg.get("departing_at", "")
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+        except ValueError:
+            try:
+                return datetime.strptime(value[:10], "%Y-%m-%d").date()
+            except ValueError:
+                return None

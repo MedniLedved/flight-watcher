@@ -2,7 +2,7 @@
 
 Logika spouštění:
 1. Načti konfiguraci z routes.yaml a .env
-2. Pro každou trasu: Kiwi → Amadeus → Travelpayouts, agreguj a deduplikuj
+2. Pro každou trasu: Duffel → Sky Scrapper → Amadeus → Travelpayouts, agreguj a deduplikuj
 3. Parsuj RSS zdroje (Secret Flying, Cestujlevně)
 4. Pokus se o Jack's Flight Club scraping
 5. Porovnej s historií a prahem
@@ -31,14 +31,16 @@ from .notifier import TelegramNotifier
 from .sources import DealResult, FlightResult
 from .sources.amadeus import AmadeusSource
 from .sources.cestujlevne import CestujLevneSource
+from .sources.duffel import DuffelSource
 from .sources.jacks import JacksFlightClubSource
-from .sources.kiwi import KiwiSource
 from .sources.secret_flying import SecretFlyingSource
+from .sources.skyscrapper import SkyScrapperSource
 from .sources.travelpayouts import TravelpayoutsSource
 
 logger = logging.getLogger(__name__)
 
 AMADEUS_MONTHLY_LIMIT = 2000
+SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
 
 
 def _window_bounds(year: int, months: list[int]) -> tuple[date, date]:
@@ -63,9 +65,13 @@ class Scanner:
         )
 
         # Inicializace zdrojů (jen pokud jsou credentials).
-        self.kiwi = (
-            KiwiSource(self.settings.kiwi_api_key)
-            if self.settings.kiwi_api_key else None
+        self.duffel = (
+            DuffelSource(self.settings.duffel_token)
+            if self.settings.duffel_token else None
+        )
+        self.skyscrapper = (
+            SkyScrapperSource(self.settings.rapidapi_key)
+            if self.settings.rapidapi_key else None
         )
         self.amadeus = (
             AmadeusSource(
@@ -113,55 +119,35 @@ class Scanner:
         }
         date_from, date_to = _window_bounds(window["year"], window["months"])
         stay = self.settings.stay_length
+        depart = date_from
+        ret = self._add_nights(depart, stay["min_nights"])
         results: list[FlightResult] = []
 
-        # --- Kiwi ---
-        if self.kiwi:
-            try:
-                ko, kd = trim_airports(
-                    legs["out_origins"], legs["out_dests"],
-                    RATE_LIMIT_COMBINATIONS["kiwi"],
-                )
-                fly_to = kd if not is_openjaw else kd  # Kiwi zvládne open-jaw přes city aliasy
-                results += self.kiwi.search(
-                    fly_from=ko, fly_to=fly_to,
-                    date_from=date_from, date_to=date_to,
-                    nights_from=stay["min_nights"], nights_to=stay["max_nights"],
-                    flight_type="round", route_name=name,
-                )
-                logger.info("Kiwi %s: %d nabídek", name, len(results))
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Kiwi scan selhal pro %s: %s", name, exc)
+        # --- Duffel (primární náhrada za Kiwi) ---
+        if self.duffel:
+            results += self._scan_per_combo(
+                self.duffel, "duffel", legs, is_openjaw,
+                depart, ret, name,
+                limit=RATE_LIMIT_COMBINATIONS["duffel"],
+            )
+
+        # --- Sky Scrapper / RapidAPI (pozor na 100 req/měsíc) ---
+        if self.skyscrapper and self._skyscrapper_has_budget():
+            results += self._scan_per_combo(
+                self.skyscrapper, "skyscrapper", legs, is_openjaw,
+                depart, ret, name,
+                limit=RATE_LIMIT_COMBINATIONS["skyscrapper"],
+                budget_check=self._skyscrapper_has_budget,
+            )
 
         # --- Amadeus ---
         if self.amadeus and self._amadeus_has_budget():
-            try:
-                ao, ad = trim_airports(
-                    legs["out_origins"], legs["out_dests"],
-                    RATE_LIMIT_COMBINATIONS["amadeus"],
-                )
-                in_o = legs["in_origins"]
-                in_d = legs["in_dests"]
-                depart = date_from
-                ret = self._add_nights(depart, stay["min_nights"])
-                for o in ao:
-                    for d in ad:
-                        if not self._amadeus_has_budget():
-                            break
-                        r_origin = in_o[0] if is_openjaw and in_o else d
-                        r_dest = in_d[0] if is_openjaw and in_d else o
-                        try:
-                            results += self.amadeus.search(
-                                origin=o, destination=d,
-                                departure_date=depart, return_date=ret,
-                                return_origin=r_origin, return_destination=r_dest,
-                                route_name=name,
-                            )
-                        except Exception as exc:  # noqa: BLE001
-                            logger.error("Amadeus %s %s→%s: %s", name, o, d, exc)
-                logger.info("Amadeus %s hotovo", name)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Amadeus scan selhal pro %s: %s", name, exc)
+            results += self._scan_per_combo(
+                self.amadeus, "amadeus", legs, is_openjaw,
+                depart, ret, name,
+                limit=RATE_LIMIT_COMBINATIONS["amadeus"],
+                budget_check=self._amadeus_has_budget,
+            )
 
         # --- Travelpayouts (záloha/trend) ---
         if self.travelpayouts:
@@ -186,11 +172,56 @@ class Scanner:
 
         return self._deduplicate(results)
 
+    def _scan_per_combo(self, source, source_name, legs, is_openjaw,
+                        depart, ret, name, limit, budget_check=None):
+        """Spustí per-combo (origin×destination) vyhledávání nad zdrojem,
+        který má jednotné rozhraní search(origin, destination, departure_date,
+        return_date, return_origin, return_destination, route_name).
+
+        budget_check (callable→bool) volitelně zastaví smyčku při vyčerpání
+        kvóty zdroje."""
+        results: list[FlightResult] = []
+        try:
+            origins, dests = trim_airports(
+                legs["out_origins"], legs["out_dests"], limit
+            )
+            in_o, in_d = legs["in_origins"], legs["in_dests"]
+            for o in origins:
+                if budget_check and not budget_check():
+                    logger.warning("%s: vyčerpána kvóta, scan trasy zkrácen",
+                                   source_name)
+                    break
+                for d in dests:
+                    if budget_check and not budget_check():
+                        break
+                    r_origin = in_o[0] if is_openjaw and in_o else d
+                    r_dest = in_d[0] if is_openjaw and in_d else o
+                    try:
+                        results += source.search(
+                            origin=o, destination=d,
+                            departure_date=depart, return_date=ret,
+                            return_origin=r_origin, return_destination=r_dest,
+                            route_name=name,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.error("%s %s %s→%s: %s",
+                                     source_name, name, o, d, exc)
+            logger.info("%s %s: %d nabídek", source_name, name, len(results))
+        except Exception as exc:  # noqa: BLE001
+            logger.error("%s scan selhal pro %s: %s", source_name, name, exc)
+        return results
+
     def _amadeus_has_budget(self) -> bool:
         if not self.amadeus:
             return False
         used = self.history.amadeus_usage() + self.amadeus.request_count
         return used < AMADEUS_MONTHLY_LIMIT
+
+    def _skyscrapper_has_budget(self) -> bool:
+        if not self.skyscrapper:
+            return False
+        used = self.history.skyscrapper_usage() + self.skyscrapper.request_count
+        return used < SKYSCRAPPER_MONTHLY_LIMIT
 
     @staticmethod
     def _add_nights(d: date, nights: int) -> date:
@@ -245,7 +276,8 @@ class Scanner:
     def run(self) -> None:
         logger.info("=== Japan Flight Tracker – start scanu ===")
         self.api_count = sum(
-            1 for s in (self.kiwi, self.amadeus, self.travelpayouts) if s
+            1 for s in (self.duffel, self.skyscrapper, self.amadeus,
+                        self.travelpayouts) if s
         )
 
         all_flights: list[FlightResult] = []
@@ -264,9 +296,11 @@ class Scanner:
         deals, source_status = self.scan_deals()
         self._process_deals(deals)
 
-        # Aktualizuj Amadeus usage.
+        # Aktualizuj počítadla spotřeby kvót.
         if self.amadeus:
             self.history.add_amadeus_usage(self.amadeus.request_count)
+        if self.skyscrapper:
+            self.history.add_skyscrapper_usage(self.skyscrapper.request_count)
 
         # Denní souhrn.
         self._send_summary(all_flights, source_status, len(routes))
@@ -310,8 +344,8 @@ class Scanner:
         for key, f in sorted(best.items(), key=lambda kv: kv[1].price)[:10]:
             nights = f"{f.nights} dní" if f.nights is not None else "?"
             label = {
-                "kiwi": "Kiwi", "amadeus": "Amadeus",
-                "travelpayouts": "Travelpayouts",
+                "duffel": "Duffel", "skyscrapper": "Sky Scrapper",
+                "amadeus": "Amadeus", "travelpayouts": "Travelpayouts",
             }.get(f.source, f.source)
             delta = self.history.price_delta(key, f.price)
             trend = ""
@@ -325,6 +359,7 @@ class Scanner:
             )
 
         amadeus_used = self.history.amadeus_usage()
+        sky_used = self.history.skyscrapper_usage()
         total_requests = route_count * max(self.api_count, 1)
         stats = {
             "scans": (
@@ -333,6 +368,10 @@ class Scanner:
             ),
             "amadeus": (
                 f"Amadeus využití: {amadeus_used}/{AMADEUS_MONTHLY_LIMIT} "
+                f"requestů tento měsíc"
+            ),
+            "skyscrapper": (
+                f"Sky Scrapper využití: {sky_used}/{SKYSCRAPPER_MONTHLY_LIMIT} "
                 f"requestů tento měsíc"
             ),
         }

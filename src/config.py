@@ -66,8 +66,9 @@ AIRPORT_NAMES = {
 
 # Maximální počty kombinací origin×destination na jeden denní běh
 RATE_LIMIT_COMBINATIONS = {
-    "kiwi":          50,   # 100 req/min, ale šetříme kvótu
+    "duffel":        50,   # Duffel – štědrý test režim, šetříme kvótu
     "amadeus":       20,   # 2 000 req/měsíc → ~66/den, bereme méně pro jistotu
+    "skyscrapper":   3,    # RapidAPI free tier 100 req/MĚSÍC → ~3/den!
     "travelpayouts": 100,  # neomezeno, ale rozumná hranice
     "secret_flying": None, # RSS – bez limitu kombinací
     "jacks":         None, # scraping – bez limitu kombinací
@@ -107,7 +108,8 @@ class Settings:
     """Konfigurace načtená z prostředí (.env) a routes.yaml."""
 
     # Sekrety / credentials
-    kiwi_api_key: str | None = None
+    duffel_token: str | None = None
+    rapidapi_key: str | None = None
     amadeus_client_id: str | None = None
     amadeus_client_secret: str | None = None
     amadeus_env: str = "test"
@@ -139,7 +141,8 @@ class Settings:
         )
 
         return cls(
-            kiwi_api_key=os.getenv("KIWI_API_KEY"),
+            duffel_token=os.getenv("DUFFEL_TOKEN"),
+            rapidapi_key=os.getenv("RAPIDAPI_KEY"),
             amadeus_client_id=os.getenv("AMADEUS_CLIENT_ID"),
             amadeus_client_secret=os.getenv("AMADEUS_CLIENT_SECRET"),
             amadeus_env=os.getenv("AMADEUS_ENV", "test"),

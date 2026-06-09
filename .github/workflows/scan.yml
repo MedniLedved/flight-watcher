@@ -15,7 +15,9 @@ jobs:
       - name: Restore price history
         uses: actions/cache@v4
         with:
-          path: data/price_history.json
+          path: |
+            data/price_history.json
+            data/skyscrapper_airports.json
           key: price-history-${{ github.run_id }}
           restore-keys: price-history-
 
@@ -29,7 +31,8 @@ jobs:
 
       - name: Run scanner
         env:
-          KIWI_API_KEY: ${{ secrets.KIWI_API_KEY }}
+          DUFFEL_TOKEN: ${{ secrets.DUFFEL_TOKEN }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           AMADEUS_CLIENT_ID: ${{ secrets.AMADEUS_CLIENT_ID }}
           AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
           AMADEUS_ENV: ${{ vars.AMADEUS_ENV }}
@@ -41,5 +44,7 @@ jobs:
       - name: Save price history
         uses: actions/cache@v4
         with:
-          path: data/price_history.json
+          path: |
+            data/price_history.json
+            data/skyscrapper_airports.json
           key: price-history-${{ github.run_id }}

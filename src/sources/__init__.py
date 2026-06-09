@@ -22,7 +22,7 @@ class FlightResult:
     depart_date: Optional[date] = None
     return_date: Optional[date] = None
     airlines: list[str] = field(default_factory=list)
-    source: str = ""              # kiwi / amadeus / travelpayouts
+    source: str = ""              # duffel / skyscrapper / amadeus / travelpayouts
     deep_link: str = ""           # přímý odkaz na koupi
     route_name: str = ""          # jméno trasy z routes.yaml
 

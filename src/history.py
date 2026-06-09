@@ -147,9 +147,24 @@ class PriceHistory:
         )
 
     def add_amadeus_usage(self, count: int, month: Optional[str] = None) -> None:
+        self._add_usage("amadeus_requests", count, month)
+
+    def skyscrapper_usage(self, month: Optional[str] = None) -> int:
+        month = month or datetime.now().strftime("%Y-%m")
+        return (
+            self.data.get(META_KEY, {})
+            .get("skyscrapper_requests", {})
+            .get(month, 0)
+        )
+
+    def add_skyscrapper_usage(self, count: int, month: Optional[str] = None) -> None:
+        self._add_usage("skyscrapper_requests", count, month)
+
+    def _add_usage(self, meta_field: str, count: int,
+                   month: Optional[str] = None) -> None:
         month = month or datetime.now().strftime("%Y-%m")
         meta = self.data.setdefault(META_KEY, {})
-        reqs = meta.setdefault("amadeus_requests", {})
+        reqs = meta.setdefault(meta_field, {})
         reqs[month] = reqs.get(month, 0) + count
 
     # -- iterace pro souhrn ----------------------------------------------

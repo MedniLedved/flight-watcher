@@ -10,12 +10,20 @@ přes **Telegram**. Běží zdarma jednou denně přes **GitHub Actions**.
 Aplikace má dvě vrstvy zdrojů:
 
 **Vrstva 1 – real-time API** (ověřené aktuální ceny):
-- **Kiwi Tequila API** – primární zdroj, podporuje open-jaw přes čárkou
-  oddělené IATA kódy
-- **Amadeus Self-Service API** – sekundární, nativní open-jaw přes POST
+- **Duffel API** – primární zdroj, nativní open-jaw / multi-city přes pole
+  `slices` *(náhrada za Kiwi Tequila – viz [poznámka](#proč-ne-kiwi))*
+- **Sky Scrapper (RapidAPI)** – Skyscanner data; ⚠️ free tier jen
+  **100 requestů/měsíc**, proto se používá velmi úsporně
+- **Amadeus Self-Service API** – nativní open-jaw přes POST
   `originDestinations`
 - **Travelpayouts Data API** – cache (až 7 dní stará), slouží jako záloha a
   pro detekci cenových trendů
+
+### Proč ne Kiwi?
+
+Kiwi.com **v květnu 2024 uzavřel veřejný přístup k Tequila API**, takže ho
+už nelze použít. Jako náhrada slouží **Duffel** (primárně) a **Sky Scrapper
+přes RapidAPI**.
 
 **Vrstva 2 – kurátorské zdroje** (cena neověřená, dobré tipy):
 - **Secret Flying** (RSS)
@@ -46,10 +54,25 @@ python -m pytest
 
 | Zdroj | Kde získat | Proměnná(é) |
 |-------|-----------|-------------|
-| Kiwi Tequila | https://tequila.kiwi.com → registrace → vytvoř *Solution* | `KIWI_API_KEY` |
+| Duffel | https://duffel.com → registrace → Dashboard → Developers → Access tokens (token `duffel_test_...` pro test, `duffel_live_...` pro produkci) | `DUFFEL_TOKEN` |
+| Sky Scrapper | https://rapidapi.com/apiheya/api/sky-scrapper → Subscribe (Basic/Free) → zkopíruj `X-RapidAPI-Key` | `RAPIDAPI_KEY` |
 | Amadeus | https://developers.amadeus.com → My Self-Service Workspace → New App | `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` |
 | Travelpayouts | https://www.travelpayouts.com → Dashboard → API tokens | `TRAVELPAYOUTS_TOKEN` |
 | Telegram bot | viz [Nastavení Telegram bota](#nastavení-telegram-bota) | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
+
+### Duffel: test vs. produkce
+
+Token sám určuje režim – `duffel_test_...` vrací testovací data, `duffel_live_...`
+reálné ceny (vyžaduje aktivovaný účet). Není potřeba zvláštní přepínač.
+
+### Sky Scrapper: pozor na kvótu
+
+Free tier má jen **100 requestů/měsíc** (~3/den). Aplikace proto:
+- cachuje skyId/entityId letišť na disk (`data/skyscrapper_airports.json`),
+  aby se `searchAirport` nevolal opakovaně,
+- má nejnižší limit kombinací (`RATE_LIMIT_COMBINATIONS["skyscrapper"] = 3`),
+- počítá spotřebu v `data/price_history.json` (`_meta.skyscrapper_requests`) a
+  při vyčerpání kvóty zdroj přeskočí.
 
 > Každý zdroj je volitelný – pokud klíč chybí, zdroj se přeskočí a scan
 > pokračuje dál. V denním souhrnu vidíš, které zdroje fungovaly.
@@ -65,8 +88,9 @@ Free tier má limit **2 000 requestů/měsíc**. Aplikace cachuje výsledky
 `data/price_history.json` (`_meta.amadeus_requests`).
 
 > ⚠️ **Amadeus sunset:** Self-Service API bude ukončeno **17. července 2026**.
-> Po tomto datu přejdi na Kiwi/Travelpayouts jako primární zdroj, nebo na
-> placený Amadeus Enterprise. V kódu jsou označeny `TODO(sunset)` komentáře.
+> Po tomto datu se spolehni na Duffel/Sky Scrapper/Travelpayouts jako primární
+> zdroje, nebo přejdi na placený Amadeus Enterprise. V kódu jsou označeny
+> `TODO(sunset)` komentáře.
 
 ## Nastavení GitHub Actions
 
@@ -76,7 +100,8 @@ spustit i ručně (*Actions → Japan Flight Scan → Run workflow*).
 V repozitáři nastav **Settings → Secrets and variables → Actions**:
 
 Secrets:
-- `KIWI_API_KEY`
+- `DUFFEL_TOKEN`
+- `RAPIDAPI_KEY`
 - `AMADEUS_CLIENT_ID`
 - `AMADEUS_CLIENT_SECRET`
 - `TRAVELPAYOUTS_TOKEN`
@@ -119,7 +144,7 @@ Každý zdroj má limit kombinací `origin × destination` na jeden běh
 překročila, seznamy se automaticky ořežou **od konce** (zachová se priorita):
 
 ```
-kiwi: 50, amadeus: 20, travelpayouts: 100, RSS zdroje: bez limitu
+duffel: 50, amadeus: 20, skyscrapper: 3, travelpayouts: 100, RSS zdroje: bez limitu
 ```
 
 ## Nastavení Telegram bota
@@ -164,7 +189,7 @@ Nainstaluj `pip install -r requirements.txt`.
 
 ```
 src/
-  sources/        # datové zdroje (kiwi, amadeus, travelpayouts, RSS, scraping)
+  sources/        # datové zdroje (duffel, skyscrapper, amadeus, travelpayouts, RSS, scraping)
   config.py       # konfigurace, letiště, rate-limity, trim_airports
   calendar_renderer.py  # ASCII kalendář pro Telegram
   history.py      # historie cen + anti-duplicita alertů + Amadeus počítadlo

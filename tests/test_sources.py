@@ -6,8 +6,9 @@ from datetime import date
 from src.config import RATE_LIMIT_COMBINATIONS, trim_airports
 from src.sources import FlightResult
 from src.sources.cestujlevne import CestujLevneSource
-from src.sources.kiwi import KiwiSource
+from src.sources.duffel import DuffelSource
 from src.sources.secret_flying import _extract_price, _matches
+from src.sources.skyscrapper import SkyScrapperSource
 from src.sources.travelpayouts import TravelpayoutsSource
 
 
@@ -33,8 +34,10 @@ def test_trim_airports_never_empties():
     assert len(o) >= 1 and len(d) >= 1
 
 
-def test_amadeus_limit_smaller_than_kiwi():
-    assert RATE_LIMIT_COMBINATIONS["amadeus"] < RATE_LIMIT_COMBINATIONS["kiwi"]
+def test_skyscrapper_has_tightest_limit():
+    # Free tier 100 req/měsíc → nejnižší limit kombinací ze všech zdrojů.
+    assert RATE_LIMIT_COMBINATIONS["skyscrapper"] < RATE_LIMIT_COMBINATIONS["amadeus"]
+    assert RATE_LIMIT_COMBINATIONS["skyscrapper"] < RATE_LIMIT_COMBINATIONS["duffel"]
 
 
 # -- FlightResult ----------------------------------------------------------
@@ -85,30 +88,87 @@ def test_cestujlevne_eur_direct():
     assert src._extract_price_eur("Tokio za €480") == 480.0
 
 
-# -- Kiwi parsing ----------------------------------------------------------
-def test_kiwi_parse_item():
-    src = KiwiSource(api_key="dummy")
-    item = {
-        "price": 489,
-        "flyFrom": "MUC",
-        "flyTo": "KIX",
-        "deep_link": "https://kiwi.com/deep",
-        "local_departure": "2026-09-12T08:00:00.000Z",
-        "route": [
-            {"airline": "LH", "flyFrom": "MUC", "flyTo": "KIX", "return": 0,
-             "local_departure": "2026-09-12T08:00:00.000Z"},
-            {"airline": "NH", "flyFrom": "NRT", "flyTo": "PRG", "return": 1,
-             "local_departure": "2026-10-07T10:00:00.000Z"},
+# -- Duffel parsing --------------------------------------------------------
+def test_duffel_parse_offer():
+    src = DuffelSource(token="dummy")
+    offer = {
+        "total_amount": "489.00",
+        "total_currency": "EUR",
+        "owner": {"iata_code": "LH"},
+        "slices": [
+            {
+                "origin": {"iata_code": "MUC"},
+                "destination": {"iata_code": "KIX"},
+                "segments": [
+                    {"departing_at": "2026-09-12T08:00:00",
+                     "marketing_carrier": {"iata_code": "LH"}},
+                ],
+            },
+            {
+                "origin": {"iata_code": "NRT"},
+                "destination": {"iata_code": "PRG"},
+                "segments": [
+                    {"departing_at": "2026-10-07T10:00:00",
+                     "marketing_carrier": {"iata_code": "NH"}},
+                ],
+            },
         ],
     }
-    result = src._parse_item(item, "Test")
-    assert result.price == 489.0
-    assert result.origin == "MUC"
-    assert result.destination == "KIX"
-    assert result.return_origin == "NRT"
-    assert result.return_destination == "PRG"
-    assert result.depart_date == date(2026, 9, 12)
-    assert "LH" in result.airlines and "NH" in result.airlines
+    r = src._parse_offer(offer, "MUC", "KIX", "Test")
+    assert r.price == 489.0
+    assert r.origin == "MUC"
+    assert r.destination == "KIX"
+    assert r.return_origin == "NRT"
+    assert r.return_destination == "PRG"
+    assert r.depart_date == date(2026, 9, 12)
+    assert r.return_date == date(2026, 10, 7)
+    assert "LH" in r.airlines and "NH" in r.airlines
+
+
+def test_duffel_parse_offer_missing_price_returns_none():
+    src = DuffelSource(token="dummy")
+    assert src._parse_offer({"slices": []}, "MUC", "KIX", "Test") is None
+
+
+# -- Sky Scrapper parsing --------------------------------------------------
+def test_skyscrapper_parse_itinerary(tmp_path):
+    src = SkyScrapperSource(rapidapi_key="dummy",
+                            cache_path=tmp_path / "airports.json")
+    it = {
+        "price": {"raw": 512.5, "formatted": "€513"},
+        "legs": [
+            {
+                "origin": {"displayCode": "FRA"},
+                "destination": {"displayCode": "NRT"},
+                "departure": "2026-09-10T09:00:00",
+                "carriers": {"marketing": [{"name": "ANA", "alternateId": "NH"}]},
+            },
+            {
+                "origin": {"displayCode": "NRT"},
+                "destination": {"displayCode": "FRA"},
+                "departure": "2026-09-24T11:00:00",
+                "carriers": {"marketing": [{"name": "ANA", "alternateId": "NH"}]},
+            },
+        ],
+    }
+    r = src._parse_itinerary(it, "FRA", "NRT", "Test")
+    assert r.price == 512.5
+    assert r.origin == "FRA"
+    assert r.destination == "NRT"
+    assert r.depart_date == date(2026, 9, 10)
+    assert r.return_date == date(2026, 9, 24)
+    assert "NH" in r.airlines
+
+
+def test_skyscrapper_airport_cache_roundtrip(tmp_path):
+    cache = tmp_path / "airports.json"
+    src = SkyScrapperSource(rapidapi_key="dummy", cache_path=cache)
+    src._airports["FRA"] = {"skyId": "FRA", "entityId": "95673383"}
+    src._save_airport_cache()
+    src2 = SkyScrapperSource(rapidapi_key="dummy", cache_path=cache)
+    # Z cache → resolve_airport nevolá síť (request_count zůstane 0).
+    assert src2.resolve_airport("FRA") == {"skyId": "FRA", "entityId": "95673383"}
+    assert src2.request_count == 0
 
 
 # -- Travelpayouts parsing -------------------------------------------------

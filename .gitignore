@@ -15,3 +15,6 @@ venv/
 # Price history is committed for GitHub Actions persistence.
 # If you prefer to keep it local-only, uncomment the next line:
 # data/price_history.json
+
+# Sky Scrapper IATA→skyId/entityId cache (regeneruje se za běhu, drží Actions cache)
+data/skyscrapper_airports.json

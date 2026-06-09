@@ -5,8 +5,9 @@ OAuth2 token: POST /v1/security/oauth2/token (client_credentials).
 Flight Offers Search: GET /v2/shopping/flight-offers.
 
 TODO(sunset): Amadeus Self-Service API bude ukončeno 17. července 2026.
-Po tomto datu je nutné migrovat na jiný zdroj (Kiwi / Travelpayouts) nebo
-na placený Amadeus Enterprise. Viz README, sekce Troubleshooting.
+Po tomto datu je nutné migrovat na jiný zdroj (Duffel / Sky Scrapper /
+Travelpayouts) nebo na placený Amadeus Enterprise. Viz README, sekce
+Troubleshooting.
 
 Open-jaw je nativně podporován – pro každý leg lze zadat vlastní
 originLocationCode / destinationLocationCode.
