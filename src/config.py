@@ -138,6 +138,8 @@ class Settings:
     # Volitelný JSON endpoint Miles & More mileage bargains (pokud se objeví);
     # bez něj se scrapuje HTML stránka.
     milesandmore_api_url: str | None = None
+    # Veřejný x-api-key webového frontendu M&M (lze přepsat); None = vestavěný.
+    milesandmore_api_key: str | None = None
     # Opt-in: ignorovat robots.txt u Miles & More (vědomé rozhodnutí uživatele
     # pro osobní měsíční monitoring). Výchozí False = robots.txt se ctí.
     milesandmore_ignore_robots: bool = False
@@ -176,6 +178,7 @@ class Settings:
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             czk_eur_rate=float(os.getenv("CZK_EUR_RATE", "25")),
             milesandmore_api_url=os.getenv("MILESANDMORE_API_URL"),
+            milesandmore_api_key=os.getenv("MILESANDMORE_API_KEY"),
             milesandmore_ignore_robots=(
                 os.getenv("MILESANDMORE_IGNORE_ROBOTS", "false").lower()
                 in ("1", "true", "yes")

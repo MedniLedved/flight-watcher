@@ -1,27 +1,31 @@
 """Miles & More – Mileage Bargains (vrstva 2, měsíční kontrola award nabídek).
 
-Stránka: https://www.miles-and-more.com/de/en/spend/flights.html#mileagebargains
+Award nabídky („Meilenschnäppchen") placené MÍLEMI (ne EUR) se mění JEDNOU
+MĚSÍČNĚ – proto se tento zdroj kontroluje jen první kalendářní den v měsíci
+(gating řeší scanner přes should_run_today()).
 
-Tzv. „Meilenschnäppchen" (mileage bargains) jsou award nabídky placené
-MÍLEMI (ne EUR), které se mění JEDNOU MĚSÍČNĚ. Proto se tento zdroj kontroluje
-jen první kalendářní den v měsíci (gating řeší scanner přes should_run_today()).
+Zdroj získává data ze STRUKTUROVANÉHO GraphQL endpointu, který používá samotný
+web Miles & More:
 
-⚠️ Stránka je JavaScriptová SPA s anti-bot ochranou a NEMÁ veřejné API.
-Scraping je proto best-effort:
-  - zkouší najít nabídky v embedded JSON (<script>) i ve viditelném HTML,
-  - respektuje robots.txt a posílá prohlížečovou hlavičku User-Agent,
-  - když selže (403 / změna struktury / anti-bot), jen zaloguje chybu a
-    NEZASTAVÍ celý scan (stejně jako Jack's Flight Club).
+  POST https://api.miles-and-more.com/content/v3/offers/search
+  hlavička x-api-key (veřejný klíč webového frontendu)
+  tělo = GraphQL dotaz na nabídky (offers.air.*)
 
-Volitelně lze přes MILESANDMORE_API_URL nasměrovat na skutečný datový
-endpoint (pokud ho objevíš), který vrací JSON – pak se použije místo HTML.
+Odpověď obsahuje pro každou leteckou nabídku: destinationIata/Name, originList
+(originIata/Name/CountryIso), promoMiles/regularMiles a cestovní období. Z toho
+se filtrují nabídky s cílem v JAPONSKU a původem v EVROPĚ.
+
+Endpoint i klíč lze přepsat přes MILESANDMORE_API_URL / MILESANDMORE_API_KEY.
+Volitelné hlavičky (Cookie z přihlášené relace) přes MILESANDMORE_HEADERS, pokud
+by endpoint vyžadoval session. Když vše selže, zkusí se fallback scraping HTML
+stránky. Žádná chyba NEZASTAVÍ celý scan.
 """
 from __future__ import annotations
 
 import json
 import logging
 import re
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 import requests
@@ -33,12 +37,69 @@ from .secret_flying import JAPAN_KEYWORDS
 logger = logging.getLogger(__name__)
 
 PAGE_URL = "https://www.miles-and-more.com/de/en/spend/flights.html"
+DEFAULT_API_URL = "https://api.miles-and-more.com/content/v3/offers/search"
+# Veřejný klíč webového frontendu M&M (není to tajemství – posílá ho prohlížeč).
+DEFAULT_API_KEY = "agGBZmuTGwFXWzVDg8ckGKGBytemE1nS"
+SITE_BASE = "https://www.miles-and-more.com"
 USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
 
-# Mílová cena, např. "35,000 miles" / "35.000 Meilen".
+# Japonská letiště pro detekci cílové destinace.
+JAPAN_IATA = {"HND", "NRT", "KIX", "ITM", "NGO", "FUK", "CTS", "OKA", "KOJ", "HIJ"}
+# Evropské země (ISO 3166-1 alpha-2) pro detekci původu.
+EUROPEAN_ISO = {
+    "DE", "CZ", "AT", "FR", "IT", "NL", "CH", "BE", "PL", "HU", "SK", "ES",
+    "PT", "DK", "SE", "NO", "FI", "IE", "GB", "LU", "SI", "HR", "RO", "BG",
+    "GR", "EE", "LV", "LT",
+}
+
+# GraphQL dotaz zachycený z webu M&M (offers.air.*).
+_GRAPHQL_QUERY = """
+query Offers($airQuery: AirQuery, $allowSamePartner: Boolean, $channelTag: String!,
+  $context: Context, $country: String, $isAirOffer: Boolean!, $language: String,
+  $offerType: [String], $orderBy: Order, $placementTags: [String],
+  $random: Boolean, $totalAmount: Int) {
+  offers(air: $airQuery, allowSamePartner: $allowSamePartner, channelTag: $channelTag,
+    context: $context, country: $country, language: $language, orderBy: $orderBy,
+    offerTypes: $offerType, placementTags: $placementTags, random: $random,
+    totalAmount: $totalAmount) {
+    offers {
+      aemId
+      air @include(if: $isAirOffer) {
+        destinationIata
+        destinationName
+        originList { originIata originName originCountryIso originCountryName }
+        promoMiles
+        regularMiles
+        travelPeriodStart
+        travelPeriodEnd
+      }
+      heading
+      miles
+      url
+      partner { name }
+    }
+  }
+}
+"""
+
+_GRAPHQL_VARIABLES = {
+    "allowSamePartner": True,
+    "offerType": ["airoffer"],
+    "orderBy": {"field": "MILES_PRICE", "direction": "ASC"},
+    "placementTags": ["Premium"],
+    "random": False,
+    "totalAmount": 1000,
+    "airQuery": {"localPreferredAirline": "", "preferredCountry": "DE"},
+    "channelTag": "WEB",
+    "context": {"language": "en", "site": "de"},
+    "country": "web:system/countries/de",
+    "language": "en",
+    "isAirOffer": True,
+}
+
 _MILES_RE = re.compile(r"([\d][\d.,\s]*\d)\s*(?:miles|meilen)", re.IGNORECASE)
 
 
@@ -51,6 +112,22 @@ def should_run_today(today: Optional[date] = None) -> bool:
 def _matches_japan(text: str) -> bool:
     low = text.lower()
     return any(k in low for k in JAPAN_KEYWORDS)
+
+
+def _is_japan_destination(iata: str, name: str) -> bool:
+    if iata and iata.upper() in JAPAN_IATA:
+        return True
+    return _matches_japan(name or "")
+
+
+def _european_origins(origin_list: list[dict]) -> list[dict]:
+    """Vrátí jen evropské původy (dle ISO země nebo evropského letiště)."""
+    out = []
+    for og in origin_list or []:
+        iso = (og.get("originCountryIso") or "").upper()
+        if iso in EUROPEAN_ISO:
+            out.append(og)
+    return out
 
 
 def _extract_miles(text: str) -> Optional[int]:
@@ -83,100 +160,129 @@ class MilesAndMoreSource:
 
     def __init__(self, page_url: str = PAGE_URL,
                  api_url: Optional[str] = None,
+                 api_key: Optional[str] = None,
                  ignore_robots: bool = False,
                  extra_headers: Optional[dict[str, str]] = None,
                  session: Optional[requests.Session] = None):
         self.page_url = page_url
-        self.api_url = api_url
-        # ignore_robots: vědomý opt-in uživatele pro monitorování této konkrétní
-        # veřejné stránky (osobní, 1×měsíčně). Výchozí False = robots.txt se ctí.
+        self.api_url = api_url or DEFAULT_API_URL
+        self.api_key = api_key or DEFAULT_API_KEY
         self.ignore_robots = ignore_robots
-        # Volitelné hlavičky (typicky Cookie z přihlášené prohlížečové relace),
-        # aby reálný zachycený endpoint prošel přes anti-bot ochranu.
+        # Volitelné hlavičky (typicky Cookie z přihlášené relace) pro případ,
+        # že by endpoint vyžadoval session / průchod anti-botem.
         self.extra_headers = extra_headers or {}
         self.session = session or requests.Session()
 
     def fetch(self) -> list[DealResult]:
-        """Vrátí nalezené Europe→Japonsko mileage bargains. Prázdný seznam,
-        pokud žádná nabídka neodpovídá; vyhazuje výjimku při chybě sítě/struktury
-        (scanner ji zachytí a označí zdroj jako nefunkční)."""
-        # 1) Explicitní JSON endpoint (zachycený z prohlížeče) má přednost.
-        if self.api_url:
-            return self._fetch_from_api(self.api_url)
-        # 2) AEM .model.json auto-pokus (M&M běží na Adobe Experience Manager,
-        #    komponenty bývají dostupné jako JSON přes Sling Model Exporter).
-        for candidate in self._model_json_candidates():
-            try:
-                deals = self._fetch_from_api(candidate, raise_on_error=False)
-            except Exception:  # noqa: BLE001 – heuristika, tiše pokračuj
-                deals = None
-            if deals:
-                logger.info("Miles & More: data z AEM endpointu %s", candidate)
-                return deals
-        # 3) Fallback: scraping HTML stránky.
-        return self._fetch_from_html()
+        """Vrátí Europe→Japonsko mileage bargains. Primárně z GraphQL endpointu,
+        s fallbackem na scraping HTML. Prázdný seznam = žádná odpovídající
+        nabídka; výjimka = tvrdá chyba (scanner ji zachytí)."""
+        try:
+            deals = self._fetch_from_graphql()
+            logger.info("Miles & More: %d nabídek z GraphQL endpointu", len(deals))
+            return deals
+        except Exception as exc:  # noqa: BLE001 – zkus fallback na HTML
+            logger.warning("Miles & More GraphQL selhal (%s) – zkouším HTML", exc)
+            return self._fetch_from_html()
 
-    def _model_json_candidates(self) -> list[str]:
-        """Odvodí kandidátní AEM JSON endpointy z URL stránky."""
-        base = self.page_url.split("#", 1)[0].split("?", 1)[0]
-        candidates: list[str] = []
-        if base.endswith(".html"):
-            candidates.append(base[:-len(".html")] + ".model.json")
-        return candidates
-
-    # -- varianta přes JSON API (zachycený endpoint / AEM model.json) -----
-    def _fetch_from_api(self, url: str,
-                        raise_on_error: bool = True) -> list[DealResult]:
+    # -- primární: GraphQL endpoint --------------------------------------
+    def _fetch_from_graphql(self) -> list[DealResult]:
         headers = {
             "User-Agent": USER_AGENT,
-            "Accept": "application/json",
-            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+            "x-api-key": self.api_key,
+            "Origin": SITE_BASE,
+            "Referer": SITE_BASE + "/",
             **self.extra_headers,
         }
-        try:
-            resp = self.session.get(url, headers=headers, timeout=30)
-            resp.raise_for_status()
-            payload = resp.json()
-        except (requests.RequestException, ValueError) as exc:
-            logger.error("Miles & More JSON (%s) selhalo: %s", url, exc)
-            if raise_on_error:
-                raise RuntimeError(f"Miles & More JSON selhalo: {exc}") from exc
-            return []
-        return self._deals_from_offers(payload)
+        body = {"query": _GRAPHQL_QUERY, "variables": _GRAPHQL_VARIABLES}
+        resp = self.session.post(self.api_url, headers=headers, json=body, timeout=30)
+        resp.raise_for_status()
+        payload = resp.json()
+        if payload.get("errors"):
+            logger.warning("Miles & More GraphQL errors: %s", payload["errors"])
+        offers = (
+            payload.get("data", {}).get("offers", {}).get("offers", [])
+        )
+        return self._deals_from_air_offers(offers)
 
-    def _deals_from_offers(self, payload) -> list[DealResult]:
-        """Vytvoří dealy z JSON payloadu. Umí dvě situace:
-        a) čistý seznam nabídek (klíč 'offers'/'items' nebo top-level list) →
-           každá položka se vyhodnotí samostatně,
-        b) libovolný vnořený AEM strom (.model.json) → projde se rekurzivně a
-           Japonsko-relevantní textové uzly se vezmou jako nabídky.
-        """
+    def _deals_from_air_offers(self, offers: list[dict]) -> list[DealResult]:
         deals: list[DealResult] = []
-        seen: set[str] = set()
-
-        offers = None
-        if isinstance(payload, list):
-            offers = payload
-        elif isinstance(payload, dict):
-            offers = payload.get("offers") or payload.get("items")
-
-        if isinstance(offers, list) and offers:
-            for offer in offers:
-                text = " ".join(_walk_json(offer))
-                if _matches_japan(text) and text not in seen:
-                    seen.add(text)
-                    deals.append(self._build_deal(text, self.page_url))
-            return deals
-
-        # Fallback: projdi celý strom a vyber Japonsko-relevantní řetězce.
-        for text in _walk_json(payload):
-            text = text.strip()
-            if text and len(text) <= 400 and _matches_japan(text) and text not in seen:
-                seen.add(text)
-                deals.append(self._build_deal(text, self.page_url))
+        for offer in offers or []:
+            air = offer.get("air") or {}
+            dest_iata = air.get("destinationIata", "")
+            dest_name = air.get("destinationName", "")
+            if not _is_japan_destination(dest_iata, dest_name):
+                continue
+            origins = air.get("originList") or []
+            eu_origins = _european_origins(origins)
+            # Chceme Europe→Japonsko: pokud jsou původy známé, vyžaduj evropský.
+            if origins and not eu_origins:
+                continue
+            deals.append(self._build_air_deal(offer, air, eu_origins or origins))
         return deals
 
-    # -- varianta přes scraping HTML --------------------------------------
+    def _build_air_deal(self, offer: dict, air: dict,
+                        origins: list[dict]) -> DealResult:
+        dest = air.get("destinationName") or air.get("destinationIata") or "Japonsko"
+        dest_iata = air.get("destinationIata", "")
+        miles = air.get("promoMiles") or offer.get("miles") or air.get("regularMiles")
+        regular = air.get("regularMiles")
+
+        origin_codes = [
+            og.get("originIata") for og in origins if og.get("originIata")
+        ]
+        origins_str = ", ".join(dict.fromkeys(origin_codes)) or "Evropa"
+
+        title = f"{origins_str} → {dest}"
+        if dest_iata:
+            title += f" ({dest_iata})"
+
+        summary_parts = []
+        if miles:
+            sm = f"{int(miles):,} mil".replace(",", " ")
+            if regular and regular != miles:
+                sm += f" (běžně {int(regular):,} mil)".replace(",", " ")
+            summary_parts.append(sm)
+        period = self._format_period(
+            air.get("travelPeriodStart"), air.get("travelPeriodEnd")
+        )
+        if period:
+            summary_parts.append(f"období {period}")
+        summary = "Award nabídka – " + ", ".join(summary_parts) if summary_parts \
+            else "Award nabídka (mileage bargain)"
+
+        url = offer.get("url") or ""
+        if url.startswith("/"):
+            url = SITE_BASE + url
+        if not url:
+            url = self.page_url
+
+        return DealResult(
+            title=title,
+            link=url,
+            source="miles-and-more.com",
+            price_eur=None,            # platí se MÍLEMI, ne EUR
+            published=date.today(),
+            summary=summary,
+        )
+
+    @staticmethod
+    def _format_period(start: Optional[str], end: Optional[str]) -> str:
+        def fmt(value):
+            if not value:
+                return None
+            try:
+                return datetime.fromisoformat(value[:10]).date().strftime("%d.%m.%Y")
+            except (ValueError, TypeError):
+                return value
+        s, e = fmt(start), fmt(end)
+        if s and e:
+            return f"{s}–{e}"
+        return s or e or ""
+
+    # -- fallback: scraping HTML -----------------------------------------
     def _fetch_from_html(self) -> list[DealResult]:
         if not self.ignore_robots and not _robots_allows(self.page_url, USER_AGENT):
             logger.warning(
@@ -189,7 +295,7 @@ class MilesAndMoreSource:
             "User-Agent": USER_AGENT,
             "Accept": "text/html,application/xhtml+xml",
             "Accept-Language": "en-US,en;q=0.9",
-            **self.extra_headers,  # typicky Cookie z přihlášené relace
+            **self.extra_headers,
         }
         try:
             resp = self.session.get(self.page_url, headers=headers, timeout=30)
@@ -206,24 +312,6 @@ class MilesAndMoreSource:
 
         deals: list[DealResult] = []
         seen: set[str] = set()
-
-        # 1) Embedded JSON ve <script> tazích (SPA stav / JSON-LD).
-        for script in soup.find_all("script"):
-            raw = script.string or script.get_text() or ""
-            raw = raw.strip()
-            if not raw or "{" not in raw:
-                continue
-            for blob in self._json_candidates(raw):
-                try:
-                    data = json.loads(blob)
-                except (json.JSONDecodeError, ValueError):
-                    continue
-                for text in _walk_json(data):
-                    if _matches_japan(text) and text not in seen:
-                        seen.add(text)
-                        deals.append(self._build_deal(text, self.page_url))
-
-        # 2) Viditelné HTML karty (fallback, pokud SPA vyrenderovala obsah).
         for node in soup.find_all(["article", "li", "div", "h2", "h3"]):
             text = node.get_text(" ", strip=True)
             if not text or len(text) > 400 or not _matches_japan(text):
@@ -231,38 +319,14 @@ class MilesAndMoreSource:
             if text in seen:
                 continue
             seen.add(text)
-            deals.append(self._build_deal(text, self.page_url))
-
+            deals.append(DealResult(
+                title=text[:200],
+                link=self.page_url,
+                source="miles-and-more.com",
+                price_eur=None,
+                published=date.today(),
+                summary="Award nabídka (mileage bargain)",
+            ))
         if not deals:
-            logger.info("Miles & More: žádná Europe→Japonsko nabídka nenalezena "
-                        "(SPA/anti-bot mohly zabránit načtení obsahu).")
+            logger.info("Miles & More: žádná Europe→Japonsko nabídka nenalezena.")
         return deals
-
-    @staticmethod
-    def _json_candidates(raw: str) -> list[str]:
-        """Z textu skriptu vytáhne kandidáty na JSON objekt/pole."""
-        candidates: list[str] = []
-        # Celý skript jako JSON (typicky JSON-LD).
-        if raw[0] in "{[":
-            candidates.append(raw)
-        # window.__STATE__ = {...}; apod.
-        m = re.search(r"=\s*(\{.*\})\s*;?\s*$", raw, re.DOTALL)
-        if m:
-            candidates.append(m.group(1))
-        return candidates
-
-    def _build_deal(self, text: str, link: str) -> DealResult:
-        miles = _extract_miles(text)
-        title = text[:200]
-        if miles:
-            summary = f"Award nabídka cca {miles:,} mil".replace(",", " ")
-        else:
-            summary = "Award nabídka (mileage bargain)"
-        return DealResult(
-            title=title,
-            link=link,
-            source="miles-and-more.com",
-            price_eur=None,           # platí se MÍLEMI, ne EUR
-            published=date.today(),
-            summary=summary,
-        )

@@ -276,42 +276,61 @@ def test_mm_matches_japan():
     assert not _matches_japan("Europe to New York deal")
 
 
-def test_mm_deals_from_api_payload():
-    from src.sources.miles_and_more import MilesAndMoreSource
-    src = MilesAndMoreSource(api_url="http://example/api")
-    payload = {"offers": [
-        {"destination": "Tokyo", "miles": "35,000 miles", "from": "Europe"},
-        {"destination": "New York", "miles": "30,000 miles"},
-    ]}
-    deals = src._deals_from_offers(payload)
-    assert len(deals) == 1
-    assert deals[0].source == "miles-and-more.com"
-    assert deals[0].price_eur is None
-    assert "Tokyo" in deals[0].title
+def _air_offer(dest_iata, dest_name, origin_iata, origin_iso, promo, regular):
+    return {
+        "air": {
+            "destinationIata": dest_iata,
+            "destinationName": dest_name,
+            "originList": [{
+                "originIata": origin_iata,
+                "originName": origin_iata,
+                "originCountryIso": origin_iso,
+                "originCountryName": origin_iso,
+            }],
+            "promoMiles": promo,
+            "regularMiles": regular,
+            "travelPeriodStart": "2026-09-01",
+            "travelPeriodEnd": "2026-12-15",
+        },
+        "heading": f"{dest_name} special",
+        "miles": promo,
+        "url": "/de/en/offer/x.html",
+    }
 
 
-def test_mm_model_json_candidate_derivation():
-    from src.sources.miles_and_more import MilesAndMoreSource
-    src = MilesAndMoreSource(
-        page_url="https://www.miles-and-more.com/de/en/spend/flights.html#mileagebargains"
-    )
-    cands = src._model_json_candidates()
-    assert "https://www.miles-and-more.com/de/en/spend/flights.model.json" in cands
-
-
-def test_mm_deals_from_nested_aem_tree():
+def test_mm_air_offers_keeps_japan_from_europe():
     from src.sources.miles_and_more import MilesAndMoreSource
     src = MilesAndMoreSource()
-    # Bez čistého 'offers' seznamu – vnořený AEM strom.
-    payload = {
-        ":items": {
-            "root": {
-                "card1": {"title": "Europe to Tokyo for 35,000 miles"},
-                "card2": {"title": "Europe to New York 30,000 miles"},
-            }
-        }
-    }
-    deals = src._deals_from_offers(payload)
+    offers = [
+        _air_offer("HND", "Tokyo", "FRA", "DE", 55000, 80000),   # ✓ EU→JP
+        _air_offer("JFK", "New York", "MUC", "DE", 30000, 50000),  # ✗ ne Japonsko
+        _air_offer("KIX", "Osaka", "JFK", "US", 60000, 90000),     # ✗ původ mimo EU
+    ]
+    deals = src._deals_from_air_offers(offers)
     assert len(deals) == 1
-    assert "Tokyo" in deals[0].title
+    d = deals[0]
+    assert d.source == "miles-and-more.com"
+    assert d.price_eur is None
+    assert "Tokyo" in d.title and "HND" in d.title and "FRA" in d.title
+    assert "55 000 mil" in d.summary
+    assert "01.09.2026" in d.summary
+    assert d.link.startswith("https://www.miles-and-more.com/")
+
+
+def test_mm_air_offers_japan_by_iata_without_name():
+    from src.sources.miles_and_more import MilesAndMoreSource
+    src = MilesAndMoreSource()
+    offers = [_air_offer("NGO", "", "VIE", "AT", 50000, 70000)]
+    deals = src._deals_from_air_offers(offers)
+    assert len(deals) == 1
+    assert "NGO" in deals[0].title
+
+
+def test_mm_air_offers_empty_origins_allowed():
+    from src.sources.miles_and_more import MilesAndMoreSource
+    src = MilesAndMoreSource()
+    offer = _air_offer("HND", "Tokyo", "FRA", "DE", 55000, 80000)
+    offer["air"]["originList"] = []  # neznámý původ → nevylučujeme
+    deals = src._deals_from_air_offers([offer])
+    assert len(deals) == 1
     assert deals[0].source == "miles-and-more.com"

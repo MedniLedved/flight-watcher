@@ -199,35 +199,32 @@ Jack's nemá veřejné API a scrapuje se HTML:
 - V každém případě to **nezastaví** zbytek scanu; v souhrnu uvidíš
   `Jack's ✗ (chyba)`.
 
-**Miles & More mileage bargains nic nevrací:**
+**Miles & More mileage bargains:**
 
 Kontrola běží **jen 1. dne v měsíci** – jindy se zdroj záměrně přeskočí
-(v logu `Miles & More: přeskočeno`). Zdroj zkouší data získat **ve třech
-krocích** v tomto pořadí:
+(v logu `Miles & More: přeskočeno`). Data se berou ze **strukturovaného
+GraphQL endpointu**, který používá samotný web M&M:
 
-1. **Explicitní JSON endpoint** z `MILESANDMORE_API_URL` (zachyť ho ve svém
-   prohlížeči: DevTools → Network → filtr XHR při načtení sekce „mileage
-   bargains", zkopíruj Request URL).
-2. **Auto-pokus o AEM `.model.json`** – M&M běží na Adobe Experience Manager,
-   kde komponenty bývají dostupné jako JSON (`…/flights.model.json`).
-3. **Scraping HTML** stránky (best-effort).
+```
+POST https://api.miles-and-more.com/content/v3/offers/search
+hlavička x-api-key (veřejný klíč webového frontendu, vestavěný v kódu)
+```
 
-> ⚠️ **Důležité zjištění:** doména `miles-and-more.com` je za **Akamai
-> anti-bot ochranou**, která vrací **403 i na obyčejný serverový požadavek**
-> (ověřeno proti živému serveru) – a to jak pro HTML, tak pro `.model.json`.
-> Plain `requests` z GitHub Actions tedy nejspíš dostane 403 také.
->
-> **Jediná spolehlivá cesta** je předat hlavičky z přihlášené prohlížečové
-> relace přes `MILESANDMORE_HEADERS` (JSON), typicky `Cookie`:
-> ```
-> MILESANDMORE_HEADERS={"Cookie": "zkopírovaná_cookie_z_prohlížeče"}
-> ```
-> Cookie postav jako **GitHub Actions Secret** (obsahuje session). Bez ní
-> zdroj 403 zaloguje, označí se v souhrnu jako `Miles & More ✗` a scan
-> pokračuje dál.
+Odpověď obsahuje pro každou leteckou nabídku `destinationIata/Name`,
+`originList`, `promoMiles`/`regularMiles` a cestovní období. Kód z toho
+filtruje nabídky s **cílem v Japonsku** a **původem v Evropě** a posílá je
+jako deal alert (cena je v *mílích*, ne EUR). **Normálně nemusíš nic
+nastavovat** – endpoint i klíč jsou vestavěné.
 
-Pokud `robots.txt` scraping zakazuje, zdroj ho ve výchozím stavu respektuje;
-pro osobní monitoring lze nastavit `MILESANDMORE_IGNORE_ROBOTS=true`.
+Pokud by endpoint přestal fungovat:
+- vrátí-li 403/chybu, zdroj automaticky zkusí **fallback scraping HTML**
+  stránky; když selže i ten, jen se zaloguje a v souhrnu se objeví
+  `Miles & More ✗` – scan pokračuje dál.
+- kdyby endpoint začal vyžadovat přihlášenou relaci, lze přidat hlavičky
+  (typicky `Cookie`) přes secret `MILESANDMORE_HEADERS={"Cookie": "..."}`.
+- endpoint/klíč jdou přepsat přes `MILESANDMORE_API_URL` /
+  `MILESANDMORE_API_KEY`; `MILESANDMORE_IGNORE_ROBOTS=true` povolí HTML
+  fallback i při zakazujícím robots.txt.
 
 **Žádné ceny v souhrnu** – zkontroluj, že máš nastavené API klíče a (u
 Amadeus) že nejsi na syntetickém testovacím prostředí (`AMADEUS_ENV`).
