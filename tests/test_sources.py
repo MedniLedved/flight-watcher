@@ -550,3 +550,22 @@ def test_priority_order_puts_undersampled_first():
     cov = {"FRA": 10.0, "MUC": 10.0, "PRG": 0.0}  # PRG neprozkoumané
     order = priority_order(airports, stats, cov, cold_target=3.0)
     assert order[0] == "PRG"  # neprozkoumané dopředu
+
+
+def test_record_uses_today_as_observation_date_not_flight_date():
+    """on_date musí být datum pozorování (dnešek), ne datum letu – jinak je
+    recency decay rozbitý (věk = záporný → váha vždy 1.0)."""
+    import tempfile, os
+    from src.history import PriceHistory
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    try:
+        h = PriceHistory(path)
+        h.record("FRA-NRT-roundtrip", 400, "duffel",
+                 depart_date=date(2026, 9, 7), return_date=date(2026, 9, 21))
+        rec = h.data["FRA-NRT-roundtrip"]["history"][0]
+        # "date" = dnešek (pozorování), depart_date = budoucí let
+        assert rec["date"] == date.today().isoformat()
+        assert rec["depart_date"] == "2026-09-07"
+    finally:
+        os.unlink(path)

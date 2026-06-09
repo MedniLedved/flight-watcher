@@ -542,7 +542,10 @@ class Scanner:
             should_send = below_threshold and self.history.should_alert(
                 key, f.price
             )
-            self.history.record(key, f.price, f.source, f.depart_date,
+            # on_date NEvyplňujeme → výchozí dnešek (datum pozorování). Datum
+            # letu se ukládá zvlášť přes depart_date/return_date. Díky tomu
+            # funguje recency decay v coverage_weights i 90denní prořezávání.
+            self.history.record(key, f.price, f.source,
                                 depart_date=f.depart_date,
                                 return_date=f.return_date)
 
