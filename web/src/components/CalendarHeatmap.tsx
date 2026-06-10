@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { priceColor } from "@/lib/colors";
 import type { CalendarDay } from "@/types/data";
 
 const DOW = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
@@ -7,17 +8,6 @@ const MONTH_NAMES = [
   "Leden", "Únor", "Březen", "Duben", "Květen", "Červen",
   "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec",
 ];
-
-function priceColor(price: number, min: number, max: number): string {
-  const t = max === min ? 0 : (price - min) / (max - min);
-  // green #10b981 → yellow #f59e0b → red #ef4444
-  if (t < 0.5) {
-    const u = t * 2;
-    return `rgb(${Math.round(16 + 229 * u)},${Math.round(185 - 27 * u)},${Math.round(129 - 118 * u)})`;
-  }
-  const u = (t - 0.5) * 2;
-  return `rgb(${Math.round(245 - 6 * u)},${Math.round(158 - 90 * u)},${Math.round(11 + 57 * u)})`;
-}
 
 function monthKey(iso: string): string {
   return iso.slice(0, 7);

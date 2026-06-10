@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { FlightMap } from "@/components/FlightMap";
 import { RouteDetailView } from "@/components/RouteDetailView";
+import { SwimlanesView } from "@/components/SwimlanesView";
 import { useDataLoader } from "@/hooks/useDataLoader";
 import { HomePage } from "@/pages/HomePage";
 
-type AppView = "offers" | "map";
+type AppView = "offers" | "swimlanes" | "map";
 
 const TAB_LABELS: Record<AppView, string> = {
   offers: "Nabídky",
+  swimlanes: "Časová osa",
   map: "Mapa",
 };
 
@@ -70,6 +72,14 @@ export default function App() {
           agentConfig={agentConfig}
           loading={loading}
           error={error}
+          onSelectRoute={setSelectedRoute}
+        />
+      )}
+
+      {view === "swimlanes" && (
+        <SwimlanesView
+          latest={latest}
+          agentConfig={agentConfig}
           onSelectRoute={setSelectedRoute}
         />
       )}
