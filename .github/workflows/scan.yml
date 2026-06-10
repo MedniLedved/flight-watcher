@@ -5,6 +5,9 @@ on:
     - cron: '0 7 * * *'   # Každý den v 7:00 UTC (8:00/9:00 CET/CEST)
   workflow_dispatch:        # Možnost spustit manuálně z GitHub UI
 
+permissions:
+  contents: write   # commit exportovaných JSONů pro dashboard
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -52,3 +55,19 @@ jobs:
             data/price_history.json
             data/skyscrapper_airports.json
           key: price-history-${{ github.run_id }}
+
+      # Exportované JSONy pro dashboard se commitují do repa – jsou to
+      # kanonická data (append-only řady přežívají 90denní retenci scanneru).
+      - name: Commit dashboard data
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.json data/history data/calendar 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Žádné změny v exportu – nic necommituji."
+          else
+            git commit -m "data: denní export pro dashboard"
+            git pull --rebase origin "${GITHUB_REF_NAME}" || true
+            git push
+          fi

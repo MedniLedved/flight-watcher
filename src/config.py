@@ -110,6 +110,68 @@ def airport_name(code: str) -> str:
     return AIRPORT_NAMES.get(code.upper(), code.upper())
 
 
+def _enabled_airport_codes(airports: list[dict]) -> list[str]:
+    """Z agent.json seznamu letišť vrátí kódy zapnutých, seřazené dle priority
+    (nižší číslo = přednost; stabilně dle pořadí v souboru)."""
+    enabled = [a for a in airports if a.get("enabled", True) and a.get("code")]
+    enabled.sort(key=lambda a: a.get("priority", 999))
+    return [a["code"] for a in enabled]
+
+
+def _travel_window_to_search_windows(window: dict) -> list[dict]:
+    """Převod travelWindow {from, to} (ISO data) na search_windows
+    [{year, months}]. Okno přes přelom roku se ořízne na první rok (scanner
+    zatím podporuje jen jedno okno v jednom roce)."""
+    try:
+        from datetime import date as _date
+        d_from = _date.fromisoformat(window["from"])
+        d_to = _date.fromisoformat(window["to"])
+    except (KeyError, ValueError, TypeError):
+        return []
+    if d_to < d_from:
+        return []
+    if d_to.year != d_from.year:
+        logger.warning(
+            "travelWindow přes přelom roku – ořezávám na rok %s", d_from.year
+        )
+        d_to = _date(d_from.year, 12, 31)
+    months = list(range(d_from.month, d_to.month + 1))
+    return [{"year": d_from.year, "months": months}]
+
+
+def apply_agent_config(routes_config: dict, agent: dict) -> dict:
+    """Promítne config/agent.json do routes_config (agent.json má přednost).
+    Externalizuje letiště, prahy, okno a délku pobytu z kódu/yaml do configu
+    editovatelného přes dashboard."""
+    if agent.get("europeAirports"):
+        codes = _enabled_airport_codes(agent["europeAirports"])
+        if codes:
+            routes_config["european_airports"] = codes
+    if agent.get("japanAirports"):
+        codes = _enabled_airport_codes(agent["japanAirports"])
+        if codes:
+            routes_config["japanese_airports"] = codes
+    thresholds = agent.get("alertThresholds", {})
+    if thresholds.get("dealMaxEur") is not None:
+        routes_config["price_threshold_eur"] = thresholds["dealMaxEur"]
+    stay = agent.get("stayLength", {})
+    if stay.get("minNights") is not None and stay.get("maxNights") is not None:
+        routes_config["stay_length"] = {
+            "min_nights": stay["minNights"], "max_nights": stay["maxNights"],
+        }
+    windows = _travel_window_to_search_windows(agent.get("travelWindow", {}))
+    if windows:
+        routes_config["search_windows"] = windows
+    # Doplň lidská jména letišť pro notifikace/exporty.
+    for a in agent.get("europeAirports", []) + agent.get("japanAirports", []):
+        if a.get("code") and a.get("name"):
+            AIRPORT_NAMES.setdefault(a["code"], a["name"])
+    for code, info in agent.get("cityAliases", {}).items():
+        if info.get("name"):
+            AIRPORT_NAMES.setdefault(code, info["name"])
+    return routes_config
+
+
 def _parse_json_env(name: str) -> dict:
     """Načte env proměnnou jako JSON objekt; při chybě/prázdnu vrátí {}."""
     import json
@@ -156,9 +218,12 @@ class Settings:
 
     # routes.yaml
     routes_config: dict[str, Any] = field(default_factory=dict)
+    # config/agent.json (editovatelný přes dashboard, čte se při každém běhu)
+    agent_config: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def load(cls, routes_path: str | Path = "config/routes.yaml") -> "Settings":
+    def load(cls, routes_path: str | Path = "config/routes.yaml",
+             agent_path: str | Path = "config/agent.json") -> "Settings":
         routes_config: dict[str, Any] = {}
         path = Path(routes_path)
         if path.exists():
@@ -166,6 +231,18 @@ class Settings:
                 routes_config = yaml.safe_load(fh) or {}
         else:
             logger.warning("routes.yaml nenalezen na %s", path)
+
+        agent_config: dict[str, Any] = {}
+        apath = Path(agent_path)
+        if apath.exists():
+            import json
+            try:
+                with open(apath, "r", encoding="utf-8") as fh:
+                    agent_config = json.load(fh) or {}
+            except (json.JSONDecodeError, OSError) as exc:
+                logger.error("Nelze načíst %s: %s – pokračuji bez něj", apath, exc)
+        if agent_config:
+            routes_config = apply_agent_config(routes_config, agent_config)
 
         threshold = float(
             os.getenv("PRICE_THRESHOLD_EUR")
@@ -192,7 +269,29 @@ class Settings:
             ),
             milesandmore_headers=_parse_json_env("MILESANDMORE_HEADERS"),
             routes_config=routes_config,
+            agent_config=agent_config,
         )
+
+    # -- toggle zdrojů / alertů z config/agent.json ------------------------
+    def source_enabled(self, name: str) -> bool:
+        """Zapnutí API zdroje dle agent.json (duffel/skyScrapper/amadeus/
+        travelpayouts). Chybějící klíč = zapnuto (zpětná kompatibilita)."""
+        sources = self.agent_config.get("sources", {})
+        value = sources.get(name)
+        return True if value is None else bool(value)
+
+    def rss_enabled(self, name: str) -> bool:
+        """Zapnutí RSS/scraping zdroje (secretFlying/cestujlevne/jacks/
+        milesAndMore) dle agent.json."""
+        rss = self.agent_config.get("sources", {}).get("rss", {})
+        value = rss.get(name)
+        return True if value is None else bool(value)
+
+    def telegram_alert_enabled(self, kind: str) -> bool:
+        """Zapnutí typu Telegram zprávy (priceAlert/dealAlert/dailySummary)."""
+        alerts = self.agent_config.get("telegramAlerts", {})
+        value = alerts.get(kind)
+        return True if value is None else bool(value)
 
     # -- pomocné gettery z routes.yaml ------------------------------------
     @property

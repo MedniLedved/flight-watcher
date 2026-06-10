@@ -170,6 +170,12 @@ class PriceHistory:
         })
         entry.setdefault("alerts", {})[str(int(price))] = datetime.now().isoformat()
 
+    # -- počítadlo scanů (pro meta.json exportu) ---------------------------
+    def bump_scan_count(self) -> int:
+        meta = self.data.setdefault(META_KEY, {})
+        meta["scan_count"] = int(meta.get("scan_count", 0)) + 1
+        return meta["scan_count"]
+
     # -- Amadeus počítadlo -----------------------------------------------
     def amadeus_usage(self, month: Optional[str] = None) -> int:
         month = month or datetime.now().strftime("%Y-%m")

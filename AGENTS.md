@@ -56,6 +56,7 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 | `src/history.py` | Perzistentní `data/price_history.json`: ceny, anti-duplicita alertů, coverage/weekday statistiky, počítadla kvót. |
 | `src/airport_stats.py` | Čistě výpočetní: `deal_sort_key`, `rank_airports`, `priority_order`, `format_*`. Žádné I/O. |
 | `src/notifier.py` | Telegram (3 typy zpráv, HTML). Dělení dlouhých zpráv (`_split_message`). |
+| `src/exporter.py` | In-process export JSONů pro dashboard na konci scanu (`latest.json`, append-only `data/history/*`, `stats.json`, `insights.json`, `routes.json`, `meta.json`, `data/calendar/*`). Datový kontrakt zrcadlí `web/src/types/data.ts`. |
 | `src/calendar_renderer.py` | ASCII kalendář odletu/příletu do `<code>` bloku. |
 | `src/sources/` | Jednotlivé zdroje. Sdílené `FlightResult` / `DealResult` v `__init__.py`. |
 
@@ -93,6 +94,10 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 
 - Trasy a okna: `config/routes.yaml` (`price_threshold_eur`, `routes`,
   `search_windows`, `stay_length`, seznamy letišť v pořadí priority).
+- **`config/agent.json` má přednost** (overlay v `Settings.load` →
+  `apply_agent_config`): letiště (enabled+priority), prahy alertů, cestovní
+  okno, délka pobytu, toggle zdrojů a Telegram alertů. Edituje se přes
+  dashboard (záložka Nastavení); žádná zadrátovaná letiště/prahy do kódu.
 - Secrets/env: `.env` lokálně (viz `.env.example`), GitHub **Actions Secrets**
   v CI. **`.env` nikdy necommituj** (je v `.gitignore`).
 - Plánování vzorkování laditelné přes env: `SCAN_DATE_SAMPLES`,

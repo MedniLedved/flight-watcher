@@ -35,6 +35,7 @@ from .config import (
     airport_name,
     trim_airports,
 )
+from .exporter import Exporter
 from .history import PriceHistory
 from .notifier import TelegramNotifier
 from .sources import DealResult, FlightResult
@@ -147,14 +148,17 @@ class Scanner:
                 "TELEGRAM_CHAT_ID. Žádné zprávy se neodešlou!"
             )
 
-        # Inicializace zdrojů (jen pokud jsou credentials).
+        # Inicializace zdrojů (jen pokud jsou credentials a zdroj není
+        # vypnutý v config/agent.json).
         self.duffel = (
             DuffelSource(self.settings.duffel_token)
-            if self.settings.duffel_token else None
+            if self.settings.duffel_token
+            and self.settings.source_enabled("duffel") else None
         )
         self.skyscrapper = (
             SkyScrapperSource(self.settings.rapidapi_key)
-            if self.settings.rapidapi_key else None
+            if self.settings.rapidapi_key
+            and self.settings.source_enabled("skyScrapper") else None
         )
         self.amadeus = (
             AmadeusSource(
@@ -162,12 +166,15 @@ class Scanner:
                 self.settings.amadeus_client_secret,
                 env=self.settings.amadeus_env,
             )
-            if (self.settings.amadeus_client_id and self.settings.amadeus_client_secret)
+            if (self.settings.amadeus_client_id
+                and self.settings.amadeus_client_secret
+                and self.settings.source_enabled("amadeus"))
             else None
         )
         self.travelpayouts = (
             TravelpayoutsSource(self.settings.travelpayouts_token)
-            if self.settings.travelpayouts_token else None
+            if self.settings.travelpayouts_token
+            and self.settings.source_enabled("travelpayouts") else None
         )
 
         self.request_count = 0
@@ -514,35 +521,38 @@ class Scanner:
         deals: list[DealResult] = []
         status: dict[str, bool] = {}
 
-        try:
-            sf = SecretFlyingSource().fetch(max_age_days=2)
-            deals += sf
-            status["secret_flying"] = True
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Secret Flying selhal: %s", exc)
-            status["secret_flying"] = False
+        if self.settings.rss_enabled("secretFlying"):
+            try:
+                sf = SecretFlyingSource().fetch(max_age_days=2)
+                deals += sf
+                status["secret_flying"] = True
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Secret Flying selhal: %s", exc)
+                status["secret_flying"] = False
 
-        try:
-            cl = CestujLevneSource(czk_eur_rate=self.settings.czk_eur_rate).fetch(
-                max_age_days=2
-            )
-            deals += cl
-            status["cestujlevne"] = True
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Cestujlevně selhal: %s", exc)
-            status["cestujlevne"] = False
+        if self.settings.rss_enabled("cestujlevne"):
+            try:
+                cl = CestujLevneSource(
+                    czk_eur_rate=self.settings.czk_eur_rate
+                ).fetch(max_age_days=2)
+                deals += cl
+                status["cestujlevne"] = True
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Cestujlevně selhal: %s", exc)
+                status["cestujlevne"] = False
 
-        try:
-            jk = JacksFlightClubSource().fetch()
-            deals += jk
-            status["jacks"] = True
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Jack's selhal: %s", exc)
-            status["jacks"] = False
+        if self.settings.rss_enabled("jacks"):
+            try:
+                jk = JacksFlightClubSource().fetch()
+                deals += jk
+                status["jacks"] = True
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Jack's selhal: %s", exc)
+                status["jacks"] = False
 
         # Miles & More mileage bargains – jen 1. kalendářní den v měsíci
         # (award nabídky se mění měsíčně).
-        if mm_should_run_today():
+        if self.settings.rss_enabled("milesAndMore") and mm_should_run_today():
             try:
                 mm = MilesAndMoreSource(
                     api_url=self.settings.milesandmore_api_url,
@@ -619,6 +629,16 @@ class Scanner:
             except Exception as exc:  # noqa: BLE001
                 logger.error("Trasa %s selhala: %s", route.get("name"), exc)
 
+        # Snapshot stavu historie PŘED zápisem dnešních cen – export z něj
+        # počítá flagy (isNewLow, priceDeltaEur) vůči stavu před scanem.
+        prev_state = {
+            key: {
+                "all_time_min": self.history.all_time_min(key),
+                "last_price": self.history.last_price(key),
+            }
+            for key in {f.route_key() for f in all_flights}
+        }
+
         # Vyhodnocení alertů vůči historii a prahu.
         self._process_flights(all_flights)
 
@@ -634,9 +654,23 @@ class Scanner:
             self._update_skyscrapper_quota()
 
         # Denní souhrn.
-        self._send_summary(all_flights, source_status, len(routes))
+        if self.settings.telegram_alert_enabled("dailySummary"):
+            self._send_summary(all_flights, source_status, len(routes))
+        else:
+            logger.info("Denní souhrn vypnut v config/agent.json – neposílám.")
 
+        self.history.bump_scan_count()
         self.history.save()
+
+        # Export pro dashboard – MUSÍ běžet in-process (živé FlightResult
+        # s efemérními poli) a nesmí shodit scan.
+        try:
+            Exporter(self.history, self.settings).run(
+                all_flights, prev_state=prev_state
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Export pro dashboard selhal: %s", exc)
+
         logger.info("=== Scan dokončen ===")
 
     def _process_flights(self, flights: list[FlightResult]) -> None:
@@ -658,12 +692,14 @@ class Scanner:
                                 depart_date=f.depart_date,
                                 return_date=f.return_date)
 
-            if should_send:
+            if should_send and self.settings.telegram_alert_enabled("priceAlert"):
                 if self.notifier.send_price_alert(f, delta=delta):
                     self.history.mark_alerted(key, f.price)
                     logger.info("Alert odeslán: %s %.0f EUR", key, f.price)
 
     def _process_deals(self, deals: list[DealResult]) -> None:
+        if not self.settings.telegram_alert_enabled("dealAlert"):
+            return
         for deal in deals:
             self.notifier.send_deal_alert(deal)
 
