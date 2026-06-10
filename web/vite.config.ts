@@ -12,4 +12,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Recharts + React = ~660 KB minified; limit raised pro SPA bez lazy-loadingu.
+    chunkSizeWarningLimit: 800,
+  },
 });

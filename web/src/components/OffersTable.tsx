@@ -65,7 +65,13 @@ function Flags({ o }: { o: LatestOffer }) {
   );
 }
 
-export function OffersTable({ offers }: { offers: LatestOffer[] }) {
+export function OffersTable({
+  offers,
+  onSelectRoute,
+}: {
+  offers: LatestOffer[];
+  onSelectRoute?: (routeKey: string) => void;
+}) {
   if (offers.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
@@ -92,7 +98,18 @@ export function OffersTable({ offers }: { offers: LatestOffer[] }) {
       <TableBody>
         {offers.map((o) => (
           <TableRow key={o.routeKey + o.source}>
-            <TableCell className="font-medium">{routeLabel(o)}</TableCell>
+            <TableCell className="font-medium">
+              {onSelectRoute ? (
+                <button
+                  onClick={() => onSelectRoute(o.routeKey)}
+                  className="text-left hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {routeLabel(o)}
+                </button>
+              ) : (
+                routeLabel(o)
+              )}
+            </TableCell>
             <TableCell className="text-muted-foreground">
               {o.type === "openjaw" ? "open-jaw" : "zpáteční"}
             </TableCell>
