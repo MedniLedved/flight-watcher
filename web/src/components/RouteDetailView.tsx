@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { CalendarHeatmap } from "./CalendarHeatmap";
 import { PriceHistoryChart } from "./PriceHistoryChart";
 import { StatsCards } from "./StatsCards";
 import { useRouteDetail } from "@/hooks/useRouteDetail";
@@ -71,37 +72,14 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
         </CardContent>
       </Card>
 
-      {/* Kalendář termínů */}
+      {/* Kalendář termínů — heatmapa */}
       {calendar && calendar.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Dostupné termíny (aktuální nejlepší ceny)</CardTitle>
+            <CardTitle className="text-base">Kalendář dostupných termínů</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Odlet</TableHead>
-                  <TableHead>Návrat</TableHead>
-                  <TableHead className="text-right">Cena</TableHead>
-                  <TableHead>Zdroj</TableHead>
-                  <TableHead>Pozorováno</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {calendar.map((day) => (
-                  <TableRow key={day.departDate}>
-                    <TableCell className="font-medium">{fmtDate(day.departDate)}</TableCell>
-                    <TableCell>{fmtDate(day.returnDate)}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      {Math.round(day.price)} €
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{day.source}</TableCell>
-                    <TableCell className="text-muted-foreground">{day.observedDate}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <CalendarHeatmap calendar={calendar} />
           </CardContent>
         </Card>
       )}
