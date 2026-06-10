@@ -26,6 +26,7 @@ from typing import Optional
 import requests
 
 from . import FlightResult
+from .google_flights import google_flights_url
 
 logger = logging.getLogger(__name__)
 
@@ -231,18 +232,29 @@ class SkyScrapperSource:
                 if code:
                     airlines.add(code)
 
+        o_code = self._leg_iata(out_leg, "origin", origin)
+        d_code = self._leg_iata(out_leg, "destination", destination)
+        r_o = self._leg_iata(in_leg, "origin", "") if in_leg else ""
+        r_d = self._leg_iata(in_leg, "destination", "") if in_leg else ""
+        depart_dt = self._leg_date(out_leg)
+        return_dt = self._leg_date(in_leg) if in_leg else None
+
         return FlightResult(
             price=price,
             currency="EUR",
-            origin=self._leg_iata(out_leg, "origin", origin),
-            destination=self._leg_iata(out_leg, "destination", destination),
-            return_origin=self._leg_iata(in_leg, "origin", "") if in_leg else "",
-            return_destination=self._leg_iata(in_leg, "destination", "") if in_leg else "",
-            depart_date=self._leg_date(out_leg),
-            return_date=self._leg_date(in_leg) if in_leg else None,
+            origin=o_code,
+            destination=d_code,
+            return_origin=r_o,
+            return_destination=r_d,
+            depart_date=depart_dt,
+            return_date=return_dt,
             airlines=sorted(airlines),
             source=self.name,
-            deep_link="",  # Sky Scrapper přímý nákupní odkaz nevrací
+            # Sky Scrapper přímý nákupní odkaz nevrací – dej aspoň ověřovací
+            # odkaz na Google Flights.
+            deep_link=google_flights_url(
+                o_code, d_code, depart_dt, return_dt, r_o, r_d
+            ),
             route_name=route_name,
         )
 

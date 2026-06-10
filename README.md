@@ -69,8 +69,16 @@ python -m pytest
 
 ### Duffel: test vs. produkce
 
-Token sám určuje režim – `duffel_test_...` vrací testovací data, `duffel_live_...`
+Token sám určuje režim – `duffel_test_...` vrací **syntetická testovací data
+se smyšlenými cenami** (neodpovídají žádné reálné letence!), `duffel_live_...`
 reálné ceny (vyžaduje aktivovaný účet). Není potřeba zvláštní přepínač.
+
+> ⚠️ **Scanner testovací token odmítne**: zdroj se vypne a denní souhrn
+> zobrazí varování. Stejně tak se zahodí odpovědi, u kterých API samo ohlásí
+> `live_mode=false`. Smyšlené ceny by jinak otrávily alerty, historii i
+> dashboard – přesně tak vznikají „nabídky", které na Google Flights stojí
+> dvojnásobek. Nabídky v jiné měně než EUR se přeskakují (historie měnu
+> neukládá, vše je EUR).
 
 ### Sky Scrapper: pozor na kvótu
 
@@ -106,7 +114,9 @@ Free tier má jen **100 requestů/měsíc** (~3/den). Aplikace proto:
 
 Pokud ho přesto chceš dočasně používat:
 
-- `AMADEUS_ENV=test` (výchozí) → `test.api.amadeus.com`, **syntetická data**
+- `AMADEUS_ENV=test` (výchozí) → `test.api.amadeus.com`, **syntetická data** –
+  **scanner zdroj v tomto režimu vypne** (smyšlené ceny nesmí do historie
+  a alertů) a upozorní v denním souhrnu
 - `AMADEUS_ENV=production` → `api.amadeus.com`, **reálné ceny** (stejný klíč,
   zdarma; v dashboardu je nutné aplikaci přepnout do produkce)
 
@@ -298,8 +308,16 @@ Pokud by endpoint přestal fungovat:
   `MILESANDMORE_API_KEY`; `MILESANDMORE_IGNORE_ROBOTS=true` povolí HTML
   fallback i při zakazujícím robots.txt.
 
-**Žádné ceny v souhrnu** – zkontroluj, že máš nastavené API klíče a (u
-Amadeus) že nejsi na syntetickém testovacím prostředí (`AMADEUS_ENV`).
+**Žádné ceny v souhrnu** – zkontroluj, že máš nastavené API klíče a že
+nejsi na syntetickém testovacím režimu (`DUFFEL_TOKEN=duffel_test_…`,
+`AMADEUS_ENV=test`) – ten scanner vypíná a hlásí v denním souhrnu ⚠️.
+
+**Ceny v alertech neodpovídají Google Flights** – téměř jistě běžíš na
+testovacím režimu zdroje (viz výše): test API vrací smyšlené ceny. Vygeneruj
+`duffel_live_…` token, resp. nastav `AMADEUS_ENV=production`. Odkaz
+„Zobrazit na Google Flights" v alertu otevírá předvyplněné vyhledávání
+(stejná letiště, termíny, 1 dospělý, economy, ceny v EUR), takže srovnání
+je 1:1; drobné rozdíly můžou být jen z rozdílné dostupnosti tarifů.
 
 **Feedparser/lxml chybí lokálně** – RSS a scraping zdroje importují
 `feedparser`/`bs4` líně; bez nich aplikace běží, jen tyto zdroje selžou.

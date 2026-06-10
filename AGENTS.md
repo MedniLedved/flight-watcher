@@ -59,6 +59,7 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 | `src/exporter.py` | In-process export JSONů pro dashboard na konci scanu (`latest.json`, append-only `data/history/*`, `stats.json`, `insights.json`, `routes.json`, `meta.json`, `data/calendar/*`). Datový kontrakt zrcadlí `web/src/types/data.ts`. |
 | `src/calendar_renderer.py` | ASCII kalendář odletu/příletu do `<code>` bloku. |
 | `src/sources/` | Jednotlivé zdroje. Sdílené `FlightResult` / `DealResult` v `__init__.py`. |
+| `src/sources/google_flights.py` | Sdílený generátor odkazů na Google Flights (binární `?tfs=` protobuf – textový `?q=` Google nepředvyplňuje). Používají Duffel, Amadeus i Sky Scrapper. |
 
 ### Kontrakt zdrojů
 
@@ -73,6 +74,11 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 
 ## Klíčové invarianty (NEROZBÍJET)
 
+- **Syntetická data NIKDY do historie/alertů.** Duffel `duffel_test_…` token
+  a Amadeus test prostředí vracejí smyšlené ceny → scanner takové zdroje
+  vypíná (`duffel_test_token`, `amadeus_test_env`) a Duffel navíc zahazuje
+  odpovědi s `live_mode=false`. Nabídky v jiné měně než EUR se přeskakují
+  (historie měnu neukládá).
 - **`history` pole `"date"` = datum POZOROVÁNÍ (dnešek), ne datum letu.**
   Datum letu je zvlášť v `depart_date`/`return_date`. Když se to zamění,
   rozbije se recency decay (`coverage_weights`) i 90denní prořezávání.

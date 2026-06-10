@@ -25,6 +25,7 @@ from typing import Optional
 import requests
 
 from . import FlightResult
+from .google_flights import google_flights_url
 
 logger = logging.getLogger(__name__)
 
@@ -201,18 +202,27 @@ class AmadeusSource:
             depart_dt = self._seg_date(out_segs[0]) if out_segs else None
             return_dt = self._seg_date(in_segs[0]) if in_segs else None
 
+            o_code = out_segs[0]["departure"]["iataCode"] if out_segs else origin
+            d_code = out_segs[-1]["arrival"]["iataCode"] if out_segs else destination
+            r_o = in_segs[0]["departure"]["iataCode"] if in_segs else ""
+            r_d = in_segs[-1]["arrival"]["iataCode"] if in_segs else ""
+
             results.append(FlightResult(
                 price=price,
                 currency=offer.get("price", {}).get("currency", "EUR"),
-                origin=out_segs[0]["departure"]["iataCode"] if out_segs else origin,
-                destination=out_segs[-1]["arrival"]["iataCode"] if out_segs else destination,
-                return_origin=in_segs[0]["departure"]["iataCode"] if in_segs else "",
-                return_destination=in_segs[-1]["arrival"]["iataCode"] if in_segs else "",
+                origin=o_code,
+                destination=d_code,
+                return_origin=r_o,
+                return_destination=r_d,
                 depart_date=depart_dt,
                 return_date=return_dt,
                 airlines=sorted(airlines),
                 source=self.name,
-                deep_link="",  # Amadeus deep link vyžaduje další volání; ponecháno prázdné
+                # Amadeus nákupní odkaz nevrací (vyžaduje další volání) –
+                # dej aspoň ověřovací odkaz na Google Flights.
+                deep_link=google_flights_url(
+                    o_code, d_code, depart_dt, return_dt, r_o, r_d
+                ),
                 route_name=route_name,
             ))
         results.sort(key=lambda r: r.price)

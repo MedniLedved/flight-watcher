@@ -150,9 +150,27 @@ class Scanner:
 
         # Inicializace zdrojů (jen pokud jsou credentials a zdroj není
         # vypnutý v config/agent.json).
+        #
+        # KRITICKÉ: testovací režimy API vracejí SYNTETICKÁ data se smyšlenými
+        # cenami (Duffel duffel_test_… token, Amadeus test prostředí). Ty by
+        # otrávily historii, alerty i dashboard – ceny by neodpovídaly žádné
+        # reálné letence. Takové zdroje se vypínají a do denního souhrnu jde
+        # varování (viz _send_summary).
+        self.duffel_test_token = bool(
+            self.settings.duffel_token
+            and self.settings.duffel_token.startswith("duffel_test")
+        )
+        if self.duffel_test_token and self.settings.source_enabled("duffel"):
+            logger.error(
+                "Duffel: DUFFEL_TOKEN je TESTOVACÍ (duffel_test_…) – API vrací "
+                "syntetické nabídky se smyšlenými cenami. Zdroj vypínám; "
+                "vygeneruj produkční duffel_live_… token (duffel.com → "
+                "Developers → Access tokens)."
+            )
         self.duffel = (
             DuffelSource(self.settings.duffel_token)
             if self.settings.duffel_token
+            and not self.duffel_test_token
             and self.settings.source_enabled("duffel") else None
         )
         self.skyscrapper = (
@@ -160,15 +178,28 @@ class Scanner:
             if self.settings.rapidapi_key
             and self.settings.source_enabled("skyScrapper") else None
         )
+        amadeus_configured = bool(
+            self.settings.amadeus_client_id
+            and self.settings.amadeus_client_secret
+            and self.settings.source_enabled("amadeus")
+        )
+        self.amadeus_test_env = bool(
+            amadeus_configured and self.settings.amadeus_env != "production"
+        )
+        if self.amadeus_test_env:
+            logger.error(
+                "Amadeus: AMADEUS_ENV=%r → testovací prostředí "
+                "(test.api.amadeus.com) se statickými/syntetickými daty. "
+                "Zdroj vypínám; pro reálné ceny nastav AMADEUS_ENV=production.",
+                self.settings.amadeus_env,
+            )
         self.amadeus = (
             AmadeusSource(
                 self.settings.amadeus_client_id,
                 self.settings.amadeus_client_secret,
                 env=self.settings.amadeus_env,
             )
-            if (self.settings.amadeus_client_id
-                and self.settings.amadeus_client_secret
-                and self.settings.source_enabled("amadeus"))
+            if amadeus_configured and not self.amadeus_test_env
             else None
         )
         self.travelpayouts = (
@@ -743,12 +774,28 @@ class Scanner:
             )
 
         total_requests = route_count * max(self.api_count, 1)
-        stats = {
-            "scans": (
-                f"Celkem scanů dnes: {route_count} tras × "
-                f"{self.api_count} API = ~{total_requests} requestů"
-            ),
-        }
+        stats: dict[str, str] = {}
+        # Varování na syntetické režimy PŘED statistikami – uživatel musí
+        # vědět, že (a proč) zdroj nedodává reálné ceny.
+        if self.duffel_test_token:
+            stats["duffel_warn"] = (
+                "⚠️ Duffel: TESTOVACÍ token (duffel_test_…) – syntetické ceny, "
+                "zdroj vypnut. Nastav produkční duffel_live_… token."
+            )
+        elif self.duffel and self.duffel.live_mode is False:
+            stats["duffel_warn"] = (
+                "⚠️ Duffel: API odpovídá v TEST režimu – syntetické nabídky "
+                "zahozeny. Zkontroluj DUFFEL_TOKEN (musí být duffel_live_…)."
+            )
+        if self.amadeus_test_env:
+            stats["amadeus_warn"] = (
+                "⚠️ Amadeus: testovací prostředí – syntetické ceny, zdroj "
+                "vypnut. Nastav AMADEUS_ENV=production."
+            )
+        stats["scans"] = (
+            f"Celkem scanů dnes: {route_count} tras × "
+            f"{self.api_count} API = ~{total_requests} requestů"
+        )
         if self.scanned_date_pairs:
             terms = ", ".join(
                 f"{d.strftime('%d.%m.')}–{r.strftime('%d.%m.')}"

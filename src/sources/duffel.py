@@ -19,11 +19,11 @@ import logging
 import time
 from datetime import date, datetime
 from typing import Optional
-from urllib.parse import quote_plus
 
 import requests
 
 from . import FlightResult
+from .google_flights import google_flights_url
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,11 @@ class DuffelSource:
     def __init__(self, token: str, session: Optional[requests.Session] = None):
         self.token = token
         self.session = session or requests.Session()
+        # None = zatím neznámé; False = API potvrdilo TEST režim (syntetická
+        # data se smyšlenými cenami) → nabídky se zahazují, ať neotráví
+        # historii, alerty ani dashboard. Scanner z příznaku staví varování
+        # do denního souhrnu.
+        self.live_mode: Optional[bool] = None
 
     def search(
         self,
@@ -94,7 +99,35 @@ class DuffelSource:
         resp = self._post_with_retry(body, headers, params, origin, destination)
 
         payload = resp.json().get("data", {})
+        live_mode = payload.get("live_mode")
+        if live_mode is not None:
+            self.live_mode = bool(live_mode)
         offers = payload.get("offers", [])
+        if live_mode is False:
+            # TEST režim (duffel_test_… token): syntetické nabídky se
+            # smyšlenými cenami, které neodpovídají žádné reálné letence.
+            logger.error(
+                "Duffel %s→%s: API běží v TEST režimu (live_mode=false) – "
+                "zahazuji %d syntetických nabídek. Nastav produkční "
+                "duffel_live_… token.",
+                origin, destination, len(offers),
+            )
+            return []
+
+        # Historie ukládá ceny bez měny (vždy EUR). Nabídku v jiné měně nelze
+        # bez kurzu použít – vydávat ji za EUR by zkreslilo alerty i trendy.
+        non_eur = sorted({
+            o.get("total_currency") for o in offers
+            if (o.get("total_currency") or "EUR") != "EUR"
+        })
+        if non_eur:
+            offers = [o for o in offers
+                      if (o.get("total_currency") or "EUR") == "EUR"]
+            logger.warning(
+                "Duffel %s→%s: nabídky v měně %s přeskočeny (ukládáme jen EUR).",
+                origin, destination, ", ".join(map(str, non_eur)),
+            )
+
         results = [
             self._parse_offer(o, origin, destination, route_name)
             for o in offers
@@ -199,30 +232,13 @@ class DuffelSource:
             airlines=sorted(airlines),
             source=self.name,
             # Duffel je booking API bez veřejného nákupního odkazu – sestavíme
-            # vyhledávací odkaz na Google Flights pro stejnou trasu a termín.
-            deep_link=self._google_flights_link(
+            # vyhledávací odkaz na Google Flights pro stejnou trasu a termín
+            # (binární ?tfs= parametr; textový ?q= Google nepředvyplňuje).
+            deep_link=google_flights_url(
                 o_code, d_code, depart_date, return_date, r_o, r_d
             ),
             route_name=route_name,
         )
-
-    @staticmethod
-    def _google_flights_link(origin: str, destination: str,
-                             depart: Optional[date], ret: Optional[date],
-                             return_origin: str = "",
-                             return_destination: str = "") -> str:
-        if not (origin and destination and depart):
-            return ""
-        q = f"flights from {origin} to {destination} on {depart.isoformat()}"
-        openjaw = return_origin and return_destination and (
-            return_origin != destination or return_destination != origin
-        )
-        if ret and openjaw:
-            q += (f" and from {return_origin} to {return_destination} "
-                  f"on {ret.isoformat()}")
-        elif ret:
-            q += f" returning {ret.isoformat()}"
-        return "https://www.google.com/travel/flights?q=" + quote_plus(q)
 
     @staticmethod
     def _seg_place(seg: dict, key: str) -> Optional[str]:

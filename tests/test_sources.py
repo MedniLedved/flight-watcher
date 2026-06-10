@@ -1,7 +1,9 @@
 """Testy pro datové zdroje a pomocné funkce konfigurace."""
 from __future__ import annotations
 
+import base64
 from datetime import date, timedelta
+from urllib.parse import parse_qs, urlparse
 
 from src.airport_stats import format_airport_stats, rank_airports
 from src.config import RATE_LIMIT_COMBINATIONS, trim_airports
@@ -9,9 +11,95 @@ from src.history import PriceHistory
 from src.sources import FlightResult
 from src.sources.cestujlevne import CestujLevneSource
 from src.sources.duffel import DuffelSource
+from src.sources.google_flights import google_flights_url
 from src.sources.secret_flying import _extract_price, _matches
 from src.sources.skyscrapper import SkyScrapperSource
 from src.sources.travelpayouts import TravelpayoutsSource
+
+
+# -- Google Flights deep link (?tfs= protobuf) -------------------------------
+def _decode_tfs(url: str) -> bytes:
+    """Vytáhne a dekóduje tfs parametr z URL (base64url bez paddingu)."""
+    tfs = parse_qs(urlparse(url).query)["tfs"][0]
+    return base64.urlsafe_b64decode(tfs + "=" * (-len(tfs) % 4))
+
+
+def _pb_fields(buf: bytes) -> list[tuple[int, object]]:
+    """Mini čtečka protobufu: vrátí [(číslo pole, hodnota)]; length-delimited
+    pole vrací jako bytes, varint jako int."""
+    out: list[tuple[int, object]] = []
+    i = 0
+
+    def _varint() -> int:
+        nonlocal i
+        val = shift = 0
+        while True:
+            b = buf[i]
+            i += 1
+            val |= (b & 0x7F) << shift
+            if not b & 0x80:
+                return val
+            shift += 7
+
+    while i < len(buf):
+        tag = _varint()
+        field, wt = tag >> 3, tag & 7
+        if wt == 0:
+            out.append((field, _varint()))
+        elif wt == 2:
+            ln = _varint()
+            out.append((field, buf[i:i + ln]))
+            i += ln
+        else:
+            raise AssertionError(f"nečekaný wire type {wt}")
+    return out
+
+
+def _leg_airports(leg: bytes) -> tuple[bytes, bytes, bytes]:
+    """Z FlightData vrátí (datum, odletové letiště, příletové letiště)."""
+    fields = _pb_fields(leg)
+    day = next(v for f, v in fields if f == 2)
+    frm = next(v for f, v in fields if f == 13)
+    to = next(v for f, v in fields if f == 14)
+    frm_code = next(v for f, v in _pb_fields(frm) if f == 2)
+    to_code = next(v for f, v in _pb_fields(to) if f == 2)
+    return day, frm_code, to_code
+
+
+def test_google_flights_url_roundtrip_prefills_search():
+    url = google_flights_url("MUC", "KIX", date(2026, 9, 12), date(2026, 10, 7))
+    assert url.startswith("https://www.google.com/travel/flights/search?tfs=")
+    assert "curr=EUR" in url
+    top = _pb_fields(_decode_tfs(url))
+    legs = [v for f, v in top if f == 3]
+    assert len(legs) == 2
+    assert [v for f, v in top if f == 19] == [1]   # trip = ROUND_TRIP
+    assert [v for f, v in top if f == 8] == [1]    # 1 dospělý
+    assert [v for f, v in top if f == 9] == [1]    # economy
+    assert _leg_airports(legs[0]) == (b"2026-09-12", b"MUC", b"KIX")
+    # Zpáteční leg zrcadlí letiště.
+    assert _leg_airports(legs[1]) == (b"2026-10-07", b"KIX", b"MUC")
+
+
+def test_google_flights_url_openjaw_is_multicity():
+    url = google_flights_url("MUC", "KIX", date(2026, 9, 12), date(2026, 10, 7),
+                             return_origin="NRT", return_destination="PRG")
+    top = _pb_fields(_decode_tfs(url))
+    assert [v for f, v in top if f == 19] == [3]   # trip = MULTI_CITY
+    legs = [v for f, v in top if f == 3]
+    assert len(legs) == 2
+    assert _leg_airports(legs[1]) == (b"2026-10-07", b"NRT", b"PRG")
+
+
+def test_google_flights_url_oneway_and_missing_data():
+    url = google_flights_url("MUC", "KIX", date(2026, 9, 12))
+    top = _pb_fields(_decode_tfs(url))
+    assert [v for f, v in top if f == 19] == [2]   # trip = ONE_WAY
+    assert len([v for f, v in top if f == 3]) == 1
+    # Bez povinných údajů žádný odkaz – jinak by Google otevřel jiný termín.
+    assert google_flights_url("", "KIX", date(2026, 9, 12)) == ""
+    assert google_flights_url("MUC", "", date(2026, 9, 12)) == ""
+    assert google_flights_url("MUC", "KIX", None) == ""
 
 
 # -- trim_airports ---------------------------------------------------------
@@ -164,7 +252,9 @@ def test_duffel_prefers_segment_airports_over_city_slice():
     assert r.destination == "KIX"      # ne city kód OSA
     assert r.return_origin == "KIX"
     assert r.deep_link.startswith("https://www.google.com/travel/flights")
-    assert "2026-09-01" in r.deep_link
+    # Termín i konkrétní letiště musí být v tfs parametru (předvyplnění).
+    decoded = _decode_tfs(r.deep_link)
+    assert b"2026-09-01" in decoded and b"KIX" in decoded and b"NUE" in decoded
 
 
 # -- Plánování termínů (coverage-driven) -------------------------------------
@@ -718,6 +808,82 @@ def test_duffel_raises_after_max_429(monkeypatch):
         src.search("MUC", "KIX", date(2026, 9, 1))
 
 
+# -- Duffel: ochrana proti syntetickým datům a cizí měně ---------------------
+def _duffel_offer(price="500.00", currency="EUR"):
+    return {
+        "total_amount": price,
+        "total_currency": currency,
+        "owner": {"iata_code": "LH"},
+        "slices": [
+            {
+                "origin": {"iata_code": "MUC"},
+                "destination": {"iata_code": "KIX"},
+                "segments": [{"departing_at": "2026-09-01T08:00:00",
+                              "origin": {"iata_code": "MUC"},
+                              "destination": {"iata_code": "KIX"}}],
+            },
+            {
+                "origin": {"iata_code": "KIX"},
+                "destination": {"iata_code": "MUC"},
+                "segments": [{"departing_at": "2026-09-13T10:00:00",
+                              "origin": {"iata_code": "KIX"},
+                              "destination": {"iata_code": "MUC"}}],
+            },
+        ],
+    }
+
+
+class _DuffelFakeSession:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def post(self, *a, **k):
+        payload = self._payload
+
+        class _Resp:
+            status_code = 200
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"data": payload}
+
+        return _Resp()
+
+
+def test_duffel_test_mode_offers_dropped(monkeypatch):
+    """live_mode=false (duffel_test_… token) = syntetické ceny → vše zahodit,
+    jinak smyšlené ceny otráví historii, alerty i dashboard."""
+    from src.sources import duffel as duffel_mod
+    monkeypatch.setattr(duffel_mod.time, "sleep", lambda *a, **k: None)
+    payload = {"live_mode": False, "offers": [_duffel_offer()]}
+    src = DuffelSource(token="duffel_test_x",
+                       session=_DuffelFakeSession(payload))
+    out = src.search("MUC", "KIX", date(2026, 9, 1),
+                     return_date=date(2026, 9, 13))
+    assert out == []
+    assert src.live_mode is False
+
+
+def test_duffel_non_eur_offers_skipped(monkeypatch):
+    """Historie ukládá ceny bez měny (vždy EUR) – nabídka v jiné měně se
+    nesmí vydávat za EUR, přeskočí se."""
+    from src.sources import duffel as duffel_mod
+    monkeypatch.setattr(duffel_mod.time, "sleep", lambda *a, **k: None)
+    payload = {"live_mode": True, "offers": [
+        _duffel_offer(price="250.00", currency="USD"),
+        _duffel_offer(price="510.00", currency="EUR"),
+    ]}
+    src = DuffelSource(token="duffel_live_x",
+                       session=_DuffelFakeSession(payload))
+    out = src.search("MUC", "KIX", date(2026, 9, 1),
+                     return_date=date(2026, 9, 13))
+    assert [r.price for r in out] == [510.0]
+    assert all(r.currency == "EUR" for r in out)
+    assert src.live_mode is True
+
+
 # -- Kvóty: auto-vypnutí + spread (#1, #2) ----------------------------------
 def test_history_disable_source_auto_expires(tmp_path):
     from datetime import datetime, timedelta
@@ -776,3 +942,76 @@ def test_spread_budget_divides_over_remaining_days():
     assert _spread_budget(0, reset, now=now) == 0
     # Bez reset hlavičky → konzervativně vše až dnes (days_left=1).
     assert _spread_budget(5, None, now=now) == 5
+
+
+# -- Scanner: syntetické režimy zdrojů se nesmí pustit do scanu --------------
+def _scanner_settings(**overrides):
+    """Settings pro testy Scanneru – bez Telegramu a bez API klíčů,
+    jednotlivé testy si zapnou jen to, co testují."""
+    from src.config import Settings
+    s = Settings.load()
+    s.telegram_bot_token = None
+    s.telegram_chat_id = None
+    s.duffel_token = None
+    s.rapidapi_key = None
+    s.amadeus_client_id = None
+    s.amadeus_client_secret = None
+    s.travelpayouts_token = None
+    for key, value in overrides.items():
+        setattr(s, key, value)
+    return s
+
+
+def test_scanner_blocks_duffel_test_token_and_amadeus_test_env():
+    """duffel_test_… token a Amadeus test prostředí vracejí syntetické ceny –
+    scanner je nesmí použít (jinak celá aplikace ukazuje nesmysly)."""
+    from src.scanner import Scanner
+    s = _scanner_settings(
+        duffel_token="duffel_test_abc",
+        amadeus_client_id="id", amadeus_client_secret="secret",
+        amadeus_env="test",
+    )
+    sc = Scanner(settings=s)
+    assert sc.duffel is None
+    assert sc.duffel_test_token is True
+    assert sc.amadeus is None
+    assert sc.amadeus_test_env is True
+
+
+def test_scanner_allows_live_duffel_and_production_amadeus():
+    from src.scanner import Scanner
+    s = _scanner_settings(
+        duffel_token="duffel_live_abc",
+        amadeus_client_id="id", amadeus_client_secret="secret",
+        amadeus_env="production",
+    )
+    sc = Scanner(settings=s)
+    assert sc.duffel is not None
+    assert sc.duffel_test_token is False
+    assert sc.amadeus is not None
+    assert sc.amadeus_test_env is False
+
+
+def test_scanner_summary_warns_about_synthetic_sources(tmp_path):
+    """Denní souhrn musí varovat, že (a proč) je zdroj vypnutý kvůli
+    syntetickým datům – uživatel jinak netuší, proč nechodí nabídky."""
+    from src.history import PriceHistory
+    from src.scanner import Scanner
+    s = _scanner_settings(
+        duffel_token="duffel_test_abc",
+        amadeus_client_id="id", amadeus_client_secret="secret",
+        amadeus_env="test",
+    )
+    sc = Scanner(settings=s)
+    sc.history = PriceHistory(tmp_path / "h.json")
+    captured: dict = {}
+
+    def fake_summary(summary_lines, source_status, stats, **kwargs):
+        captured["stats"] = stats
+        return True
+
+    sc.notifier.send_daily_summary = fake_summary
+    sc._send_summary([], {}, route_count=1)
+    joined = " ".join(captured["stats"].values())
+    assert "Duffel" in joined and "duffel_live_" in joined
+    assert "Amadeus" in joined and "AMADEUS_ENV=production" in joined
