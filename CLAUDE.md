@@ -36,5 +36,13 @@ staví na ní. Po každé fázi zastav a nech zkorigovat.
 Vyvíjej na designované feature branchi, commituj s popisnými zprávami, push až je hotovo.
 Pull requesty nevytvářej bez explicitního pokynu.
 
+## Deploy na GitHub Pages
+Po každé dokončené fázi **vždy** spusť deployment skript (z kořene repozitáře, na dev větvi):
+```
+bash scripts/deploy.sh
+```
+Skript: (1) vybuiluje `web/dist`, (2) ověří obsah bundlu, (3) zkopíruje vše do gh-pages přes
+`git worktree` (bez přepínání větví), (4) commitne a pushne. **Nikdy nedeployuj ručně.**
+
 ---
 Plné zadání viz @docs/zadani-flight-dashboard.md
