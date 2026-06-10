@@ -135,9 +135,25 @@ class GoogleFlightsSource:
             passengers=Passengers(adults=adults),
             seat="economy",
         )
-        result = get_flights_from_filter(
-            filter_, currency="EUR", mode=self.fetch_mode
-        )
+        # Multi-city (open-jaw) stránky Google neservíruje server-side
+        # (přijde jen „Loading results") – common mód tam nikdy nic nenajde.
+        # fallback = nejdřív common, při neúspěchu externí playwright render.
+        mode = self.fetch_mode
+        if trip == "multi-city" and mode == "common":
+            mode = "fallback"
+        try:
+            result = get_flights_from_filter(filter_, currency="EUR", mode=mode)
+        except RuntimeError as exc:
+            # fast-flights vyhazuje RuntimeError s CELÝM markdownem stránky –
+            # do logu patří krátká diagnóza, ne 3000 řádek HTML.
+            raise RuntimeError(
+                "Google nevrátil parsovatelné výsledky (stránka bez "
+                "server-side dat, jen 'Loading results' – JS render; "
+                "viz GOOGLEFLIGHTS_FETCH_MODE)"
+            ) from exc
+        except AssertionError as exc:
+            raise RuntimeError(
+                f"Google fetch selhal: {str(exc)[:200]}") from exc
         return list(result.flights)
 
     # -- mapování na FlightResult -------------------------------------------

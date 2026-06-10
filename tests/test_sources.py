@@ -1195,3 +1195,46 @@ def test_scanner_initializes_googleflights_by_default():
     s2.agent_config["sources"]["googleFlights"] = False
     sc2 = Scanner(settings=s2)
     assert sc2.googleflights is None
+
+
+def test_googleflights_multicity_upgrades_common_to_fallback(monkeypatch):
+    """Multi-city stránky Google neservíruje server-side → common se musí
+    pro open-jaw povýšit na fallback (common pokus + playwright záchrana)."""
+    import fast_flights
+    from src.sources import googleflights as gf_mod
+    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    captured: dict = {}
+
+    def fake_gfff(filter_, currency="", *, mode="common"):
+        captured["mode"] = mode
+
+        class _R:
+            flights: list = []
+
+        return _R()
+
+    monkeypatch.setattr(fast_flights, "get_flights_from_filter", fake_gfff)
+    src = gf_mod.GoogleFlightsSource()   # výchozí common
+    src.search("MUC", "KIX", date(2026, 9, 5), return_date=date(2026, 9, 19),
+               return_origin="NRT", return_destination="PRG")
+    assert captured["mode"] == "fallback"
+    src.search("MUC", "NRT", date(2026, 9, 5), return_date=date(2026, 9, 19))
+    assert captured["mode"] == "common"  # roundtrip zůstává common
+
+
+def test_googleflights_truncates_parse_error(monkeypatch):
+    """RuntimeError z fast-flights obsahuje celý markdown stránky – do logu
+    (a tedy výjimky) smí jít jen krátká diagnóza."""
+    import pytest
+    import fast_flights
+    from src.sources import googleflights as gf_mod
+    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+
+    def fake_gfff(*a, **k):
+        raise RuntimeError("No flights found:\n" + "x" * 50000)
+
+    monkeypatch.setattr(fast_flights, "get_flights_from_filter", fake_gfff)
+    src = gf_mod.GoogleFlightsSource()
+    with pytest.raises(RuntimeError) as ei:
+        src.search("MUC", "NRT", date(2026, 9, 5))
+    assert len(str(ei.value)) < 300
