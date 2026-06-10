@@ -2,6 +2,10 @@
 # Pre-deployment validation: type check, bundle inspection, data integrity.
 # Usage: bash scripts/validate.sh [--full]
 # --full: also checks deployed GitHub Pages (requires network)
+#
+# REGRESSION-PROOFING (viz CLAUDE.md "Poučení z chyb"): každý nově objevený typ
+# chyby, který lze detekovat skriptem, sem přidej jako novou kontrolu s exit 1.
+# Kontroly nikdy neodstraňuj — chrání před opakováním už vyřešených chyb.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -51,6 +51,28 @@ Pokud v kterémkoliv bodě selže → **zastav, oprav příčinu, ne symptom**, 
 Např.: pokud dev server padne s "Module not found", neobcházej `npm install --force`; najdi
 proč se import přerušil (chyby v souboru? špatná cesta?).
 
+## Poučení z chyb — povinný proces (regression-proofing)
+
+Když je nalezen **nový typ chyby** (uživatelem nahlášený bug, selhání při testování, chyba
+v deployi), oprava není hotová, dokud neproběhly **všechny tři** kroky:
+
+1. **Oprav všechny výskyty příčiny, ne jen ten nahlášený.** Polož si otázku: „Kde jinde
+   v projektu může být stejná chyba?" a zkontroluj to (např. chybí-li calendar data pro
+   jednu trasu, zkontroluj všechny trasy z `latest.json`).
+2. **Přidej automatickou kontrolu, která tento typ chyby příště odchytí:**
+   - chyba odchytitelná před deployem → nová kontrola do `scripts/validate.sh`
+   - chyba v deploy procesu → nová kontrola/krok do `scripts/deploy.sh`
+   - chyba v exportu/datech scanneru → nový test do `tests/`
+   - Kontrola musí selhat (exit 1), pokud by chyba nastala znovu — ne jen vypsat warning.
+3. **Pokud chybu nelze odchytit skriptem** (např. vyžaduje lidský úsudek nebo prohlížeč),
+   přidej bod do checklistu výše v tomto souboru, aby se na něj při další fázi nezapomnělo.
+
+Historie zachycených typů chyb (každý už má svou kontrolu — neopakovat):
+- stale `index.html` ukazující na starý bundle hash → `validate.sh` [3], `deploy.sh` integrity check
+- komponenta napsaná, ale chybějící v bundlu (neimportovaná / starý build) → `validate.sh` [4]
+- datové JSONy chybí nebo nevalidní (smazané, v .gitignore) → `validate.sh` [5][6]
+- ruční deploy s přepínáním větví rozbil working tree → deploy výhradně přes `deploy.sh` (worktree)
+
 ## Git
 Vyvíjej na designované feature branchi, commituj s popisnými zprávami, push až je hotovo.
 Pull requesty nevytvářej bez explicitního pokynu.
