@@ -67,6 +67,7 @@ export default function App() {
         <HomePage
           latest={latest}
           stats={stats}
+          agentConfig={agentConfig}
           loading={loading}
           error={error}
           onSelectRoute={setSelectedRoute}

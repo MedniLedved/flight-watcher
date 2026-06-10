@@ -1,3 +1,4 @@
+import { Train } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { LatestOffer } from "@/types/data";
+import { cn } from "@/lib/utils";
+import { effectivePrice } from "@/lib/transport";
+import type { AgentConfig, LatestOffer } from "@/types/data";
 
 /** Hodnota „bez filtru" pro selecty (Radix nepovoluje prázdný string). */
 export const ALL = "__all__";
@@ -37,10 +40,13 @@ function parseNum(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Klientské filtrování v paměti nad načteným latest.json. */
+/** Klientské filtrování v paměti. Cenový filtr se aplikuje na efektivní cenu
+ *  (= cena letu + 2× doprava), pokud je includeTransport zapnuto. */
 export function applyFilters(
   offers: LatestOffer[],
   f: OfferFilters,
+  agentConfig: AgentConfig | null = null,
+  includeTransport = false,
 ): LatestOffer[] {
   const priceMin = parseNum(f.priceMin);
   const priceMax = parseNum(f.priceMax);
@@ -49,14 +55,11 @@ export function applyFilters(
   return offers.filter((o) => {
     if (f.origin !== ALL && o.origin !== f.origin) return false;
     if (f.destination !== ALL && o.destination !== f.destination) return false;
-    if (priceMin !== null && o.price < priceMin) return false;
-    if (priceMax !== null && o.price > priceMax) return false;
-    if (nightsMin !== null && (o.nights === null || o.nights < nightsMin)) {
-      return false;
-    }
-    if (nightsMax !== null && (o.nights === null || o.nights > nightsMax)) {
-      return false;
-    }
+    const displayedPrice = effectivePrice(o.price, o.origin, agentConfig, includeTransport);
+    if (priceMin !== null && displayedPrice < priceMin) return false;
+    if (priceMax !== null && displayedPrice > priceMax) return false;
+    if (nightsMin !== null && (o.nights === null || o.nights < nightsMin)) return false;
+    if (nightsMax !== null && (o.nights === null || o.nights > nightsMax)) return false;
     return true;
   });
 }
@@ -65,13 +68,20 @@ interface FilterBarProps {
   offers: LatestOffer[];
   filters: OfferFilters;
   onChange: (filters: OfferFilters) => void;
+  includeTransport: boolean;
+  onToggleTransport: (v: boolean) => void;
 }
 
-export function FilterBar({ offers, filters, onChange }: FilterBarProps) {
+export function FilterBar({
+  offers,
+  filters,
+  onChange,
+  includeTransport,
+  onToggleTransport,
+}: FilterBarProps) {
   const origins = [...new Set(offers.map((o) => o.origin))].sort();
   const destinations = [...new Set(offers.map((o) => o.destination))].sort();
-  const set = (patch: Partial<OfferFilters>) =>
-    onChange({ ...filters, ...patch });
+  const set = (patch: Partial<OfferFilters>) => onChange({ ...filters, ...patch });
 
   return (
     <Card>
@@ -80,19 +90,14 @@ export function FilterBar({ offers, filters, onChange }: FilterBarProps) {
           <label className="text-xs font-medium text-muted-foreground">
             Odletové letiště
           </label>
-          <Select
-            value={filters.origin}
-            onValueChange={(v) => set({ origin: v })}
-          >
+          <Select value={filters.origin} onValueChange={(v) => set({ origin: v })}>
             <SelectTrigger>
               <SelectValue placeholder="Vše" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Všechna</SelectItem>
               {origins.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {code}
-                </SelectItem>
+                <SelectItem key={code} value={code}>{code}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -102,19 +107,14 @@ export function FilterBar({ offers, filters, onChange }: FilterBarProps) {
           <label className="text-xs font-medium text-muted-foreground">
             Destinace
           </label>
-          <Select
-            value={filters.destination}
-            onValueChange={(v) => set({ destination: v })}
-          >
+          <Select value={filters.destination} onValueChange={(v) => set({ destination: v })}>
             <SelectTrigger>
               <SelectValue placeholder="Vše" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Všechny</SelectItem>
               {destinations.map((code) => (
-                <SelectItem key={code} value={code}>
-                  {code}
-                </SelectItem>
+                <SelectItem key={code} value={code}>{code}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -122,7 +122,7 @@ export function FilterBar({ offers, filters, onChange }: FilterBarProps) {
 
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">
-            Cena (EUR)
+            Cena (EUR){includeTransport ? " vč. dopravy" : ""}
           </label>
           <div className="flex items-center gap-2">
             <Input
@@ -168,6 +168,24 @@ export function FilterBar({ offers, filters, onChange }: FilterBarProps) {
               onChange={(e) => set({ nightsMax: e.target.value })}
             />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Celkové náklady
+          </label>
+          <button
+            onClick={() => onToggleTransport(!includeTransport)}
+            className={cn(
+              "flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors",
+              includeTransport
+                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-300"
+                : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Train className="h-4 w-4 shrink-0" />
+            + doprava
+          </button>
         </div>
 
         <Button variant="outline" onClick={() => onChange(EMPTY_FILTERS)}>

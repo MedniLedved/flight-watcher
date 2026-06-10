@@ -14,30 +14,51 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { LatestFile, StatsFile } from "@/types/data";
+import { effectivePrice } from "@/lib/transport";
+import type { AgentConfig, LatestFile, StatsFile } from "@/types/data";
 
 interface Props {
   latest: LatestFile | null;
   stats: StatsFile | null;
+  agentConfig: AgentConfig | null;
   loading: boolean;
   error: string | null;
   onSelectRoute: (routeKey: string) => void;
 }
 
-function SummaryBar({ stats }: { stats: StatsFile }) {
+function SummaryBar({
+  stats,
+  offers,
+  agentConfig,
+  includeTransport,
+}: {
+  stats: StatsFile;
+  offers: LatestFile;
+  agentConfig: AgentConfig | null;
+  includeTransport: boolean;
+}) {
   const routes = Object.keys(stats);
-  const allMins = routes
-    .map((k) => stats[k].allTimeMin)
-    .filter((v): v is number => v != null);
-  const bestMin = allMins.length ? Math.min(...allMins) : null;
   const trending = routes.filter((k) => (stats[k].trend30d ?? 0) < -5).length;
+
+  const bestPrice = useMemo(() => {
+    if (includeTransport && offers.length > 0) {
+      return Math.min(
+        ...offers.map((o) => effectivePrice(o.price, o.origin, agentConfig, true)),
+      );
+    }
+    const allMins = routes
+      .map((k) => stats[k].allTimeMin)
+      .filter((v): v is number => v != null);
+    return allMins.length ? Math.min(...allMins) : null;
+  }, [includeTransport, offers, agentConfig, routes, stats]);
+
   return (
     <div className="flex flex-wrap gap-6 rounded-lg border bg-muted/40 px-5 py-3 text-sm">
       <span>
         <span className="font-semibold text-emerald-700">
-          {bestMin != null ? `${bestMin} €` : "—"}
+          {bestPrice != null ? `${Math.round(bestPrice)} €` : "—"}
         </span>{" "}
-        nejnižší nalezená cena
+        {includeTransport ? "nejnižší cena vč. dopravy" : "nejnižší nalezená cena"}
       </span>
       <span>
         <span className="font-semibold">{routes.length}</span> sledovaných tras
@@ -49,11 +70,15 @@ function SummaryBar({ stats }: { stats: StatsFile }) {
   );
 }
 
-export function HomePage({ latest, stats, loading, error, onSelectRoute }: Props) {
+export function HomePage({ latest, stats, agentConfig, loading, error, onSelectRoute }: Props) {
   const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
+  const [includeTransport, setIncludeTransport] = useState(false);
 
   const offers = useMemo(() => latest ?? [], [latest]);
-  const visible = useMemo(() => applyFilters(offers, filters), [offers, filters]);
+  const visible = useMemo(
+    () => applyFilters(offers, filters, agentConfig, includeTransport),
+    [offers, filters, agentConfig, includeTransport],
+  );
 
   if (loading) {
     return (
@@ -73,8 +98,21 @@ export function HomePage({ latest, stats, loading, error, onSelectRoute }: Props
 
   return (
     <div className="space-y-6">
-      {stats && <SummaryBar stats={stats} />}
-      <FilterBar offers={offers} filters={filters} onChange={setFilters} />
+      {stats && (
+        <SummaryBar
+          stats={stats}
+          offers={offers}
+          agentConfig={agentConfig}
+          includeTransport={includeTransport}
+        />
+      )}
+      <FilterBar
+        offers={offers}
+        filters={filters}
+        onChange={setFilters}
+        includeTransport={includeTransport}
+        onToggleTransport={setIncludeTransport}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Aktuální nejlepší nabídky</CardTitle>
@@ -85,7 +123,12 @@ export function HomePage({ latest, stats, loading, error, onSelectRoute }: Props
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <OffersTable offers={visible} onSelectRoute={onSelectRoute} />
+          <OffersTable
+            offers={visible}
+            onSelectRoute={onSelectRoute}
+            agentConfig={agentConfig}
+            includeTransport={includeTransport}
+          />
         </CardContent>
       </Card>
     </div>

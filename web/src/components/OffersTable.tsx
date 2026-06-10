@@ -10,7 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { LatestOffer } from "@/types/data";
+import { effectivePrice, fmtDuration, getTransport } from "@/lib/transport";
+import type { AgentConfig, LatestOffer } from "@/types/data";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -65,13 +66,19 @@ function Flags({ o }: { o: LatestOffer }) {
   );
 }
 
+interface Props {
+  offers: LatestOffer[];
+  onSelectRoute?: (routeKey: string) => void;
+  agentConfig?: AgentConfig | null;
+  includeTransport?: boolean;
+}
+
 export function OffersTable({
   offers,
   onSelectRoute,
-}: {
-  offers: LatestOffer[];
-  onSelectRoute?: (routeKey: string) => void;
-}) {
+  agentConfig = null,
+  includeTransport = false,
+}: Props) {
   if (offers.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
@@ -79,13 +86,16 @@ export function OffersTable({
       </p>
     );
   }
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Trasa</TableHead>
           <TableHead>Typ</TableHead>
-          <TableHead className="text-right">Cena</TableHead>
+          <TableHead className="text-right">
+            {includeTransport ? "Cena vč. dopravy" : "Cena"}
+          </TableHead>
           <TableHead>Odlet</TableHead>
           <TableHead>Návrat</TableHead>
           <TableHead className="text-right">Nocí</TableHead>
@@ -96,45 +106,57 @@ export function OffersTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {offers.map((o) => (
-          <TableRow key={o.routeKey + o.source}>
-            <TableCell className="font-medium">
-              {onSelectRoute ? (
-                <button
-                  onClick={() => onSelectRoute(o.routeKey)}
-                  className="text-left hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {routeLabel(o)}
-                </button>
-              ) : (
-                routeLabel(o)
-              )}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {o.type === "openjaw" ? "open-jaw" : "zpáteční"}
-            </TableCell>
-            <TableCell className="text-right font-semibold tabular-nums">
-              {Math.round(o.price)} €
-            </TableCell>
-            <TableCell className="tabular-nums">{fmtDate(o.departDate)}</TableCell>
-            <TableCell className="tabular-nums">{fmtDate(o.returnDate)}</TableCell>
-            <TableCell className="text-right tabular-nums">{o.nights ?? "—"}</TableCell>
-            <TableCell>{o.airlines.length > 0 ? o.airlines.join(", ") : "—"}</TableCell>
-            <TableCell className="text-muted-foreground">{o.source}</TableCell>
-            <TableCell>
-              <Flags o={o} />
-            </TableCell>
-            <TableCell>
-              {o.dealUrl ? (
-                <Button asChild variant="ghost" size="sm">
-                  <a href={o.dealUrl} target="_blank" rel="noreferrer">
-                    Deal <ExternalLink className="h-3 w-3" />
-                  </a>
-                </Button>
-              ) : null}
-            </TableCell>
-          </TableRow>
-        ))}
+        {offers.map((o) => {
+          const transport = includeTransport ? getTransport(o.origin, agentConfig) : null;
+          const displayed = effectivePrice(o.price, o.origin, agentConfig, includeTransport);
+          return (
+            <TableRow key={o.routeKey + o.source}>
+              <TableCell className="font-medium">
+                {onSelectRoute ? (
+                  <button
+                    onClick={() => onSelectRoute(o.routeKey)}
+                    className="text-left hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    {routeLabel(o)}
+                  </button>
+                ) : (
+                  routeLabel(o)
+                )}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {o.type === "openjaw" ? "open-jaw" : "zpáteční"}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                <div className="font-semibold">{Math.round(displayed)} €</div>
+                {transport && (
+                  <div className="text-xs text-muted-foreground">
+                    +{2 * transport.costEur} € · {fmtDuration(transport.durationMin)}
+                  </div>
+                )}
+                {includeTransport && !transport && (
+                  <div className="text-xs text-muted-foreground">doprava neznámá</div>
+                )}
+              </TableCell>
+              <TableCell className="tabular-nums">{fmtDate(o.departDate)}</TableCell>
+              <TableCell className="tabular-nums">{fmtDate(o.returnDate)}</TableCell>
+              <TableCell className="text-right tabular-nums">{o.nights ?? "—"}</TableCell>
+              <TableCell>{o.airlines.length > 0 ? o.airlines.join(", ") : "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{o.source}</TableCell>
+              <TableCell>
+                <Flags o={o} />
+              </TableCell>
+              <TableCell>
+                {o.dealUrl ? (
+                  <Button asChild variant="ghost" size="sm">
+                    <a href={o.dealUrl} target="_blank" rel="noreferrer">
+                      Deal <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                ) : null}
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
