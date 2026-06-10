@@ -52,9 +52,10 @@ class GoogleFlightsSource:
     def __init__(self, fetch_mode: Optional[str] = None,
                  fx: Optional[FxRates] = None,
                  fetcher: Optional[Callable] = None):
-        self.fetch_mode = fetch_mode or os.getenv(
-            "GOOGLEFLIGHTS_FETCH_MODE", "common"
-        )
+        # "or" řetěz: nenastavená Actions variable přijde jako PRÁZDNÝ string,
+        # ne None – nesmí protéct jako neplatný mode do fast-flights.
+        self.fetch_mode = (fetch_mode
+                           or os.getenv("GOOGLEFLIGHTS_FETCH_MODE") or "common")
         self.fx = fx or FxRates()
         # Testovací šev: fetcher(legs, trip, adults) → list objektů s atributy
         # price/name (viz fast_flights.schema.Flight). None = reálný scraping.

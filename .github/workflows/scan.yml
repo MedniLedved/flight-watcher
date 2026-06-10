@@ -34,6 +34,7 @@ jobs:
 
       - name: Run scanner
         env:
+          GOOGLEFLIGHTS_FETCH_MODE: ${{ vars.GOOGLEFLIGHTS_FETCH_MODE }}
           DUFFEL_TOKEN: ${{ secrets.DUFFEL_TOKEN }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           AMADEUS_CLIENT_ID: ${{ secrets.AMADEUS_CLIENT_ID }}
