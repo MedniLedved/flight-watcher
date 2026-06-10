@@ -1,0 +1,130 @@
+[
+  {
+    "routeKey": "PRG-TYO-roundtrip",
+    "type": "roundtrip",
+    "origin": "PRG",
+    "destination": "TYO",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Praha",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": { "lat": 50.1008, "lon": 14.26 },
+      "destination": { "lat": 35.6812, "lon": 139.7671 },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "MUC-TYO-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "TYO",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Mnichov",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": { "lat": 48.3538, "lon": 11.7861 },
+      "destination": { "lat": 35.6812, "lon": 139.7671 },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "FRA-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Frankfurt",
+    "destinationName": "Tokio Haneda",
+    "returnOriginName": null,
+    "coords": {
+      "origin": { "lat": 50.0379, "lon": 8.5622 },
+      "destination": { "lat": 35.5494, "lon": 139.7798 },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "BUD-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "BUD",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Budapešť",
+    "destinationName": "Tokio Narita",
+    "returnOriginName": null,
+    "coords": {
+      "origin": { "lat": 47.4298, "lon": 19.2611 },
+      "destination": { "lat": 35.7647, "lon": 140.3863 },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "VIE-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "VIE",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Vídeň",
+    "destinationName": "Tokio Narita",
+    "returnOriginName": null,
+    "coords": {
+      "origin": { "lat": 48.1103, "lon": 16.5697 },
+      "destination": { "lat": 35.7647, "lon": 140.3863 },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "PRG-KIX-roundtrip",
+    "type": "roundtrip",
+    "origin": "PRG",
+    "destination": "KIX",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Praha",
+    "destinationName": "Osaka Kansai",
+    "returnOriginName": null,
+    "coords": {
+      "origin": { "lat": 50.1008, "lon": 14.26 },
+      "destination": { "lat": 34.4347, "lon": 135.2441 },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "MUC-KIX-OSA-openjaw",
+    "type": "openjaw",
+    "origin": "MUC",
+    "destination": "KIX",
+    "returnOrigin": "OSA",
+    "returnDestination": "MUC",
+    "originName": "Mnichov",
+    "destinationName": "Osaka Kansai",
+    "returnOriginName": "Osaka (město)",
+    "coords": {
+      "origin": { "lat": 48.3538, "lon": 11.7861 },
+      "destination": { "lat": 34.4347, "lon": 135.2441 },
+      "returnOrigin": { "lat": 34.6937, "lon": 135.5023 }
+    }
+  },
+  {
+    "routeKey": "AMS-TYO-NGO-openjaw",
+    "type": "openjaw",
+    "origin": "AMS",
+    "destination": "TYO",
+    "returnOrigin": "NGO",
+    "returnDestination": "AMS",
+    "originName": "Amsterdam",
+    "destinationName": "Tokio",
+    "returnOriginName": "Nagoja Chubu",
+    "coords": {
+      "origin": { "lat": 52.3105, "lon": 4.7683 },
+      "destination": { "lat": 35.6812, "lon": 139.7671 },
+      "returnOrigin": { "lat": 34.8584, "lon": 136.8049 }
+    }
+  }
+]
