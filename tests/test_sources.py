@@ -1027,9 +1027,11 @@ def _scanner_settings(**overrides):
     jednotlivé testy si zapnou jen to, co testují."""
     from src.config import Settings
     s = Settings.load()
-    # V repo config/agent.json je amadeus vypnutý – testy blokace test
-    # prostředí ale potřebují zdroj zapnutý, jinak se logika vůbec nespustí.
+    # V repo config/agent.json jsou duffel a amadeus vypnuté (nejsou zdarma /
+    # sunset) – testy jejich blokační logiky je ale potřebují zapnuté, jinak
+    # se vůbec nespustí.
     s.agent_config.setdefault("sources", {})["amadeus"] = True
+    s.agent_config["sources"]["duffel"] = True
     s.telegram_bot_token = None
     s.telegram_chat_id = None
     s.duffel_token = None
@@ -1095,3 +1097,101 @@ def test_scanner_summary_warns_about_synthetic_sources(tmp_path):
     joined = " ".join(captured["stats"].values())
     assert "Duffel" in joined and "duffel_live_" in joined
     assert "Amadeus" in joined and "AMADEUS_ENV=production" in joined
+
+
+# -- Google Flights zdroj (scraping přes fast-flights) ------------------------
+class _GfFlight:
+    """Duck-typed fast_flights.schema.Flight pro testy."""
+
+    def __init__(self, price, name="Lufthansa"):
+        self.price = price
+        self.name = name
+
+
+def _gf_source(flights, captured=None, fx=None):
+    from src.sources.googleflights import GoogleFlightsSource
+
+    def fetcher(legs, trip, adults):
+        if captured is not None:
+            captured.update({"legs": legs, "trip": trip, "adults": adults})
+        return flights
+
+    return GoogleFlightsSource(fetcher=fetcher, fx=fx or _FakeFx())
+
+
+def test_googleflights_roundtrip_maps_results(monkeypatch):
+    from src.sources import googleflights as gf_mod
+    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    captured: dict = {}
+    src = _gf_source([_GfFlight("€533"), _GfFlight("€489", name="ANA")],
+                     captured=captured)
+    out = src.search("MUC", "NRT", date(2026, 9, 5),
+                     return_date=date(2026, 9, 19), route_name="Test")
+    assert captured["trip"] == "round-trip"
+    assert captured["legs"] == [("MUC", "NRT", date(2026, 9, 5)),
+                                ("NRT", "MUC", date(2026, 9, 19))]
+    assert [r.price for r in out] == [489.0, 533.0]   # řazeno dle ceny
+    best = out[0]
+    assert best.currency == "EUR"
+    assert best.source == "googleflights"
+    assert best.origin == "MUC" and best.destination == "NRT"
+    assert best.return_origin == "NRT" and best.return_destination == "MUC"
+    assert best.depart_date == date(2026, 9, 5)
+    assert best.return_date == date(2026, 9, 19)
+    assert best.airlines == ["ANA"]
+    assert best.deep_link.startswith(
+        "https://www.google.com/travel/flights/search?tfs=")
+    assert best.nights == 14
+
+
+def test_googleflights_openjaw_uses_multicity(monkeypatch):
+    from src.sources import googleflights as gf_mod
+    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    captured: dict = {}
+    src = _gf_source([_GfFlight("€612")], captured=captured)
+    out = src.search("MUC", "KIX", date(2026, 9, 5),
+                     return_date=date(2026, 9, 19),
+                     return_origin="NRT", return_destination="PRG")
+    assert captured["trip"] == "multi-city"
+    assert captured["legs"] == [("MUC", "KIX", date(2026, 9, 5)),
+                                ("NRT", "PRG", date(2026, 9, 19))]
+    assert out[0].route_key() == "MUC-KIX-NRT-openjaw"
+
+
+def test_googleflights_converts_foreign_currency_and_skips_unknown(monkeypatch):
+    """Kdyby Google ignoroval curr=EUR: USD se převede kurzem ECB, cena
+    s nerozpoznanou měnou se zahodí (nikdy nehádat)."""
+    from src.sources import googleflights as gf_mod
+    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    src = _gf_source([_GfFlight("$540"), _GfFlight("1 234"),
+                      _GfFlight("€510")],
+                     fx=_FakeFx(rates={"USD": 1.08}))
+    out = src.search("MUC", "NRT", date(2026, 9, 5),
+                     return_date=date(2026, 9, 19))
+    assert [r.price for r in out] == [500.0, 510.0]   # 540/1.08 a EUR přímo
+    assert all(r.currency == "EUR" for r in out)
+
+
+def test_googleflights_parse_price_variants():
+    from src.sources.googleflights import GoogleFlightsSource
+    p = GoogleFlightsSource._parse_price
+    assert p("€533") == (533.0, "EUR")
+    assert p("$1234") == (1234.0, "USD")
+    assert p("CA$999") == (999.0, "CAD")
+    assert p("CHF 920") == (920.0, "CHF")
+    assert p("CZK 12500") == (12500.0, "CZK")
+    assert p("") == (None, "")
+    assert p("1 234") == (1234.0, "")   # bez měny → volající přeskočí
+
+
+def test_scanner_initializes_googleflights_by_default():
+    """Google Flights je primární zdroj – jede bez klíče, dokud ho agent.json
+    nevypne."""
+    from src.scanner import Scanner
+    s = _scanner_settings()
+    sc = Scanner(settings=s)
+    assert sc.googleflights is not None
+    s2 = _scanner_settings()
+    s2.agent_config["sources"]["googleFlights"] = False
+    sc2 = Scanner(settings=s2)
+    assert sc2.googleflights is None

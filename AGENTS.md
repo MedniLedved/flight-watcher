@@ -40,8 +40,9 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
    nejakčnější dny a nejméně prozkoumaná letiště.
 3. **Přeřaď letiště** (`_apply_dynamic_priority`) – levná/akční dopředu, aby
    přežila ořezání podle rate limitů.
-4. Pro každou trasu (`scan_route`): Duffel → Sky Scrapper → Amadeus →
-   Travelpayouts; agreguj a deduplikuj (`_deduplicate`).
+4. Pro každou trasu (`scan_route`): Google Flights → (Duffel – vypnut) →
+   Sky Scrapper → (Amadeus – vypnut) → Travelpayouts; agreguj a deduplikuj
+   (`_deduplicate`).
 5. RSS/scraping zdroje (`scan_deals`): Secret Flying, Cestujlevně, Jack's,
    Miles & More.
 6. Porovnej s historií a prahem, pošli alerty + denní souhrn (`notifier.py`).
@@ -59,16 +60,19 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 | `src/exporter.py` | In-process export JSONů pro dashboard na konci scanu (`latest.json`, append-only `data/history/*`, `stats.json`, `insights.json`, `routes.json`, `meta.json`, `data/calendar/*`). Datový kontrakt zrcadlí `web/src/types/data.ts`. |
 | `src/calendar_renderer.py` | ASCII kalendář odletu/příletu do `<code>` bloku. |
 | `src/sources/` | Jednotlivé zdroje. Sdílené `FlightResult` / `DealResult` v `__init__.py`. |
-| `src/sources/google_flights.py` | Sdílený generátor odkazů na Google Flights (binární `?tfs=` protobuf – textový `?q=` Google nepředvyplňuje). Používají Duffel, Amadeus i Sky Scrapper. |
+| `src/sources/google_flights.py` | Sdílený generátor odkazů na Google Flights (binární `?tfs=` protobuf – textový `?q=` Google nepředvyplňuje). Používají všechny vrstvy-1 zdroje. |
+| `src/sources/googleflights.py` | PRIMÁRNÍ zdroj cen: scraping Google Flights přes fast-flights (bez klíče, EUR vynucené, open-jaw = multi-city). Sekvenčně + šetrně; smoke test `scripts/smoke_googleflights.py` / workflow `test-googleflights.yml`. |
 | `src/sources/fx.py` | Převod cizích měn na EUR denním kurzem ECB (frankfurter.app, keyless). Líný fetch 1×/běh; bez kurzu se ne-EUR nabídka přeskočí. |
 | `src/maintenance.py` | Selektivní purge nereálných záznamů z historie dle `source` (`python -m src.maintenance`, CI workflow `purge-history.yml`). Výchozí dry-run. |
 
 ### Kontrakt zdrojů
 
-- **Vrstva 1 (API)** – `duffel`, `skyscrapper`, `amadeus`, `travelpayouts`:
-  metoda `search(origin, destination, departure_date, return_date=None,
-  return_origin=None, return_destination=None, ..., route_name="")` →
-  `list[FlightResult]`.
+- **Vrstva 1 (real-time)** – `googleflights` (primární, scraping),
+  `skyscrapper`, `travelpayouts` + vypnuté `duffel` (live není zdarma)
+  a `amadeus` (sunset 17. 7. 2026): metoda `search(origin, destination,
+  departure_date, return_date=None, return_origin=None,
+  return_destination=None, ..., route_name="")` → `list[FlightResult]`.
+  Toggle zdrojů je v `config/agent.json` (`sources.googleFlights` atd.).
 - **Vrstva 2 (RSS/scraping)** – `secret_flying`, `cestujlevne`, `jacks`,
   `miles_and_more`: metoda `fetch(...)` → `list[DealResult]` (cena neověřená).
 - Každý zdroj je **volitelný a izolovaný**: chybějící klíč → přeskočí se;

@@ -42,6 +42,7 @@ from .sources import DealResult, FlightResult
 from .sources.amadeus import AmadeusSource
 from .sources.cestujlevne import CestujLevneSource
 from .sources.duffel import DuffelSource
+from .sources.googleflights import GoogleFlightsSource
 from .sources.jacks import JacksFlightClubSource
 from .sources.miles_and_more import MilesAndMoreSource
 from .sources.miles_and_more import should_run_today as mm_should_run_today
@@ -156,6 +157,12 @@ class Scanner:
         # otrávily historii, alerty i dashboard – ceny by neodpovídaly žádné
         # reálné letence. Takové zdroje se vypínají a do denního souhrnu jde
         # varování (viz _send_summary).
+        # Google Flights (scraping) – primární bezplatný zdroj: bez klíče,
+        # bez kvóty, ceny 1:1 s ověřovacím odkazem.
+        self.googleflights = (
+            GoogleFlightsSource()
+            if self.settings.source_enabled("googleFlights") else None
+        )
         self.duffel_test_token = bool(
             self.settings.duffel_token
             and self.settings.duffel_token.startswith("duffel_test")
@@ -279,7 +286,21 @@ class Scanner:
         self.scanned_date_pairs = date_pairs
         results: list[FlightResult] = []
 
-        # --- Duffel (primární náhrada za Kiwi) – všechny vzorky termínů ---
+        # --- Google Flights (primární, free) – všechny vzorky termínů.
+        # Scraping: budget_check vynucuje SEKVENČNÍ běh (paralelní dotazy na
+        # Google = koleda o blokaci); šetrnost zajišťuje malý limit kombinací
+        # + prodleva mezi dotazy přímo ve zdroji.
+        if self.googleflights:
+            for depart, ret in date_pairs:
+                results += self._scan_per_combo(
+                    self.googleflights, "googleflights", legs, is_openjaw,
+                    depart, ret, name,
+                    limit=RATE_LIMIT_COMBINATIONS["googleflights"],
+                    budget_check=lambda: True,
+                )
+
+        # --- Duffel – všechny vzorky termínů (vypnuto v config/agent.json,
+        # live účet není zdarma; kód zůstává pro případné znovuzapnutí) ---
         if self.duffel:
             for depart, ret in date_pairs:
                 results += self._scan_per_combo(
@@ -647,8 +668,8 @@ class Scanner:
         # aby levnější letiště přežila ořezání dle rate limitů.
         airport_stats = self._apply_dynamic_priority()
         self.api_count = sum(
-            1 for s in (self.duffel, self.skyscrapper, self.amadeus,
-                        self.travelpayouts) if s
+            1 for s in (self.googleflights, self.duffel, self.skyscrapper,
+                        self.amadeus, self.travelpayouts) if s
         )
 
         all_flights: list[FlightResult] = []
@@ -753,8 +774,9 @@ class Scanner:
         for key, f in sorted(best.items(), key=lambda kv: kv[1].price)[:10]:
             nights_part = f", {f.nights} nocí" if f.nights is not None else ""
             label = {
-                "duffel": "Duffel", "skyscrapper": "Sky Scrapper",
-                "amadeus": "Amadeus", "travelpayouts": "Travelpayouts",
+                "googleflights": "Google Flights", "duffel": "Duffel",
+                "skyscrapper": "Sky Scrapper", "amadeus": "Amadeus",
+                "travelpayouts": "Travelpayouts",
             }.get(f.source, f.source)
             delta = self.history.price_delta(key, f.price)
             trend = ""

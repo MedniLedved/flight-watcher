@@ -202,6 +202,7 @@ export interface AgentConfig {
     newLowSensitivityPct: number;
   };
   sources: {
+    googleFlights: boolean;
     duffel: boolean;
     skyScrapper: boolean;
     amadeus: boolean;

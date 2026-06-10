@@ -9,26 +9,30 @@ přes **Telegram**. Běží zdarma jednou denně přes **GitHub Actions**.
 
 Aplikace má dvě vrstvy zdrojů:
 
-**Vrstva 1 – real-time API** (ověřené aktuální ceny):
-- **Duffel API** – primární zdroj, nativní open-jaw / multi-city přes pole
-  `slices` *(náhrada za Kiwi Tequila – viz [poznámka](#proč-ne-kiwi))*
+**Vrstva 1 – real-time zdroje** (ověřené aktuální ceny):
+- **Google Flights** (scraping přes [fast-flights](https://pypi.org/project/fast-flights/))
+  – **primární zdroj**: bez API klíče, bez kvóty, ceny v EUR a 1:1 shodné
+  s ověřovacím odkazem v alertech; open-jaw jde přes multi-city vyhledávání
 - **Sky Scrapper (RapidAPI)** – Skyscanner data; ⚠️ free tier jen
   **100 requestů/měsíc**, proto se používá velmi úsporně
 - **Travelpayouts Data API** – cache (až 7 dní stará), slouží jako záloha a
   pro detekci cenových trendů
-- **Amadeus Self-Service API** *(volitelný)* – nativní open-jaw přes POST
-  `originDestinations`. ⚠️ **Bez nastavených klíčů se přeskakuje** a
-  **API končí 17. 7. 2026** (viz [sunset](#amadeus-volitelný--brzy-končí)).
-  Aplikace funguje plně i bez něj.
+- **Duffel API** *(vypnuto v `config/agent.json` – live účet **není zdarma**)*
+  – kód zůstává pro případné znovuzapnutí, viz
+  [Duffel: test vs. produkce](#duffel-vypnuto--test-vs-produkce)
+- **Amadeus Self-Service API** *(vypnuto v `config/agent.json`)* –
+  **API končí 17. 7. 2026** (viz [sunset](#amadeus-volitelný--brzy-končí))
 
-> **Minimálně stačí Duffel** (vrstva 1) + Telegram. Každý další zdroj je
-> volitelný – chybí-li klíč, zdroj se přeskočí a scan pokračuje dál.
+> **Minimálně stačí Telegram** – Google Flights jede bez klíče. Každý další
+> zdroj je volitelný: chybí-li klíč nebo je vypnutý v configu, přeskočí se
+> a scan pokračuje dál.
 
-### Proč ne Kiwi?
+### Proč ne Kiwi a Duffel?
 
-Kiwi.com **v květnu 2024 uzavřel veřejný přístup k Tequila API**, takže ho
-už nelze použít. Jako náhrada slouží **Duffel** (primárně) a **Sky Scrapper
-přes RapidAPI**.
+Kiwi.com **v květnu 2024 uzavřel veřejný přístup k Tequila API**. Duffel,
+původní náhrada, vyžaduje pro reálné ceny **aktivovaný live účet, který není
+zdarma** (test token vrací jen syntetická data). Primárním zdrojem je proto
+**Google Flights** (zdarma, bez klíče) + **Sky Scrapper přes RapidAPI**.
 
 **Vrstva 2 – kurátorské zdroje** (cena neověřená, dobré tipy):
 - **Secret Flying** (RSS)
@@ -61,17 +65,44 @@ python -m pytest
 
 | Zdroj | Povinný? | Kde získat | Proměnná(é) |
 |-------|----------|-----------|-------------|
-| Duffel | **doporučeno** (hlavní zdroj) | https://duffel.com → registrace → Dashboard → Developers → Access tokens (token `duffel_test_...` pro test, `duffel_live_...` pro produkci) | `DUFFEL_TOKEN` |
+| Google Flights | **hlavní zdroj – bez klíče** | nic nezařizuješ (scraping přes fast-flights, ceny rovnou v EUR) | – (volitelně `GOOGLEFLIGHTS_FETCH_MODE`) |
 | Sky Scrapper | volitelný | https://rapidapi.com/apiheya/api/sky-scrapper → Subscribe (Basic/Free) → zkopíruj `X-RapidAPI-Key` | `RAPIDAPI_KEY` |
 | Travelpayouts | volitelný | https://www.travelpayouts.com → Dashboard → API tokens | `TRAVELPAYOUTS_TOKEN` |
-| Amadeus | volitelný, **končí 17. 7. 2026** | https://developers.amadeus.com → My Self-Service Workspace → New App | `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` |
+| Duffel | **vypnuto** (live účet není zdarma) | https://duffel.com – jen pokud si pořídíš live účet; pak zapni v `config/agent.json` | `DUFFEL_TOKEN` |
+| Amadeus | **vypnuto**, API **končí 17. 7. 2026** | https://developers.amadeus.com → My Self-Service Workspace → New App | `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` |
 | Telegram bot | **povinný** (notifikace) | viz [Nastavení Telegram bota](#nastavení-telegram-bota) | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
 
-### Duffel: test vs. produkce
+### Google Flights (primární zdroj)
+
+Scraping výsledkové stránky Google Flights knihovnou
+[fast-flights](https://github.com/AWeirdDev/flights) – stejný binární `?tfs=`
+parametr, jaký generují ověřovací odkazy v alertech, takže **cena v alertu ==
+cena po kliknutí**. Vlastnosti:
+
+- žádný klíč, žádná kvóta, žádné náklady; ceny si vynucujeme v EUR
+  (`curr=EUR`; kdyby Google parametr ignoroval, převede se kurzem ECB),
+- open-jaw trasy jdou přes multi-city vyhledávání (cena za celý itinerář),
+- je to scraping → šetrnost: malý limit kombinací
+  (`RATE_LIMIT_COMBINATIONS["googleflights"]`), sekvenční dotazy s prodlevou,
+- křehkost: změna HTML Googlu může parsing rozbít – pak se zaloguje chyba
+  per kombinace a scan jede dál z ostatních zdrojů. Funkčnost lze kdykoliv
+  ověřit workflow *Actions → Test Google Flights source* (jedno živé
+  vyhledávání, výpis cen do logu) nebo lokálně
+  `python scripts/smoke_googleflights.py MUC NRT`.
+- `GOOGLEFLIGHTS_FETCH_MODE=fallback` zapne záložní stažení přes externí
+  playwright službu (try.playwright.tech), když přímý GET neprojde – posílají
+  se jí jen letiště a termíny.
+
+### Duffel (vypnuto) – test vs. produkce
+
+**Zdroj je vypnutý v `config/agent.json`** (`"sources.duffel": false`):
+reálné ceny vyžadují aktivovaný **live účet, který není zdarma**. Kód zůstává
+funkční – po případném pořízení live účtu stačí přepnout toggle a nastavit
+`DUFFEL_TOKEN`.
 
 Token sám určuje režim – `duffel_test_...` vrací **syntetická testovací data
 se smyšlenými cenami** (neodpovídají žádné reálné letence!), `duffel_live_...`
-reálné ceny (vyžaduje aktivovaný účet). Není potřeba zvláštní přepínač.
+reálné ceny. Není potřeba zvláštní přepínač.
 
 > ⚠️ **Scanner testovací token odmítne**: zdroj se vypne a denní souhrn
 > zobrazí varování. Stejně tak se zahodí odpovědi, u kterých API samo ohlásí
@@ -159,13 +190,13 @@ spustit i ručně (*Actions → Japan Flight Scan → Run workflow*).
 
 V repozitáři nastav **Settings → Secrets and variables → Actions**:
 
-Secrets – **povinné minimum**:
-- `DUFFEL_TOKEN`
+Secrets – **povinné minimum** (Google Flights jede bez klíče):
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 
 Secrets – **volitelné** (chybí-li, zdroj se přeskočí):
 - `RAPIDAPI_KEY` (Sky Scrapper)
+- `DUFFEL_TOKEN` *(zdroj vypnut v `config/agent.json` – live účet není zdarma)*
 - `TRAVELPAYOUTS_TOKEN`
 - `AMADEUS_CLIENT_ID`, `AMADEUS_CLIENT_SECRET` *(končí 17. 7. 2026 – viz výše)*
 

@@ -145,8 +145,9 @@ class TelegramNotifier:
         lines.append(price_line)
 
         source_label = {
-            "duffel": "Duffel", "skyscrapper": "Sky Scrapper",
-            "amadeus": "Amadeus", "travelpayouts": "Travelpayouts",
+            "googleflights": "Google Flights", "duffel": "Duffel",
+            "skyscrapper": "Sky Scrapper", "amadeus": "Amadeus",
+            "travelpayouts": "Travelpayouts",
         }.get(flight.source, flight.source)
         lines.append(f"🏢 Zdroj: {source_label}")
         if flight.airlines:

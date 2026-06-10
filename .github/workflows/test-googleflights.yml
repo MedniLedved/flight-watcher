@@ -1,0 +1,35 @@
+name: Test Google Flights source
+
+# Živý smoke test scraping zdroje Google Flights (fast-flights): jedno
+# vyhledávání MUC→NRT ~90 dní dopředu, výpis nalezených cen do logu.
+# Neposílá nic na Telegram a nesahá na historii – bezpečné spustit kdykoliv.
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: 'Odletové letiště (IATA)'
+        required: false
+        default: 'MUC'
+      destination:
+        description: 'Cílové letiště (IATA)'
+        required: false
+        default: 'NRT'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run smoke search
+        run: python scripts/smoke_googleflights.py "${{ inputs.origin }}" "${{ inputs.destination }}"
