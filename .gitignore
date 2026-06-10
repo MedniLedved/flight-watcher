@@ -18,3 +18,10 @@ venv/
 
 # Sky Scrapper IATA→skyId/entityId cache (regeneruje se za běhu, drží Actions cache)
 data/skyscrapper_airports.json
+
+# Generated data directories
+data/calendar/
+data/history/
+
+# Vite cache
+web/.vite/
