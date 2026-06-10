@@ -1,0 +1,124 @@
+import { ArrowDownRight, ArrowUpRight, ExternalLink, Sparkles } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import type { LatestOffer } from "@/types/data";
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
+}
+
+function routeLabel(o: LatestOffer): string {
+  if (o.type === "openjaw" && o.returnOrigin) {
+    return `${o.origin} → ${o.destination} / ${o.returnOrigin} → ${o.returnDestination ?? o.origin}`;
+  }
+  return `${o.origin} ⇄ ${o.destination}`;
+}
+
+function Flags({ o }: { o: LatestOffer }) {
+  const { isNewLow, isBigDrop, priceDeltaEur, pctChange7d } = o.flags;
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {isNewLow && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+          <Sparkles className="h-3 w-3" /> nové minimum
+        </span>
+      )}
+      {isBigDrop && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">
+          <ArrowDownRight className="h-3 w-3" /> velký pokles
+        </span>
+      )}
+      {priceDeltaEur !== null && priceDeltaEur !== 0 && (
+        <span
+          className={cn(
+            "inline-flex items-center gap-0.5 text-xs font-medium",
+            priceDeltaEur < 0 ? "text-emerald-700" : "text-red-700",
+          )}
+        >
+          {priceDeltaEur < 0 ? (
+            <ArrowDownRight className="h-3 w-3" />
+          ) : (
+            <ArrowUpRight className="h-3 w-3" />
+          )}
+          {priceDeltaEur > 0 ? "+" : ""}
+          {priceDeltaEur} €
+        </span>
+      )}
+      {pctChange7d !== null && (
+        <span className="text-xs text-muted-foreground">
+          {pctChange7d > 0 ? "+" : ""}
+          {pctChange7d} % / 7 d
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function OffersTable({ offers }: { offers: LatestOffer[] }) {
+  if (offers.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        Žádné nabídky neodpovídají filtrům.
+      </p>
+    );
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Trasa</TableHead>
+          <TableHead>Typ</TableHead>
+          <TableHead className="text-right">Cena</TableHead>
+          <TableHead>Odlet</TableHead>
+          <TableHead>Návrat</TableHead>
+          <TableHead className="text-right">Nocí</TableHead>
+          <TableHead>Aerolinky</TableHead>
+          <TableHead>Zdroj</TableHead>
+          <TableHead>Signály</TableHead>
+          <TableHead />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {offers.map((o) => (
+          <TableRow key={o.routeKey + o.source}>
+            <TableCell className="font-medium">{routeLabel(o)}</TableCell>
+            <TableCell className="text-muted-foreground">
+              {o.type === "openjaw" ? "open-jaw" : "zpáteční"}
+            </TableCell>
+            <TableCell className="text-right font-semibold tabular-nums">
+              {Math.round(o.price)} €
+            </TableCell>
+            <TableCell className="tabular-nums">{fmtDate(o.departDate)}</TableCell>
+            <TableCell className="tabular-nums">{fmtDate(o.returnDate)}</TableCell>
+            <TableCell className="text-right tabular-nums">{o.nights ?? "—"}</TableCell>
+            <TableCell>{o.airlines.length > 0 ? o.airlines.join(", ") : "—"}</TableCell>
+            <TableCell className="text-muted-foreground">{o.source}</TableCell>
+            <TableCell>
+              <Flags o={o} />
+            </TableCell>
+            <TableCell>
+              {o.dealUrl ? (
+                <Button asChild variant="ghost" size="sm">
+                  <a href={o.dealUrl} target="_blank" rel="noreferrer">
+                    Deal <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
+              ) : null}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
