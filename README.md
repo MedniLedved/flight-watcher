@@ -81,7 +81,6 @@ cena po kliknutí**. Vlastnosti:
 
 - žádný klíč, žádná kvóta, žádné náklady; ceny si vynucujeme v EUR
   (`curr=EUR`; kdyby Google parametr ignoroval, převede se kurzem ECB),
-- open-jaw trasy jdou přes multi-city vyhledávání (cena za celý itinerář),
 - je to scraping → šetrnost: malý limit kombinací
   (`RATE_LIMIT_COMBINATIONS["googleflights"]`), sekvenční dotazy s prodlevou,
 - křehkost: změna HTML Googlu může parsing rozbít – pak se zaloguje chyba
@@ -89,9 +88,14 @@ cena po kliknutí**. Vlastnosti:
   ověřit workflow *Actions → Test Google Flights source* (jedno živé
   vyhledávání, výpis cen do logu) nebo lokálně
   `python scripts/smoke_googleflights.py MUC NRT`.
-- `GOOGLEFLIGHTS_FETCH_MODE=fallback` zapne záložní stažení přes externí
-  playwright službu (try.playwright.tech), když přímý GET neprojde – posílají
-  se jí jen letiště a termíny.
+
+**Open-jaw (multi-city) omezení:** multi-city výsledky Google neservíruje
+server-side (vrací jen „Loading results"), takže ve výchozím `common` módu se
+open-jaw vyhledávání **přeskakuje** (zpáteční trasy fungují, ověřeno v CI).
+Pro open-jaw pokrytí nastav repo Variable **`GOOGLEFLIGHTS_FETCH_MODE=local`**
+– workflow pak nainstaluje playwright + chromium a výsledky renderuje skutečný
+prohlížeč (pomalejší, ale plné pokrytí). Mód `fallback` (externí služba
+try.playwright.tech) je aktuálně nefunkční – služba vrací 401.
 
 ### Duffel (vypnuto) – test vs. produkce
 

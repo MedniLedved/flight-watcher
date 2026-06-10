@@ -60,6 +60,7 @@ class GoogleFlightsSource:
         # Testovací šev: fetcher(legs, trip, adults) → list objektů s atributy
         # price/name (viz fast_flights.schema.Flight). None = reálný scraping.
         self._fetcher = fetcher
+        self._openjaw_warned = False
 
     def search(
         self,
@@ -84,6 +85,19 @@ class GoogleFlightsSource:
                             or return_destination != origin))
         legs = [(origin, destination, departure_date)]
         if return_date and openjaw:
+            # Multi-city stránky Google neservíruje server-side (jen „Loading
+            # results") a veřejná fallback služba fast-flights je mrtvá (401).
+            # Bez JS renderu nemá smysl pálit dotazy → přeskoč, dokud uživatel
+            # nezapne GOOGLEFLIGHTS_FETCH_MODE=local (playwright, viz README).
+            if self.fetch_mode == "common":
+                if not self._openjaw_warned:
+                    logger.warning(
+                        "Google Flights: open-jaw (multi-city) vyžaduje JS "
+                        "render – přeskakuji. Zapni GOOGLEFLIGHTS_FETCH_MODE="
+                        "local (playwright) pro open-jaw pokrytí."
+                    )
+                    self._openjaw_warned = True
+                return []
             trip = "multi-city"
             legs.append((return_origin, return_destination, return_date))
         elif return_date:
@@ -135,14 +149,10 @@ class GoogleFlightsSource:
             passengers=Passengers(adults=adults),
             seat="economy",
         )
-        # Multi-city (open-jaw) stránky Google neservíruje server-side
-        # (přijde jen „Loading results") – common mód tam nikdy nic nenajde.
-        # fallback = nejdřív common, při neúspěchu externí playwright render.
-        mode = self.fetch_mode
-        if trip == "multi-city" and mode == "common":
-            mode = "fallback"
         try:
-            result = get_flights_from_filter(filter_, currency="EUR", mode=mode)
+            result = get_flights_from_filter(
+                filter_, currency="EUR", mode=self.fetch_mode
+            )
         except RuntimeError as exc:
             # fast-flights vyhazuje RuntimeError s CELÝM markdownem stránky –
             # do logu patří krátká diagnóza, ne 3000 řádek HTML.

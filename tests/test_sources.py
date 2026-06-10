@@ -1108,7 +1108,7 @@ class _GfFlight:
         self.name = name
 
 
-def _gf_source(flights, captured=None, fx=None):
+def _gf_source(flights, captured=None, fx=None, fetch_mode="common"):
     from src.sources.googleflights import GoogleFlightsSource
 
     def fetcher(legs, trip, adults):
@@ -1116,7 +1116,8 @@ def _gf_source(flights, captured=None, fx=None):
             captured.update({"legs": legs, "trip": trip, "adults": adults})
         return flights
 
-    return GoogleFlightsSource(fetcher=fetcher, fx=fx or _FakeFx())
+    return GoogleFlightsSource(fetch_mode=fetch_mode, fetcher=fetcher,
+                               fx=fx or _FakeFx())
 
 
 def test_googleflights_roundtrip_maps_results(monkeypatch):
@@ -1148,7 +1149,9 @@ def test_googleflights_openjaw_uses_multicity(monkeypatch):
     from src.sources import googleflights as gf_mod
     monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
     captured: dict = {}
-    src = _gf_source([_GfFlight("€612")], captured=captured)
+    # Open-jaw vyžaduje JS render → mód local (v common se přeskakuje).
+    src = _gf_source([_GfFlight("€612")], captured=captured,
+                     fetch_mode="local")
     out = src.search("MUC", "KIX", date(2026, 9, 5),
                      return_date=date(2026, 9, 19),
                      return_origin="NRT", return_destination="PRG")
@@ -1197,29 +1200,32 @@ def test_scanner_initializes_googleflights_by_default():
     assert sc2.googleflights is None
 
 
-def test_googleflights_multicity_upgrades_common_to_fallback(monkeypatch):
-    """Multi-city stránky Google neservíruje server-side → common se musí
-    pro open-jaw povýšit na fallback (common pokus + playwright záchrana)."""
-    import fast_flights
+def test_googleflights_openjaw_skipped_in_common_mode(monkeypatch):
+    """Multi-city stránky Google neservíruje server-side a veřejný fallback
+    je mrtvý (401) → v common módu se open-jaw přeskakuje BEZ dotazu na
+    Google; s local/fallback módem se vyhledává jako multi-city."""
     from src.sources import googleflights as gf_mod
     monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
-    captured: dict = {}
+    calls: list = []
 
-    def fake_gfff(filter_, currency="", *, mode="common"):
-        captured["mode"] = mode
+    def fetcher(legs, trip, adults):
+        calls.append(trip)
+        return []
 
-        class _R:
-            flights: list = []
-
-        return _R()
-
-    monkeypatch.setattr(fast_flights, "get_flights_from_filter", fake_gfff)
-    src = gf_mod.GoogleFlightsSource()   # výchozí common
-    src.search("MUC", "KIX", date(2026, 9, 5), return_date=date(2026, 9, 19),
-               return_origin="NRT", return_destination="PRG")
-    assert captured["mode"] == "fallback"
+    src = gf_mod.GoogleFlightsSource(fetch_mode="common", fetcher=fetcher)
+    out = src.search("MUC", "KIX", date(2026, 9, 5),
+                     return_date=date(2026, 9, 19),
+                     return_origin="NRT", return_destination="PRG")
+    assert out == [] and calls == []   # žádný dotaz neproběhl
+    # Roundtrip v common módu normálně jede.
     src.search("MUC", "NRT", date(2026, 9, 5), return_date=date(2026, 9, 19))
-    assert captured["mode"] == "common"  # roundtrip zůstává common
+    assert calls == ["round-trip"]
+    # local mód open-jaw vyhledává přes multi-city.
+    src_local = gf_mod.GoogleFlightsSource(fetch_mode="local", fetcher=fetcher)
+    src_local.search("MUC", "KIX", date(2026, 9, 5),
+                     return_date=date(2026, 9, 19),
+                     return_origin="NRT", return_destination="PRG")
+    assert calls[-1] == "multi-city"
 
 
 def test_googleflights_truncates_parse_error(monkeypatch):

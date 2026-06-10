@@ -61,7 +61,7 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 | `src/calendar_renderer.py` | ASCII kalendář odletu/příletu do `<code>` bloku. |
 | `src/sources/` | Jednotlivé zdroje. Sdílené `FlightResult` / `DealResult` v `__init__.py`. |
 | `src/sources/google_flights.py` | Sdílený generátor odkazů na Google Flights (binární `?tfs=` protobuf – textový `?q=` Google nepředvyplňuje). Používají všechny vrstvy-1 zdroje. |
-| `src/sources/googleflights.py` | PRIMÁRNÍ zdroj cen: scraping Google Flights přes fast-flights (bez klíče, EUR vynucené, open-jaw = multi-city). Sekvenčně + šetrně; smoke test `scripts/smoke_googleflights.py` / workflow `test-googleflights.yml`. |
+| `src/sources/googleflights.py` | PRIMÁRNÍ zdroj cen: scraping Google Flights přes fast-flights (bez klíče, EUR vynucené). Roundtrip funguje v common módu (ověřeno v CI); open-jaw/multi-city vyžaduje `GOOGLEFLIGHTS_FETCH_MODE=local` (playwright), jinak se přeskakuje. Sekvenčně + šetrně; smoke test `scripts/smoke_googleflights.py` / workflow `test-googleflights.yml`. |
 | `src/sources/fx.py` | Převod cizích měn na EUR denním kurzem ECB (frankfurter.app, keyless). Líný fetch 1×/běh; bez kurzu se ne-EUR nabídka přeskočí. |
 | `src/maintenance.py` | Selektivní purge nereálných záznamů z historie dle `source` (`python -m src.maintenance`, CI workflow `purge-history.yml`). Výchozí dry-run. |
 
