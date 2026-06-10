@@ -148,6 +148,59 @@ class PriceHistory:
                 "(budoucí datum letu omylem uložené jako datum pozorování)."
             )
 
+    # -- údržba: selektivní odstranění záznamů dle zdroje ------------------
+    def purge_sources(self, sources: set[str] | list[str],
+                      before: Optional[date] = None) -> dict[str, int]:
+        """Odstraní záznamy pocházející z daných zdrojů (volitelně jen ty
+        s datem pozorování PŘED ``before``) a přepočítá odvozené hodnoty
+        trasy (all_time_min, last_price, last_seen) ze zbývajících záznamů.
+
+        Použití: vyčištění syntetických cen (Duffel test token, Amadeus test
+        prostředí) bez ztráty záznamů z reálných zdrojů.
+
+        Trasa bez zbývajících záznamů se odstraní celá. Alerty (anti-duplicitní
+        razítka) se u zasažených tras mažou – vztahovaly se k cenám, které už
+        nemusí existovat. Vrací {route_key: počet odstraněných záznamů}.
+
+        POZOR: all_time_min přepočtený jen z 90denního okna může minout
+        skutečné dlouhodobé minimum – volající (src/maintenance.py) ho
+        přepisuje minimem z dlouhodobé řady data/history/{route_key}.json.
+        """
+        sources = set(sources)
+        removed: dict[str, int] = {}
+
+        def _purge_hit(h: dict) -> bool:
+            if h.get("source") not in sources:
+                return False
+            if before is not None:
+                hd = _parse_iso(h.get("date"))
+                if hd is not None and hd >= before:
+                    return False
+            return True
+
+        for key, entry in list(self.routes()):
+            history = entry.get("history", [])
+            kept = [h for h in history if not _purge_hit(h)]
+            n_removed = len(history) - len(kept)
+            if not n_removed:
+                continue
+            removed[key] = n_removed
+            if not kept:
+                del self.data[key]
+                continue
+            entry["history"] = kept
+            prices = [float(h["price"]) for h in kept
+                      if h.get("price") is not None]
+            if prices:
+                entry["all_time_min"] = min(prices)
+            else:
+                entry.pop("all_time_min", None)
+            last = max(kept, key=lambda h: h.get("date") or "")
+            entry["last_seen"] = last.get("date")
+            entry["last_price"] = last.get("price")
+            entry["alerts"] = {}
+        return removed
+
     # -- anti-duplicita alertů -------------------------------------------
     def should_alert(self, route_key: str, price: float) -> bool:
         """False, pokud stejná cena pro stejnou trasu byla odeslána

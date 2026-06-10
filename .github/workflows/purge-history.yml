@@ -1,0 +1,76 @@
+name: Purge price history
+
+# Selektivní odstranění nereálných záznamů z historie cen (syntetická data
+# z test režimů – Duffel test token, Amadeus test prostředí). Reálná historie
+# žije v Actions cache, proto purge musí běžet tady, ne lokálně.
+#
+# Výchozí běh je DRY-RUN: do logu vypíše, co by se odstranilo. Teprve se
+# zaškrtnutým „apply" se změny zapíší (cache + commit dlouhodobých řad).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: 'Zdroje k odstranění (mezerou oddělené)'
+        required: true
+        default: 'duffel amadeus'
+      before:
+        description: 'Jen záznamy před datem (YYYY-MM-DD; prázdné = všechny)'
+        required: false
+        default: ''
+      apply:
+        description: 'Skutečně zapsat (bez zaškrtnutí jen dry-run do logu)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Restore price history
+        uses: actions/cache@v5
+        with:
+          path: |
+            data/price_history.json
+            data/skyscrapper_airports.json
+          # Prefix "price-history-" sdílený se scan.yml → další scan si
+          # vyčištěnou historii obnoví přes restore-keys.
+          key: price-history-purge-${{ github.run_id }}
+          restore-keys: price-history-
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # src.maintenance používá jen stdlib – žádné pip install není potřeba.
+      - name: Run purge
+        run: |
+          ARGS="--sources ${{ inputs.sources }}"
+          if [ -n "${{ inputs.before }}" ]; then
+            ARGS="$ARGS --before ${{ inputs.before }}"
+          fi
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            ARGS="$ARGS --apply"
+          fi
+          python -m src.maintenance $ARGS
+
+      - name: Commit purged data
+        if: ${{ inputs.apply }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.json data/history 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Žádné změny v commitnutých datech."
+          else
+            git commit -m "data: purge nereálných záznamů (${{ inputs.sources }})"
+            git pull --rebase origin "${GITHUB_REF_NAME}" || true
+            git push
+          fi

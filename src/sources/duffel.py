@@ -23,6 +23,7 @@ from typing import Optional
 import requests
 
 from . import FlightResult
+from .fx import FxRates
 from .google_flights import google_flights_url
 
 logger = logging.getLogger(__name__)
@@ -41,9 +42,13 @@ _BACKOFF_BASE = 2.0  # s: 2, 4, 8, 16
 class DuffelSource:
     name = "duffel"
 
-    def __init__(self, token: str, session: Optional[requests.Session] = None):
+    def __init__(self, token: str, session: Optional[requests.Session] = None,
+                 fx: Optional[FxRates] = None):
         self.token = token
         self.session = session or requests.Session()
+        # Duffel (na rozdíl od ostatních zdrojů) neumí vynutit měnu odpovědi –
+        # ne-EUR nabídky se převádějí denním kurzem ECB (viz fx.py).
+        self.fx = fx or FxRates()
         # None = zatím neznámé; False = API potvrdilo TEST režim (syntetická
         # data se smyšlenými cenami) → nabídky se zahazují, ať neotráví
         # historii, alerty ani dashboard. Scanner z příznaku staví varování
@@ -114,18 +119,15 @@ class DuffelSource:
             )
             return []
 
-        # Historie ukládá ceny bez měny (vždy EUR). Nabídku v jiné měně nelze
-        # bez kurzu použít – vydávat ji za EUR by zkreslilo alerty i trendy.
-        non_eur = sorted({
-            o.get("total_currency") for o in offers
-            if (o.get("total_currency") or "EUR") != "EUR"
-        })
-        if non_eur:
-            offers = [o for o in offers
-                      if (o.get("total_currency") or "EUR") == "EUR"]
+        # Historie ukládá ceny bez měny (vždy EUR). Ne-EUR nabídky převeď
+        # denním kurzem ECB; bez dostupného kurzu nabídku přeskoč – vydávat
+        # cizí měnu za EUR by zkreslilo alerty i trendy.
+        offers, skipped_currencies = self._offers_in_eur(offers)
+        if skipped_currencies:
             logger.warning(
-                "Duffel %s→%s: nabídky v měně %s přeskočeny (ukládáme jen EUR).",
-                origin, destination, ", ".join(map(str, non_eur)),
+                "Duffel %s→%s: nabídky v měně %s přeskočeny (kurz na EUR "
+                "není k dispozici).",
+                origin, destination, ", ".join(skipped_currencies),
             )
 
         results = [
@@ -135,6 +137,33 @@ class DuffelSource:
         results = [r for r in results if r is not None]
         results.sort(key=lambda r: r.price)
         return results[:max_results]
+
+    def _offers_in_eur(self, offers: list[dict]) -> tuple[list[dict], list[str]]:
+        """Vrátí (nabídky s cenou v EUR, kódy měn bez dostupného kurzu).
+
+        EUR nabídky projdou beze změny; ostatní se převedou denním kurzem
+        ECB (total_amount → EUR, kopie – původní payload se nemutuje).
+        """
+        kept: list[dict] = []
+        skipped: set[str] = set()
+        for o in offers:
+            currency = o.get("total_currency") or "EUR"
+            if currency == "EUR":
+                kept.append(o)
+                continue
+            try:
+                amount = float(o["total_amount"])
+            except (KeyError, ValueError, TypeError):
+                continue
+            eur = self.fx.to_eur(amount, currency)
+            if eur is None:
+                skipped.add(str(currency))
+                continue
+            converted = dict(o)
+            converted["total_amount"] = eur
+            converted["total_currency"] = "EUR"
+            kept.append(converted)
+        return kept, sorted(skipped)
 
     def _post_with_retry(self, body, headers, params, origin, destination):
         """POST s retry na 429/5xx (exponenciální backoff, respektuje

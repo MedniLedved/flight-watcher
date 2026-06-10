@@ -1,8 +1,9 @@
-# Duffel a Sky Scrapper (RapidAPI) volají REST přímo přes requests – bez SDK.
+# Všechny API zdroje (Duffel, Sky Scrapper, Amadeus, Travelpayouts, FX kurzy)
+# volají REST přímo přes requests – žádné SDK (amadeus balík odstraněn,
+# nikdy se neimportoval a jen zpomaloval/rozbíjel pip install).
 requests>=2.31.0
 feedparser>=6.0.10
 beautifulsoup4>=4.12.0
 pyyaml>=6.0
 python-dotenv>=1.0.0
-amadeus>=9.0.0          # Oficiální Amadeus Python SDK
 lxml>=4.9.0             # Rychlejší parser pro BeautifulSoup

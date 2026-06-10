@@ -866,9 +866,41 @@ def test_duffel_test_mode_offers_dropped(monkeypatch):
     assert src.live_mode is False
 
 
-def test_duffel_non_eur_offers_skipped(monkeypatch):
-    """Historie ukládá ceny bez měny (vždy EUR) – nabídka v jiné měně se
-    nesmí vydávat za EUR, přeskočí se."""
+class _FakeFx:
+    """Falešné kurzy pro testy: rates=None simuluje výpadek ECB API."""
+
+    def __init__(self, rates=None):
+        self.rates = rates
+
+    def to_eur(self, amount, currency):
+        if currency == "EUR":
+            return amount
+        if not self.rates or currency not in self.rates:
+            return None
+        return round(amount / self.rates[currency], 2)
+
+
+def test_duffel_non_eur_offers_converted_via_ecb_rate(monkeypatch):
+    """Ne-EUR nabídka se převede denním kurzem ECB a zůstane ve výsledcích."""
+    from src.sources import duffel as duffel_mod
+    monkeypatch.setattr(duffel_mod.time, "sleep", lambda *a, **k: None)
+    payload = {"live_mode": True, "offers": [
+        _duffel_offer(price="540.00", currency="USD"),
+        _duffel_offer(price="510.00", currency="EUR"),
+    ]}
+    src = DuffelSource(token="duffel_live_x",
+                       session=_DuffelFakeSession(payload),
+                       fx=_FakeFx(rates={"USD": 1.08}))
+    out = src.search("MUC", "KIX", date(2026, 9, 1),
+                     return_date=date(2026, 9, 13))
+    # 540 USD / 1.08 = 500 EUR → levnější než EUR nabídka, řadí se první.
+    assert [r.price for r in out] == [500.0, 510.0]
+    assert all(r.currency == "EUR" for r in out)
+
+
+def test_duffel_non_eur_offers_skipped_without_rates(monkeypatch):
+    """Bez dostupného kurzu (výpadek ECB API / neznámá měna) se ne-EUR
+    nabídka přeskočí – nesmí se vydávat za EUR."""
     from src.sources import duffel as duffel_mod
     monkeypatch.setattr(duffel_mod.time, "sleep", lambda *a, **k: None)
     payload = {"live_mode": True, "offers": [
@@ -876,12 +908,57 @@ def test_duffel_non_eur_offers_skipped(monkeypatch):
         _duffel_offer(price="510.00", currency="EUR"),
     ]}
     src = DuffelSource(token="duffel_live_x",
-                       session=_DuffelFakeSession(payload))
+                       session=_DuffelFakeSession(payload),
+                       fx=_FakeFx(rates=None))
     out = src.search("MUC", "KIX", date(2026, 9, 1),
                      return_date=date(2026, 9, 13))
     assert [r.price for r in out] == [510.0]
     assert all(r.currency == "EUR" for r in out)
     assert src.live_mode is True
+
+
+# -- FxRates (frankfurter.app / ECB) -----------------------------------------
+class _FxFakeSession:
+    def __init__(self, payload=None, fail=False):
+        self.payload = payload
+        self.fail = fail
+        self.calls = 0
+
+    def get(self, *a, **k):
+        self.calls += 1
+        sess = self
+
+        class _Resp:
+            def raise_for_status(self):
+                if sess.fail:
+                    import requests
+                    raise requests.HTTPError("503")
+
+            def json(self):
+                return sess.payload
+
+        return _Resp()
+
+
+def test_fx_rates_convert_to_eur():
+    from src.sources.fx import FxRates
+    session = _FxFakeSession(payload={"base": "EUR",
+                                      "rates": {"USD": 1.08, "GBP": 0.85}})
+    fx = FxRates(session=session)
+    assert fx.to_eur(108.0, "USD") == 100.0
+    assert fx.to_eur(85.0, "GBP") == 100.0
+    assert fx.to_eur(500.0, "EUR") == 500.0   # EUR bez fetchee
+    assert fx.to_eur(100.0, "XXX") is None    # neznámá měna
+    assert session.calls == 1                  # kurzy se stahují jen jednou
+
+
+def test_fx_rates_fetch_failure_only_once():
+    from src.sources.fx import FxRates
+    session = _FxFakeSession(fail=True)
+    fx = FxRates(session=session)
+    assert fx.to_eur(100.0, "USD") is None
+    assert fx.to_eur(200.0, "USD") is None
+    assert session.calls == 1   # po selhání se už znovu nezkouší (per běh)
 
 
 # -- Kvóty: auto-vypnutí + spread (#1, #2) ----------------------------------
@@ -950,6 +1027,9 @@ def _scanner_settings(**overrides):
     jednotlivé testy si zapnou jen to, co testují."""
     from src.config import Settings
     s = Settings.load()
+    # V repo config/agent.json je amadeus vypnutý – testy blokace test
+    # prostředí ale potřebují zdroj zapnutý, jinak se logika vůbec nespustí.
+    s.agent_config.setdefault("sources", {})["amadeus"] = True
     s.telegram_bot_token = None
     s.telegram_chat_id = None
     s.duffel_token = None

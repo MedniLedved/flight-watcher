@@ -77,8 +77,29 @@ reálné ceny (vyžaduje aktivovaný účet). Není potřeba zvláštní přepí
 > zobrazí varování. Stejně tak se zahodí odpovědi, u kterých API samo ohlásí
 > `live_mode=false`. Smyšlené ceny by jinak otrávily alerty, historii i
 > dashboard – přesně tak vznikají „nabídky", které na Google Flights stojí
-> dvojnásobek. Nabídky v jiné měně než EUR se přeskakují (historie měnu
-> neukládá, vše je EUR).
+> dvojnásobek.
+
+Nabídky v jiné měně než EUR (Duffel měnu odpovědi neumí vynutit) se
+**převádějí denním referenčním kurzem ECB** (frankfurter.app – zdarma, bez
+klíče); když kurz není k dispozici (výpadek API, exotická měna), nabídka se
+přeskočí – cizí měna se nikdy nevydává za EUR.
+
+### Vyčištění historie po běhu na testovacích datech
+
+Pokud scanner nějakou dobu běžel s testovacím tokenem, historie obsahuje
+syntetické ceny smíchané s reálnými záznamy ostatních zdrojů. Každý záznam
+nese pole `source`, takže jde cíleně odstranit jen zasažené zdroje:
+
+- **V CI (doporučeno – reálná historie žije v Actions cache):** spusť workflow
+  *Actions → Purge price history → Run workflow*. Výchozí běh je **dry-run**
+  (jen vypíše do logu, co by se smazalo); teprve se zaškrtnutým `apply` se
+  změny zapíší do cache a commitnou dlouhodobé řady (`data/history/*`).
+- **Lokálně:** `python -m src.maintenance --sources duffel amadeus
+  [--before YYYY-MM-DD] [--apply]`.
+
+Purge přepočítá `all_time_min`/`last_price`/`last_seen` ze zbývajících
+záznamů (minimum bere z dlouhodobé řady, která přežívá 90denní retenci)
+a smaže anti-duplicitní razítka alertů zasažených tras.
 
 ### Sky Scrapper: pozor na kvótu
 
@@ -111,6 +132,13 @@ Free tier má jen **100 requestů/měsíc** (~3/den). Aplikace proto:
 > **Bez nastavených `AMADEUS_CLIENT_ID`/`AMADEUS_CLIENT_SECRET` se zdroj
 > automaticky přeskakuje** (v denním souhrnu se vůbec neobjeví). Kód zůstává
 > funkční jako volitelný zdroj a je v něm označen komentáři `TODO(sunset)`.
+
+**Zdroj je aktuálně vypnutý v `config/agent.json`** (`"sources.amadeus":
+false`) – při scanu se vůbec neinicializuje (nulová režie) a nehlásí žádná
+varování. Zapnout jde přepnutím na `true` (např. přes záložku Nastavení
+dashboardu) + nastavením `AMADEUS_ENV=production`. Python SDK `amadeus` byl
+odstraněn z `requirements.txt` – nikde se neimportoval (zdroj volá REST přímo
+přes `requests`) a jen zpomaloval každodenní instalaci v CI.
 
 Pokud ho přesto chceš dočasně používat:
 
