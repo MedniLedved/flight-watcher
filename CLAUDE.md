@@ -28,21 +28,41 @@ přečti ho.
   Telegram i export — neduplikovat.
 - **Žádné pravidelné náklady.** Jen free tiery (GitHub Actions, Pages, OSM, statické JSONy).
 
-## Pořadí fází
-Drž se fází 0–8 ze zadání (sekce 8). Začni vždy Fází 0 (datový kontrakt + export), ostatní
-staví na ní. Po každé fázi zastav a nech zkorigovat.
+## Implementace fází — checklist pro bezchybný kód
+
+Po implementaci každé fáze projdi **vždy všechny** body v tomto pořadí. Vynechání jednoho se
+vracího jako bug během testování.
+
+1. **TypeScript:** `npm run build` v `web/` bez chyb → pokud chyba, oprav ji, ne workaround
+2. **Ověř, že všechny komponenty jsou importovány** kde je třeba — mrtvý kód se nezobrazí
+3. **Zkontroluj data:** pokud fáze pracuje s JSON daty, ověř že všechny soubory existují:
+   - `web/public/data/*.json` (latest, stats, routes, meta, insights)
+   - `web/public/data/calendar/{route_key}.json` pro každou trasu, která je v `latest.json`
+   - `web/public/data/history/{route_key}.json` (pokud je třeba)
+4. **Mock data jsou konzistentní:** `latest.json` obsahuje routeKey, který existuje v `calendar/` i `history/`
+5. **Spusť dev server:** `npm run dev` v `web/`, ručně otestuj zlatý path (klik na trasu, zobraz detail, filtruj)
+6. **Build bez warningů:** `npm run build` → zkontroluj výstup na "error" nebo "warning"
+7. **Spusť validační skript:** `bash scripts/validate.sh` — ověří bundle, data, JSON syntax
+8. **Deployuj:** `bash scripts/deploy.sh` — skript sám ověří všechno a pushe na GitHub Pages
+9. **Otestuj na GitHub Pages:** refreshni https://medniledved.github.io/flight-watcher/
+   (Ctrl+Shift+R), zkus přesně totéž co v bodu 5 — mělo by to fungovat stejně
+
+Pokud v kterémkoliv bodě selže → **zastav, oprav příčinu, ne symptom**, a vrať se na bod 1.
+Např.: pokud dev server padne s "Module not found", neobcházej `npm install --force`; najdi
+proč se import přerušil (chyby v souboru? špatná cesta?).
 
 ## Git
 Vyvíjej na designované feature branchi, commituj s popisnými zprávami, push až je hotovo.
 Pull requesty nevytvářej bez explicitního pokynu.
 
 ## Deploy na GitHub Pages
-Po každé dokončené fázi **vždy** spusť deployment skript (z kořene repozitáře, na dev větvi):
+Po projití všech bodů checklistu spusť (z kořene repozitáře, na dev větvi):
 ```
 bash scripts/deploy.sh
 ```
-Skript: (1) vybuiluje `web/dist`, (2) ověří obsah bundlu, (3) zkopíruje vše do gh-pages přes
-`git worktree` (bez přepínání větví), (4) commitne a pushne. **Nikdy nedeployuj ručně.**
+Skript: (1) vybuiluje `web/dist`, (2) spustí `validate.sh`, (3) zkopíruje vše do gh-pages
+přes `git worktree`, (4) commitne a pushne. Neselže-li žádný bod checklistu, deploy uspěje.
+**Nikdy nedeployuj ručně.**
 
 ---
 Plné zadání viz @docs/zadani-flight-dashboard.md
