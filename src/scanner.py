@@ -48,6 +48,7 @@ from .sources.miles_and_more import MilesAndMoreSource
 from .sources.miles_and_more import should_run_today as mm_should_run_today
 from .sources.secret_flying import SecretFlyingSource
 from .sources.skyscrapper import SkyScrapperSource
+from .sources.letsfg_source import LetsFGSource
 from .sources.travelpayouts import TravelpayoutsSource
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,10 @@ class Scanner:
         self.googleflights = (
             GoogleFlightsSource()
             if self.settings.source_enabled("googleFlights") else None
+        )
+        self.letsfg = (
+            LetsFGSource()
+            if self.settings.source_enabled("letsFG") else None
         )
         self.duffel_test_token = bool(
             self.settings.duffel_token
@@ -297,6 +302,16 @@ class Scanner:
                     depart, ret, name,
                     limit=RATE_LIMIT_COMBINATIONS["googleflights"],
                     budget_check=lambda: True,
+                )
+
+        # --- LetsFG (free, 400+ aerolinky) – všechny vzorky termínů.
+        # Bez API klíče, paralelní volání jako Google Flights.
+        if self.letsfg:
+            for depart, ret in date_pairs:
+                results += self._scan_per_combo(
+                    self.letsfg, "letsfg", legs, is_openjaw,
+                    depart, ret, name,
+                    limit=RATE_LIMIT_COMBINATIONS["letsfg"],
                 )
 
         # --- Duffel – všechny vzorky termínů (vypnuto v config/agent.json,
