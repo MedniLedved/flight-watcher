@@ -51,11 +51,13 @@ from .sources.skyscrapper import SkyScrapperSource
 from .sources.travelpayouts import TravelpayoutsSource
 from .sources.flightlabs import FlightLabsSource
 from .sources.letsfg_source import LetsFGSource
+from .sources.serpapi import SerpApiSource
 
 logger = logging.getLogger(__name__)
 
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
+SERPAPI_MONTHLY_LIMIT = 100       # SerpAPI free tier
 FLIGHTLABS_TRIAL_LIMIT = 50      # celkový limit trialu (bez měsíčního resetu)
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
@@ -196,6 +198,11 @@ class Scanner:
             SkyScrapperSource(self.settings.rapidapi_key)
             if self.settings.rapidapi_key
             and self.settings.source_enabled("skyScrapper") else None
+        )
+        self.serpapi = (
+            SerpApiSource(self.settings.serpapi_key)
+            if self.settings.serpapi_key
+            and self.settings.source_enabled("serpApi") else None
         )
         amadeus_configured = bool(
             self.settings.amadeus_client_id
@@ -344,6 +351,15 @@ class Scanner:
                 budget_check=self._skyscrapper_has_budget,
             )
 
+        # --- SerpAPI / Google Flights (100 req/měsíc) ---
+        if self.serpapi and self._serpapi_has_budget():
+            results += self._scan_per_combo(
+                self.serpapi, "serpapi", legs, is_openjaw,
+                depart, ret, name,
+                limit=RATE_LIMIT_COMBINATIONS["serpapi"],
+                budget_check=self._serpapi_has_budget,
+            )
+
         # --- Amadeus ---
         if self.amadeus and self._amadeus_has_budget():
             results += self._scan_per_combo(
@@ -447,6 +463,23 @@ class Scanner:
         used = self.history.amadeus_usage() + self.amadeus.request_count
         return used < AMADEUS_MONTHLY_LIMIT
 
+    def _serpapi_has_budget(self) -> bool:
+        if not self.serpapi:
+            return False
+        if self.history.is_source_disabled("serpapi"):
+            return False
+        quota = self.history.get_quota("serpapi")
+        remaining = quota.get("remaining")
+        if remaining is not None:
+            if remaining <= 0:
+                return False
+            per_run = _spread_budget(remaining, quota.get("reset_at"))
+            if self.serpapi.request_count >= per_run:
+                return False
+            return True
+        used = self.history.serpapi_usage() + self.serpapi.request_count
+        return used < SERPAPI_MONTHLY_LIMIT
+
     def _flightlabs_has_budget(self) -> bool:
         if not self.flightlabs:
             return False
@@ -501,6 +534,7 @@ class Scanner:
             "googleflights": _req_count("googleflights"),
             "travelpayouts": _req_count("travelpayouts"),
             "skyscrapper": _req_count("skyscrapper"),
+            "serpapi": _req_count("serpapi"),
             "amadeus": _req_count("amadeus"),
             "duffel": _req_count("duffel"),
             "flightlabs": _req_count("flightlabs"),
@@ -525,6 +559,24 @@ class Scanner:
             self.history.disable_source("skyscrapper", until)
             logger.warning(
                 "Sky Scrapper: kvóta vyčerpána → vypínám do %s (pak se sám zapne)",
+                until.isoformat(timespec="minutes"),
+            )
+
+    def _update_serpapi_quota(self) -> None:
+        """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
+        resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
+        sa = self.serpapi
+        if sa.quota_remaining is not None or sa.quota_reset_at is not None:
+            self.history.record_quota(
+                "serpapi", sa.quota_remaining, sa.quota_reset_at, sa.quota_limit
+            )
+        if sa.request_count:
+            self.history.add_serpapi_usage(sa.request_count)
+        if sa.quota_exhausted:
+            until = sa.quota_reset_at or _first_of_next_month()
+            self.history.disable_source("serpapi", until)
+            logger.warning(
+                "SerpAPI: kvóta vyčerpána → vypínám do %s (pak se sám zapne)",
                 until.isoformat(timespec="minutes"),
             )
 
@@ -780,6 +832,8 @@ class Scanner:
         if self.skyscrapper:
             self.history.add_skyscrapper_usage(self.skyscrapper.request_count)
             self._update_skyscrapper_quota()
+        if self.serpapi:
+            self._update_serpapi_quota()
         if self.flightlabs and self.flightlabs.request_count:
             self.history.add_flightlabs_usage(self.flightlabs.request_count)
             logger.info(

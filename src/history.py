@@ -252,6 +252,17 @@ class PriceHistory:
     def add_skyscrapper_usage(self, count: int, month: Optional[str] = None) -> None:
         self._add_usage("skyscrapper_requests", count, month)
 
+    def serpapi_usage(self, month: Optional[str] = None) -> int:
+        month = month or datetime.now().strftime("%Y-%m")
+        return (
+            self.data.get(META_KEY, {})
+            .get("serpapi_requests", {})
+            .get(month, 0)
+        )
+
+    def add_serpapi_usage(self, count: int, month: Optional[str] = None) -> None:
+        self._add_usage("serpapi_requests", count, month)
+
     # -- kvóty zdrojů: auto-vypnutí při vyčerpání + zjištěný stav ---------
     def is_source_disabled(self, name: str, now: Optional[datetime] = None) -> bool:
         """True, pokud je zdroj dočasně vypnutý (vyčerpaná kvóta) a lhůta
