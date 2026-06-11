@@ -15,6 +15,8 @@ const MONTH_NAMES = [
 
 const DAY_MS = 86_400_000;
 const DEAL_THRESHOLD_DEFAULT = 550;
+/** Pixelů na den — určuje měřítko celé osy. */
+const PX_PER_DAY = 10;
 
 function utcMs(iso: string): number {
   return Date.parse(iso + "T00:00:00Z");
@@ -25,12 +27,10 @@ function fmtDay(iso: string): string {
   return `${d.getUTCDate()}. ${d.getUTCMonth() + 1}.`;
 }
 
-// Unikátní klíč pro nabídku – dvě nabídky stejné trasy s různými daty jsou různé řádky.
 function offerKey(o: LatestOffer): string {
   return `${o.routeKey}--${o.departDate ?? "nd"}--${o.price}`;
 }
 
-// Popisek řádku obsahuje i datum odletu, aby byly odlišitelné dvě nabídky stejné trasy.
 function laneLabel(o: LatestOffer): string {
   const route =
     o.type === "openjaw" && o.returnOrigin
@@ -42,8 +42,6 @@ function laneLabel(o: LatestOffer): string {
 
 const FALLBACK_NIGHTS = 14;
 
-/** Konec letu pro potřeby vykreslení baru. Pokud returnDate chybí (RSS deal),
- *  odhadne se z nights nebo minNights z configu. */
 function barEndDate(o: LatestOffer, minNights: number): string {
   if (o.returnDate) return o.returnDate;
   const nights = o.nights ?? minNights;
@@ -58,9 +56,6 @@ interface Props {
   onSelectRoute: (routeKey: string) => void;
 }
 
-/** Swimlanes: dny = sloupce (časová osa), nabídky = řádky seřazené podle
- *  nejbližšího odletu. Pozice barů v procentech časového rozsahu, takže
- *  layout je responzivní bez měření kontejneru. */
 export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const [selected, setSelected] = useState<LatestOffer | null>(null);
   const [includeTransport, setIncludeTransport] = useState(false);
@@ -69,8 +64,6 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? DEAL_THRESHOLD_DEFAULT;
   const minNights = agentConfig?.stayLength?.minNights ?? FALLBACK_NIGHTS;
 
-  // Zobrazujeme POUZE dealy pod limitem s alespoň departDate.
-  // Nabídky bez returnDate (RSS dealy) zobrazíme s odhadnutou délkou.
   const lanes = useMemo(
     () =>
       offers
@@ -81,13 +74,25 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const undated = offers.filter((o) => !o.departDate).length;
   const overBudget = offers.filter((o) => o.departDate).length - lanes.length;
 
-  // Časový rozsah zarovnaný na hranice měsíců → čisté měsíční ticky.
-  const { start, end, monthTicks, weekTicks, weekendBands } = useMemo(() => {
-    if (lanes.length === 0) return { start: 0, end: 1, monthTicks: [], weekTicks: [], weekendBands: [] };
+  // Časový rozsah: start = začátek prvního měsíce s odletem,
+  // end = konec posledního měsíce (max z návratů a sledovaného období z configu).
+  const { end, totalWidth, px, monthTicks, weekTicks, weekendBands } = useMemo(() => {
+    if (lanes.length === 0) {
+      return { end: 1, totalWidth: 0, px: (_t: number) => 0, monthTicks: [], weekTicks: [], weekendBands: [] };
+    }
+
     const minDepart = new Date(Math.min(...lanes.map((o) => utcMs(o.departDate!))));
-    const maxReturn = new Date(Math.max(...lanes.map((o) => utcMs(barEndDate(o, minNights)))));
+    const travelTo = agentConfig?.travelWindow?.to;
+    const rawEndMs = Math.max(
+      ...lanes.map((o) => utcMs(barEndDate(o, minNights))),
+      travelTo ? utcMs(travelTo) : 0,
+    );
+    const maxReturn = new Date(rawEndMs);
     const start = Date.UTC(minDepart.getUTCFullYear(), minDepart.getUTCMonth(), 1);
     const end = Date.UTC(maxReturn.getUTCFullYear(), maxReturn.getUTCMonth() + 1, 1);
+
+    const totalWidth = Math.round((end - start) / DAY_MS * PX_PER_DAY);
+    const px = (t: number) => Math.round((t - start) / DAY_MS * PX_PER_DAY);
 
     const monthTicks: { t: number; label: string }[] = [];
     for (let d = new Date(start); d.getTime() <= end; d.setUTCMonth(d.getUTCMonth() + 1)) {
@@ -103,18 +108,15 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
       weekTicks.push(t);
     }
 
-    // Weekend bands: Saturday 00:00 UTC → Monday 00:00 UTC
     const weekendBands: { s: number; e: number }[] = [];
-    const startDow = new Date(start).getUTCDay(); // 0=Sun,6=Sat
+    const startDow = new Date(start).getUTCDay();
     const daysToFirstSat = ((6 - startDow) + 7) % 7;
     for (let t = start + daysToFirstSat * DAY_MS; t < end; t += 7 * DAY_MS) {
       weekendBands.push({ s: t, e: Math.min(t + 2 * DAY_MS, end) });
     }
 
-    return { start, end, monthTicks, weekTicks, weekendBands };
-  }, [lanes]);
-
-  const pct = (t: number) => ((t - start) / (end - start)) * 100;
+    return { end, totalWidth, px, monthTicks, weekTicks, weekendBands };
+  }, [lanes, agentConfig, minNights]);
 
   const effPrices = useMemo(
     () => lanes.map((o) => effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination)),
@@ -156,7 +158,6 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
             </CardDescription>
           </div>
           <div className="flex items-center gap-4">
-            {/* Legenda */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="tabular-nums">{Math.round(minPrice)} €</span>
               <div className="flex h-3 w-20 overflow-hidden rounded">
@@ -192,7 +193,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
         </CardHeader>
         <CardContent>
           <div className="flex">
-            {/* Levý sloupec s popisky tras */}
+            {/* Levý sloupec s popisky tras — fixní, nescrolluje */}
             <div className="w-44 shrink-0 pr-3">
               <div className="h-7" />
               {lanes.map((o) => (
@@ -213,76 +214,77 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               ))}
             </div>
 
-            {/* Časová osa */}
-            <div className="relative flex-1">
-              {weekendBands.map(({ s, e }) => (
-                <div
-                  key={s}
-                  className="absolute inset-y-0 bg-muted/50"
-                  style={{ left: `${pct(s)}%`, width: `${pct(e) - pct(s)}%` }}
-                />
-              ))}
-              {weekTicks.map((t) => (
-                <div
-                  key={t}
-                  className="absolute inset-y-0 border-l border-border/40"
-                  style={{ left: `${pct(t)}%` }}
-                />
-              ))}
-              {monthTicks.map(({ t, label }) => (
-                <div
-                  key={t}
-                  className="absolute inset-y-0 border-l border-border"
-                  style={{ left: `${pct(t)}%` }}
-                >
-                  {pct(t) < 100 && (
-                    <span className="absolute left-1 top-0 whitespace-nowrap text-[10px] font-medium text-muted-foreground">
-                      {label}
-                    </span>
-                  )}
-                </div>
-              ))}
-
-              <div className="h-7" />
-              {lanes.map((o, i) => {
-                const left = pct(utcMs(o.departDate!));
-                const endIso = barEndDate(o, minNights);
-                const width = Math.max(pct(utcMs(endIso)) - left, 1.5);
-                const eff = effPrices[i];
-                const isSel = selected ? offerKey(selected) === offerKey(o) : false;
-                const estimated = !o.returnDate;
-                return (
-                  <div key={offerKey(o)} className="relative h-9">
-                    <button
-                      onClick={() => setSelected((prev) => (prev && offerKey(prev) === offerKey(o) ? null : o))}
-                      className={cn(
-                        "absolute inset-y-1 flex items-center overflow-hidden rounded px-2",
-                        "text-[11px] font-semibold text-white transition-all hover:brightness-110",
-                        estimated && "border-r-2 border-dashed border-white/60",
-                        isSel && "outline outline-2 outline-offset-1 outline-foreground",
-                      )}
-                      style={{
-                        left: `${left}%`,
-                        width: `${width}%`,
-                        background: priceColor(eff, minPrice, maxPrice),
-                      }}
-                      title={
-                        estimated
-                          ? `${laneLabel(o)} · od ${fmtDay(o.departDate!)} · délka pobytu odhadnuta (${o.nights ?? minNights} nocí)`
-                          : `${laneLabel(o)} · ${fmtDay(o.departDate!)} – ${fmtDay(o.returnDate!)}`
-                      }
-                    >
-                      <span className="truncate tabular-nums">{Math.round(eff)} €</span>
-                    </button>
+            {/* Horizontálně scrollovatelná časová osa s pevným měřítkem */}
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="relative" style={{ width: `${totalWidth}px` }}>
+                {weekendBands.map(({ s, e }) => (
+                  <div
+                    key={s}
+                    className="absolute inset-y-0 bg-muted/50"
+                    style={{ left: `${px(s)}px`, width: `${px(e) - px(s)}px` }}
+                  />
+                ))}
+                {weekTicks.map((t) => (
+                  <div
+                    key={t}
+                    className="absolute inset-y-0 border-l border-border/40"
+                    style={{ left: `${px(t)}px` }}
+                  />
+                ))}
+                {monthTicks.map(({ t, label }) => (
+                  <div
+                    key={t}
+                    className="absolute inset-y-0 border-l border-border"
+                    style={{ left: `${px(t)}px` }}
+                  >
+                    {t < end && (
+                      <span className="absolute left-1 top-0 whitespace-nowrap text-[10px] font-medium text-muted-foreground">
+                        {label}
+                      </span>
+                    )}
                   </div>
-                );
-              })}
+                ))}
+
+                <div className="h-7" />
+                {lanes.map((o, i) => {
+                  const leftPx = px(utcMs(o.departDate!));
+                  const endIso = barEndDate(o, minNights);
+                  const widthPx = Math.max(px(utcMs(endIso)) - leftPx, PX_PER_DAY);
+                  const eff = effPrices[i];
+                  const isSel = selected ? offerKey(selected) === offerKey(o) : false;
+                  const estimated = !o.returnDate;
+                  return (
+                    <div key={offerKey(o)} className="relative h-9">
+                      <button
+                        onClick={() => setSelected((prev) => (prev && offerKey(prev) === offerKey(o) ? null : o))}
+                        className={cn(
+                          "absolute inset-y-1 flex items-center overflow-hidden rounded px-2",
+                          "text-[11px] font-semibold text-white transition-all hover:brightness-110",
+                          estimated && "border-r-2 border-dashed border-white/60",
+                          isSel && "outline outline-2 outline-offset-1 outline-foreground",
+                        )}
+                        style={{
+                          left: `${leftPx}px`,
+                          width: `${widthPx}px`,
+                          background: priceColor(eff, minPrice, maxPrice),
+                        }}
+                        title={
+                          estimated
+                            ? `${laneLabel(o)} · od ${fmtDay(o.departDate!)} · délka pobytu odhadnuta (${o.nights ?? minNights} nocí)`
+                            : `${laneLabel(o)} · ${fmtDay(o.departDate!)} – ${fmtDay(o.returnDate!)}`
+                        }
+                      >
+                        <span className="truncate tabular-nums">{Math.round(eff)} €</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Detail vybrané nabídky */}
       {selected && (
         <div className="rounded-lg border bg-muted/40 p-4 text-sm">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -334,7 +336,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                 <dt className="text-muted-foreground">Doprava na letiště</dt>
                 <dd>
                   {selectedReturnTransport
-                    ? `${selectedTransport.costEur} € (${selected!.origin}) + ${selectedReturnTransport.costEur} € (${selected!.returnDestination}) · ${selectedTransport.mode}`
+                    ? `${selectedTransport.costEur} € (${selected.origin}) + ${selectedReturnTransport.costEur} € (${selected.returnDestination}) · ${selectedTransport.mode}`
                     : `2× ${selectedTransport.costEur} € · ${fmtDuration(selectedTransport.durationMin)} (${selectedTransport.mode})`}
                 </dd>
               </>
