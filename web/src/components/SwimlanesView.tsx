@@ -117,7 +117,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const pct = (t: number) => ((t - start) / (end - start)) * 100;
 
   const effPrices = useMemo(
-    () => lanes.map((o) => effectivePrice(o.price, o.origin, agentConfig, includeTransport)),
+    () => lanes.map((o) => effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination)),
     [lanes, agentConfig, includeTransport],
   );
   const minPrice = effPrices.length ? Math.min(...effPrices) : 0;
@@ -134,8 +134,12 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   }
 
   const selectedTransport = selected ? getTransport(selected.origin, agentConfig) : null;
+  const selectedReturnTransport =
+    selected?.type === "openjaw" && selected.returnDestination
+      ? getTransport(selected.returnDestination, agentConfig)
+      : null;
   const selectedEffPrice = selected
-    ? effectivePrice(selected.price, selected.origin, agentConfig, includeTransport)
+    ? effectivePrice(selected.price, selected.origin, agentConfig, includeTransport, selected.returnDestination)
     : null;
 
   return (
@@ -329,8 +333,9 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               <>
                 <dt className="text-muted-foreground">Doprava na letiště</dt>
                 <dd>
-                  2× {selectedTransport.costEur} € · {fmtDuration(selectedTransport.durationMin)} (
-                  {selectedTransport.mode})
+                  {selectedReturnTransport
+                    ? `${selectedTransport.costEur} € (${selected!.origin}) + ${selectedReturnTransport.costEur} € (${selected!.returnDestination}) · ${selectedTransport.mode}`
+                    : `2× ${selectedTransport.costEur} € · ${fmtDuration(selectedTransport.durationMin)} (${selectedTransport.mode})`}
                 </dd>
               </>
             )}

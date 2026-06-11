@@ -142,13 +142,13 @@ export function OffersTable({
                 {isOpenJaw && transport && (
                   <div className="text-xs text-muted-foreground">
                     {returnTransport
-                      ? `+${transport.costEur + returnTransport.costEur} € (${o.origin} + ${o.returnDestination})`
-                      : `+${transport.costEur} € · ${fmtDuration(transport.durationMin)}`}
+                      ? `${fmtDuration(transport.durationMin)} + ${fmtDuration(returnTransport.durationMin)}`
+                      : fmtDuration(transport.durationMin)}
                   </div>
                 )}
                 {!isOpenJaw && transport && (
                   <div className="text-xs text-muted-foreground">
-                    +{2 * transport.costEur} € · {fmtDuration(transport.durationMin)}
+                    {fmtDuration(transport.durationMin)} tam i zpět
                   </div>
                 )}
                 {includeTransport && !transport && (

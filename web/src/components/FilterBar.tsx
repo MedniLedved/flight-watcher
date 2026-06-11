@@ -125,23 +125,63 @@ export function FilterBar({
             Cena (EUR){includeTransport ? " vč. dopravy" : ""}
           </label>
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              inputMode="numeric"
-              placeholder="od"
-              className="w-24"
-              value={filters.priceMin}
-              onChange={(e) => set({ priceMin: e.target.value })}
-            />
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-7 px-0 text-base"
+                onClick={() => {
+                  const v = parseNum(filters.priceMin);
+                  if (v != null) set({ priceMin: v <= 50 ? "" : String(v - 50) });
+                }}
+              >−</Button>
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="od"
+                className="w-20"
+                value={filters.priceMin}
+                onChange={(e) => set({ priceMin: e.target.value })}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-7 px-0 text-base"
+                onClick={() => {
+                  const v = parseNum(filters.priceMin) ?? 0;
+                  set({ priceMin: String(v + 50) });
+                }}
+              >+</Button>
+            </div>
             <span className="text-muted-foreground">–</span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              placeholder="do"
-              className="w-24"
-              value={filters.priceMax}
-              onChange={(e) => set({ priceMax: e.target.value })}
-            />
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-7 px-0 text-base"
+                onClick={() => {
+                  const v = parseNum(filters.priceMax);
+                  if (v != null) set({ priceMax: v <= 50 ? "0" : String(v - 50) });
+                }}
+              >−</Button>
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="do"
+                className="w-20"
+                value={filters.priceMax}
+                onChange={(e) => set({ priceMax: e.target.value })}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-7 px-0 text-base"
+                onClick={() => {
+                  const v = parseNum(filters.priceMax);
+                  if (v != null) set({ priceMax: String(v + 50) });
+                }}
+              >+</Button>
+            </div>
           </div>
         </div>
 

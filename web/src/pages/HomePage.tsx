@@ -74,6 +74,11 @@ export function HomePage({ latest, stats, agentConfig, loading, error, onSelectR
   const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
   const [includeTransport, setIncludeTransport] = useState(false);
 
+  const handleToggleTransport = (v: boolean) => {
+    setIncludeTransport(v);
+    setFilters((prev) => ({ ...prev, priceMax: v ? "650" : "550" }));
+  };
+
   const offers = useMemo(() => latest ?? [], [latest]);
   const visible = useMemo(
     () => applyFilters(offers, filters, agentConfig, includeTransport),
@@ -111,7 +116,7 @@ export function HomePage({ latest, stats, agentConfig, loading, error, onSelectR
         filters={filters}
         onChange={setFilters}
         includeTransport={includeTransport}
-        onToggleTransport={setIncludeTransport}
+        onToggleTransport={handleToggleTransport}
       />
       <Card>
         <CardHeader>
