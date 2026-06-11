@@ -3,7 +3,7 @@
 Endpointy:
 * GET https://serpapi.com/search.json?engine=google_flights
 
-⚠️ FREE TIER: 100 vyhledávání / MĚSÍC. Chování kopíruje Sky Scrapper:
+⚠️ FREE TIER: 250 vyhledávání / MĚSÍC. Chování kopíruje Sky Scrapper:
   - kvóta se čte z hlaviček odpovědi (X-RateLimit-*),
   - při vyčerpání se zdroj auto-vypne do konce periody,
   - RATE_LIMIT_COMBINATIONS["serpapi"] je nastaven nízko.

@@ -80,7 +80,7 @@ RATE_LIMIT_COMBINATIONS = {
     "amadeus":       20,   # 2 000 req/měsíc → ~66/den, bereme méně pro jistotu
     "skyscrapper":   3,    # RapidAPI free tier 100 req/MĚSÍC → ~3/den!
     "travelpayouts": 100,  # neomezeno, ale rozumná hranice
-    "serpapi":        3,   # SerpAPI free tier 100 req/MĚSÍC → ~3/den
+    "serpapi":        8,   # SerpAPI free tier 250 req/MĚSÍC → ~8/den
     "secret_flying": None, # RSS – bez limitu kombinací
     "jacks":         None, # scraping – bez limitu kombinací
     "cestujlevne":   None, # RSS – bez limitu kombinací

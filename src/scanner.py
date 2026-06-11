@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
-SERPAPI_MONTHLY_LIMIT = 100       # SerpAPI free tier
+SERPAPI_MONTHLY_LIMIT = 250       # SerpAPI free tier
 FLIGHTLABS_TRIAL_LIMIT = 50      # celkový limit trialu (bez měsíčního resetu)
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
