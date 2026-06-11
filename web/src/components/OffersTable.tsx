@@ -107,8 +107,19 @@ export function OffersTable({
       </TableHeader>
       <TableBody>
         {offers.map((o) => {
+          const isOpenJaw = o.type === "openjaw" && o.returnDestination != null;
           const transport = includeTransport ? getTransport(o.origin, agentConfig) : null;
-          const displayed = effectivePrice(o.price, o.origin, agentConfig, includeTransport);
+          const returnTransport =
+            includeTransport && isOpenJaw
+              ? getTransport(o.returnDestination!, agentConfig)
+              : null;
+          const displayed = effectivePrice(
+            o.price,
+            o.origin,
+            agentConfig,
+            includeTransport,
+            o.returnDestination,
+          );
           return (
             <TableRow key={o.routeKey + o.source}>
               <TableCell className="font-medium">
@@ -128,7 +139,14 @@ export function OffersTable({
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 <div className="font-semibold">{Math.round(displayed)} €</div>
-                {transport && (
+                {isOpenJaw && transport && (
+                  <div className="text-xs text-muted-foreground">
+                    {returnTransport
+                      ? `+${transport.costEur + returnTransport.costEur} € (${o.origin} + ${o.returnDestination})`
+                      : `+${transport.costEur} € · ${fmtDuration(transport.durationMin)}`}
+                  </div>
+                )}
+                {!isOpenJaw && transport && (
                   <div className="text-xs text-muted-foreground">
                     +{2 * transport.costEur} € · {fmtDuration(transport.durationMin)}
                   </div>

@@ -20,8 +20,7 @@ import {
 } from "@/lib/agentConfig";
 import {
   AGENT_CONFIG_PATH,
-  commitAgentConfig,
-  fetchAgentConfigFile,
+  commitWithRetry,
   loadToken,
   saveToken,
   triggerScan,
@@ -313,15 +312,14 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
       const commitMsg = "config: úprava agenta přes dashboard (Nastavení)";
 
       // 1) main — scanner čte config odsud při každém běhu
-      const remoteMain = await fetchAgentConfigFile(token, "main");
-      await commitAgentConfig(token, serialized, remoteMain.sha, commitMsg, "main");
+      await commitWithRetry(token, "main", serialized, commitMsg);
 
       // 2) gh-pages — dashboard čte config odsud; okamžitý efekt po reloadu
+      // gh-pages větev nebo soubor nemusí existovat → chybu tiše ignorujeme
       try {
-        const remotePages = await fetchAgentConfigFile(token, "gh-pages");
-        await commitAgentConfig(token, serialized, remotePages.sha, commitMsg, "gh-pages");
+        await commitWithRetry(token, "gh-pages", serialized, commitMsg);
       } catch {
-        // gh-pages nemusí mít soubor (první deploy) — nevadí, main stačí
+        /* gh-pages nemusí existovat (první deploy) — projeví se po příštím deployi */
       }
 
       setStatus({
@@ -341,13 +339,11 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
     setStatus({ kind: "busy", msg: "Ukládám na GitHub…" });
     try {
       const serialized = serializeConfig(config);
-      const remoteMain = await fetchAgentConfigFile(token, "main");
-      await commitAgentConfig(token, serialized, remoteMain.sha, "config: update letiště", "main");
+      await commitWithRetry(token, "main", serialized, "config: update letiště");
       try {
-        const remotePages = await fetchAgentConfigFile(token, "gh-pages");
-        await commitAgentConfig(token, serialized, remotePages.sha, "config: update letiště", "gh-pages");
+        await commitWithRetry(token, "gh-pages", serialized, "config: update letiště");
       } catch {
-        /* nevadí */
+        /* gh-pages nemusí existovat */
       }
       setStatus({ kind: "ok", msg: "Letiště uloženo ✓" });
     } catch (e) {

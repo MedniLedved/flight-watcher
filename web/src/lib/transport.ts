@@ -5,17 +5,29 @@ export function getTransport(
   agentConfig: AgentConfig | null,
 ): AirportTransport | null {
   if (!agentConfig) return null;
-  return agentConfig.europeAirports.find((a) => a.code === origin)?.transport ?? null;
+  return (
+    agentConfig.europeAirports.find(
+      (a) => a.code === origin || a.cityCode === origin,
+    )?.transport ?? null
+  );
 }
 
-/** Effective price: base + 2× round-trip transport cost (if toggle on). */
+/** Effective price: base + transport cost (if toggle on).
+ *  Roundtrip: +2× transport(origin).
+ *  Open-jaw s různým returnDestination: +transport(origin) + transport(returnDestination). */
 export function effectivePrice(
   price: number,
   origin: string,
   agentConfig: AgentConfig | null,
   includeTransport: boolean,
+  returnDestination?: string | null,
 ): number {
   if (!includeTransport) return price;
+  if (returnDestination && returnDestination !== origin) {
+    const t1 = getTransport(origin, agentConfig);
+    const t2 = getTransport(returnDestination, agentConfig);
+    return price + (t1?.costEur ?? 0) + (t2?.costEur ?? 0);
+  }
   const t = getTransport(origin, agentConfig);
   return price + (t ? 2 * t.costEur : 0);
 }

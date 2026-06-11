@@ -114,28 +114,59 @@ export async function fetchAgentConfigFile(
   return { text: base64ToUtf8(data.content), sha: data.sha };
 }
 
-/** Commitne nový obsah configu na danou větev. Vyžaduje aktuální `sha`. */
+/** Commitne nový obsah configu na danou větev.
+ *  `sha` je blob SHA aktuálního souboru (null = soubor na větvi ještě neexistuje). */
 export async function commitAgentConfig(
   token: string,
   contentText: string,
-  sha: string,
+  sha: string | null,
   message: string,
   branch: string = TARGET_BRANCH,
 ): Promise<string> {
+  const payload: Record<string, unknown> = {
+    message,
+    content: utf8ToBase64(contentText),
+    branch,
+  };
+  if (sha) payload.sha = sha;
+
   const data = await gh<{ commit: { sha: string } }>(
     token,
     `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${AGENT_CONFIG_PATH}`,
     {
       method: "PUT",
-      body: JSON.stringify({
-        message,
-        content: utf8ToBase64(contentText),
-        sha,
-        branch,
-      }),
+      body: JSON.stringify(payload),
     },
   );
   return data.commit.sha;
+}
+
+/** Commitne config s automatickým retry při 409 (stale SHA).
+ *  Pokud soubor na větvi neexistuje (404), vytvoří ho bez SHA.
+ *  Všechny ostatní chyby (vč. chybějící větve) propaguje výš. */
+export async function commitWithRetry(
+  token: string,
+  branch: string,
+  contentText: string,
+  message: string,
+): Promise<string> {
+  let sha: string | null = null;
+  try {
+    const remote = await fetchAgentConfigFile(token, branch);
+    sha = remote.sha;
+  } catch (e) {
+    if (!(e instanceof Error && e.message.includes("404"))) throw e;
+    // soubor na větvi ještě neexistuje → commit ho vytvoří
+  }
+
+  try {
+    return await commitAgentConfig(token, contentText, sha, message, branch);
+  } catch (e) {
+    if (!(e instanceof Error && e.message.includes("409"))) throw e;
+    // SHA bylo stale (mezitím přibyl jiný commit) → načti znovu a zkus ještě jednou
+    const fresh = await fetchAgentConfigFile(token, branch);
+    return await commitAgentConfig(token, contentText, fresh.sha, message, branch);
+  }
 }
 
 /** Spustí scan ručně přes workflow_dispatch (vyžaduje Actions: write). */

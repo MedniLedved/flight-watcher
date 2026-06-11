@@ -185,6 +185,8 @@ export interface AgentAirport {
   lon: number;
   priority: number;
   enabled: boolean;
+  /** IATA metropolitní/city kód (např. MIL pro MXP) – alternativní kód pro transport lookup */
+  cityCode?: string;
   /** jen evropská letiště (doprava z homeLocation) */
   transport?: AirportTransport;
 }
