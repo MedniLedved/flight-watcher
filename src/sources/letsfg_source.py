@@ -4,18 +4,23 @@ Dokumentace: https://letsfg.co / https://github.com/LetsFG/LetsFG
 Instalace:   pip install letsfg
 Autentizace: volitelný API klíč; bez klíče = free local search (výchozí).
 
-Poznámky k integraci:
-- LetsFG API vrací objekt s .cheapest a volitelně iterovatelné výsledky.
-  Wrapper zkouší iterovat všechny výsledky, fallbackuje na .cheapest.
-- Cena je dostupná ze search() bez unlock() – unlock() je pro rezervaci.
-- Roundtrip: LetsFG search je one-way; při return_date se vyhledá outbound
-  a výsledek se doplní return info (jako TracKer u jiných zdrojů, kde server
-  vrací jen jednosměrné nabídky).
-- Pokud vrátí ceny v jiné měně než EUR, je potřeba dopsat FX konverzi
-  (zatím se předpokládá EUR ze search result – viz _extract_price).
+DŮLEŽITÉ – proč je zdroj defaultně vypnutý (letsFG: false v agent.json):
+LetsFG není REST API, ale browser-based scraping engine. Každé volání
+search() spouští Chromium prohlížeče pro desítky konektorů najednou
+(skyscanner, aviasales, booking.com, emirates, BA, Austrian…). Jeden combo
+trvá 1–5 minut; náš scanner volá stovky combos (10 eur × 5 jap × routes ×
+date_pairs). Výsledkem je scan trvající hodiny místo minut.
+
+Pro zapnutí: v agent.json nastav "letsFG": true a přijmi, že scan poběží
+výrazně déle. Vhodné jen pro manuální jednorázové vyhledávání (1 trasa),
+ne pro denní cron přes stovky tras.
+
+Wrapper přidává timeout SEARCH_TIMEOUT_S (výchozí 90 s na combo) jako
+pojistku proti neomezenému blokování CI.
 """
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import re
 from datetime import date
@@ -25,7 +30,8 @@ from . import FlightResult
 
 logger = logging.getLogger(__name__)
 
-_MAX_PER_COMBO = 5  # kolik výsledků vzít z jednoho search() volání
+_MAX_PER_COMBO = 5   # kolik výsledků vzít z jednoho search() volání
+SEARCH_TIMEOUT_S = 90  # max sekund na jedno search() volání (LetsFG spouští prohlížeče)
 
 
 class LetsFGSource:
@@ -56,7 +62,17 @@ class LetsFGSource:
         dep_str = str(departure_date)
         try:
             bt = LetsFG(api_key=self.api_key) if self.api_key else LetsFG()
-            results_obj = bt.search(origin, destination, dep_str)
+            # LetsFG spouští browsers → obalíme timeoutem aby CI neviselo donekonečna.
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                fut = ex.submit(bt.search, origin, destination, dep_str)
+                try:
+                    results_obj = fut.result(timeout=SEARCH_TIMEOUT_S)
+                except concurrent.futures.TimeoutError:
+                    logger.warning(
+                        "LetsFG timeout %ds pro %s→%s – přeskakuji",
+                        SEARCH_TIMEOUT_S, origin, destination,
+                    )
+                    return []
         except Exception as exc:
             logger.error("LetsFG search %s→%s %s: %s", origin, destination, dep_str, exc)
             return []
