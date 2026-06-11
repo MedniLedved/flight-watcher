@@ -1,41 +1,204 @@
 {
   "homeLocation": "Ingolstadt",
-  "travelWindow": { "from": "2026-09-01", "to": "2026-12-31" },
-  "stayLength": { "minNights": 12, "maxNights": 25 },
+  "travelWindow": {
+    "from": "2026-09-01",
+    "to": "2026-12-31"
+  },
+  "stayLength": {
+    "minNights": 12,
+    "maxNights": 25
+  },
   "europeAirports": [
-    { "code": "MUC", "name": "Mnichov", "lat": 48.3538, "lon": 11.7861, "priority": 1, "enabled": true,
-      "transport": { "costEur": 18, "durationMin": 95, "mode": "vlak (DB)" } },
-    { "code": "PRG", "name": "Praha", "lat": 50.1008, "lon": 14.26, "priority": 2, "enabled": true,
-      "transport": { "costEur": 35, "durationMin": 330, "mode": "vlak/bus" } },
-    { "code": "VIE", "name": "Vídeň", "lat": 48.1103, "lon": 16.5697, "priority": 3, "enabled": true,
-      "transport": { "costEur": 60, "durationMin": 420, "mode": "vlak (ÖBB)" } },
-    { "code": "FRA", "name": "Frankfurt", "lat": 50.0379, "lon": 8.5622, "priority": 4, "enabled": true,
-      "transport": { "costEur": 45, "durationMin": 180, "mode": "vlak (ICE)" } },
-    { "code": "NUE", "name": "Norimberk", "lat": 49.4987, "lon": 11.078, "priority": 5, "enabled": true,
-      "transport": { "costEur": 12, "durationMin": 40, "mode": "vlak (DB)" } },
-    { "code": "MXP", "name": "Milán Malpensa", "lat": 45.6306, "lon": 8.7281, "priority": 6, "enabled": true,
-      "transport": { "costEur": 70, "durationMin": 480, "mode": "vlak" } },
-    { "code": "FCO", "name": "Řím Fiumicino", "lat": 41.8003, "lon": 12.2389, "priority": 7, "enabled": true,
-      "transport": { "costEur": 90, "durationMin": 600, "mode": "vlak" } },
-    { "code": "BUD", "name": "Budapešť", "lat": 47.4298, "lon": 19.2611, "priority": 8, "enabled": true,
-      "transport": { "costEur": 70, "durationMin": 540, "mode": "vlak" } },
-    { "code": "AMS", "name": "Amsterdam", "lat": 52.3105, "lon": 4.7683, "priority": 9, "enabled": true,
-      "transport": { "costEur": 90, "durationMin": 480, "mode": "vlak (ICE)" } },
-    { "code": "FMM", "name": "Memmingen", "lat": 47.9888, "lon": 10.2395, "priority": 10, "enabled": true,
-      "transport": { "costEur": 25, "durationMin": 150, "mode": "vlak/bus" } }
+    {
+      "code": "MUC",
+      "name": "Mnichov",
+      "lat": 48.3538,
+      "lon": 11.7861,
+      "priority": 1,
+      "enabled": true,
+      "transport": {
+        "costEur": 45,
+        "durationMin": 90,
+        "mode": "vlak (DB)"
+      }
+    },
+    {
+      "code": "PRG",
+      "name": "Praha",
+      "lat": 50.1008,
+      "lon": 14.26,
+      "priority": 2,
+      "enabled": true,
+      "transport": {
+        "costEur": 85,
+        "durationMin": 330,
+        "mode": "vlak/bus"
+      }
+    },
+    {
+      "code": "VIE",
+      "name": "Vídeň",
+      "lat": 48.1103,
+      "lon": 16.5697,
+      "priority": 3,
+      "enabled": true,
+      "transport": {
+        "costEur": 90,
+        "durationMin": 390,
+        "mode": "vlak (ÖBB)"
+      }
+    },
+    {
+      "code": "FRA",
+      "name": "Frankfurt",
+      "lat": 50.0379,
+      "lon": 8.5622,
+      "priority": 4,
+      "enabled": true,
+      "transport": {
+        "costEur": 60,
+        "durationMin": 210,
+        "mode": "vlak (ICE)"
+      }
+    },
+    {
+      "code": "NUE",
+      "name": "Norimberk",
+      "lat": 49.4987,
+      "lon": 11.078,
+      "priority": 5,
+      "enabled": true,
+      "transport": {
+        "costEur": 60,
+        "durationMin": 60,
+        "mode": "vlak (DB)"
+      }
+    },
+    {
+      "code": "MXP",
+      "name": "Milán Malpensa",
+      "lat": 45.6306,
+      "lon": 8.7281,
+      "priority": 6,
+      "enabled": true,
+      "transport": {
+        "costEur": 70,
+        "durationMin": 480,
+        "mode": "vlak"
+      }
+    },
+    {
+      "code": "FCO",
+      "name": "Řím Fiumicino",
+      "lat": 41.8003,
+      "lon": 12.2389,
+      "priority": 7,
+      "enabled": true,
+      "transport": {
+        "costEur": 90,
+        "durationMin": 600,
+        "mode": "vlak"
+      }
+    },
+    {
+      "code": "BUD",
+      "name": "Budapešť",
+      "lat": 47.4298,
+      "lon": 19.2611,
+      "priority": 8,
+      "enabled": true,
+      "transport": {
+        "costEur": 70,
+        "durationMin": 540,
+        "mode": "vlak"
+      }
+    },
+    {
+      "code": "AMS",
+      "name": "Amsterdam",
+      "lat": 52.3105,
+      "lon": 4.7683,
+      "priority": 9,
+      "enabled": true,
+      "transport": {
+        "costEur": 90,
+        "durationMin": 480,
+        "mode": "vlak (ICE)"
+      }
+    },
+    {
+      "code": "FMM",
+      "name": "Memmingen",
+      "lat": 47.9888,
+      "lon": 10.2395,
+      "priority": 10,
+      "enabled": true,
+      "transport": {
+        "costEur": 25,
+        "durationMin": 150,
+        "mode": "vlak/bus"
+      }
+    }
   ],
   "japanAirports": [
-    { "code": "HND", "name": "Tokio Haneda", "lat": 35.5494, "lon": 139.7798, "priority": 1, "enabled": true },
-    { "code": "NRT", "name": "Tokio Narita", "lat": 35.7647, "lon": 140.3863, "priority": 2, "enabled": true },
-    { "code": "KIX", "name": "Osaka Kansai", "lat": 34.4347, "lon": 135.2441, "priority": 3, "enabled": true },
-    { "code": "ITM", "name": "Osaka Itami", "lat": 34.7855, "lon": 135.4382, "priority": 4, "enabled": true },
-    { "code": "NGO", "name": "Nagoja Chubu", "lat": 34.8584, "lon": 136.8049, "priority": 5, "enabled": true }
+    {
+      "code": "HND",
+      "name": "Tokio Haneda",
+      "lat": 35.5494,
+      "lon": 139.7798,
+      "priority": 1,
+      "enabled": true
+    },
+    {
+      "code": "NRT",
+      "name": "Tokio Narita",
+      "lat": 35.7647,
+      "lon": 140.3863,
+      "priority": 2,
+      "enabled": true
+    },
+    {
+      "code": "KIX",
+      "name": "Osaka Kansai",
+      "lat": 34.4347,
+      "lon": 135.2441,
+      "priority": 3,
+      "enabled": true
+    },
+    {
+      "code": "ITM",
+      "name": "Osaka Itami",
+      "lat": 34.7855,
+      "lon": 135.4382,
+      "priority": 4,
+      "enabled": true
+    },
+    {
+      "code": "NGO",
+      "name": "Nagoja Chubu",
+      "lat": 34.8584,
+      "lon": 136.8049,
+      "priority": 5,
+      "enabled": true
+    }
   ],
   "cityAliases": {
-    "TYO": { "name": "Tokio (město)", "lat": 35.6812, "lon": 139.7671 },
-    "OSA": { "name": "Osaka (město)", "lat": 34.6937, "lon": 135.5023 }
+    "TYO": {
+      "name": "Tokio (město)",
+      "lat": 35.6812,
+      "lon": 139.7671
+    },
+    "OSA": {
+      "name": "Osaka (město)",
+      "lat": 34.6937,
+      "lon": 135.5023
+    }
   },
-  "alertThresholds": { "dealMaxEur": 550, "bigDropPct": 15, "newLowSensitivityPct": 2 },
+  "alertThresholds": {
+    "dealMaxEur": 550,
+    "bigDropPct": 15,
+    "newLowSensitivityPct": 2
+  },
   "sources": {
     "googleFlights": true,
     "flightLabs": true,
@@ -45,7 +208,16 @@
     "serpApi": true,
     "amadeus": false,
     "travelpayouts": true,
-    "rss": { "secretFlying": true, "cestujlevne": true, "jacks": true, "milesAndMore": true }
+    "rss": {
+      "secretFlying": true,
+      "cestujlevne": true,
+      "jacks": true,
+      "milesAndMore": true
+    }
   },
-  "telegramAlerts": { "priceAlert": true, "dealAlert": true, "dailySummary": true }
+  "telegramAlerts": {
+    "priceAlert": true,
+    "dealAlert": true,
+    "dailySummary": true
+  }
 }
