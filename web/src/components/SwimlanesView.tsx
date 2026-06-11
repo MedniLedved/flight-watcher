@@ -21,7 +21,7 @@ function utcMs(iso: string): number {
 
 function fmtDay(iso: string): string {
   const d = new Date(utcMs(iso));
-  return `${d.getUTCDate()}. ${d.getUTCMonth() + 1}. ${d.getUTCFullYear()}`;
+  return `${d.getUTCDate()}. ${d.getUTCMonth() + 1}.`;
 }
 
 function laneLabel(o: LatestOffer): string {
@@ -54,8 +54,8 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const undated = offers.length - lanes.length;
 
   // Časový rozsah zarovnaný na hranice měsíců → čisté měsíční ticky.
-  const { start, end, monthTicks, weekTicks } = useMemo(() => {
-    if (lanes.length === 0) return { start: 0, end: 1, monthTicks: [], weekTicks: [] };
+  const { start, end, monthTicks, weekTicks, weekendBands } = useMemo(() => {
+    if (lanes.length === 0) return { start: 0, end: 1, monthTicks: [], weekTicks: [], weekendBands: [] };
     const minDepart = new Date(Math.min(...lanes.map((o) => utcMs(o.departDate!))));
     const maxReturn = new Date(Math.max(...lanes.map((o) => utcMs(o.returnDate!))));
     const start = Date.UTC(minDepart.getUTCFullYear(), minDepart.getUTCMonth(), 1);
@@ -75,7 +75,15 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
       weekTicks.push(t);
     }
 
-    return { start, end, monthTicks, weekTicks };
+    // Weekend bands: Saturday 00:00 UTC → Monday 00:00 UTC
+    const weekendBands: { s: number; e: number }[] = [];
+    const startDow = new Date(start).getUTCDay(); // 0=Sun,6=Sat
+    const daysToFirstSat = ((6 - startDow) + 7) % 7;
+    for (let t = start + daysToFirstSat * DAY_MS; t < end; t += 7 * DAY_MS) {
+      weekendBands.push({ s: t, e: Math.min(t + 2 * DAY_MS, end) });
+    }
+
+    return { start, end, monthTicks, weekTicks, weekendBands };
   }, [lanes]);
 
   const pct = (t: number) => ((t - start) / (end - start)) * 100;
@@ -174,6 +182,13 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
 
             {/* Časová osa */}
             <div className="relative flex-1">
+              {weekendBands.map(({ s, e }) => (
+                <div
+                  key={s}
+                  className="absolute inset-y-0 bg-muted/50"
+                  style={{ left: `${pct(s)}%`, width: `${pct(e) - pct(s)}%` }}
+                />
+              ))}
               {weekTicks.map((t) => (
                 <div
                   key={t}

@@ -29,7 +29,7 @@ export const EMPTY_FILTERS: OfferFilters = {
   origin: ALL,
   destination: ALL,
   priceMin: "",
-  priceMax: "",
+  priceMax: "550",
   nightsMin: "",
   nightsMax: "",
 };
