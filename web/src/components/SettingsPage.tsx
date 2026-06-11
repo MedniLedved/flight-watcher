@@ -133,11 +133,15 @@ function AirportRow({
   withTransport,
   onChange,
   onRemove,
+  onSave,
+  isBusy,
 }: {
   airport: AgentAirport;
   withTransport: boolean;
   onChange: (patch: Partial<AgentAirport>) => void;
   onRemove: () => void;
+  onSave: () => void;
+  isBusy: boolean;
 }) {
   const t = airport.transport ?? { costEur: 0, durationMin: 0, mode: "" };
   const setTransport = (patch: Partial<typeof t>) =>
@@ -217,6 +221,9 @@ function AirportRow({
           <Field label="Prostředek" className="min-w-40 flex-1">
             <Input value={t.mode} onChange={(e) => setTransport({ mode: e.target.value })} />
           </Field>
+          <Button size="sm" onClick={onSave} disabled={isBusy} title="Uložit toto letiště na GitHub">
+            <Save className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>
@@ -326,6 +333,28 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
     }
   };
 
+  const handleSaveAirport = async () => {
+    if (!token) {
+      setStatus({ kind: "err", msg: "Nejdřív vlož a ulož GitHub token." });
+      return;
+    }
+    setStatus({ kind: "busy", msg: "Ukládám na GitHub…" });
+    try {
+      const serialized = serializeConfig(config);
+      const remoteMain = await fetchAgentConfigFile(token, "main");
+      await commitAgentConfig(token, serialized, remoteMain.sha, "config: update letiště", "main");
+      try {
+        const remotePages = await fetchAgentConfigFile(token, "gh-pages");
+        await commitAgentConfig(token, serialized, remotePages.sha, "config: update letiště", "gh-pages");
+      } catch {
+        /* nevadí */
+      }
+      setStatus({ kind: "ok", msg: "Letiště uloženo ✓" });
+    } catch (e) {
+      setStatus({ kind: "err", msg: e instanceof Error ? e.message : String(e) });
+    }
+  };
+
   const handleTriggerScan = async () => {
     if (!token) {
       setStatus({ kind: "err", msg: "Pro spuštění scanu je potřeba token (Actions: write)." });
@@ -377,81 +406,6 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Token + akce */}
-      <Card>
-        <CardHeader>
-          <CardTitle>GitHub přístup</CardTitle>
-          <CardDescription>
-            Fine-grained Personal Access Token s právy <strong>Contents: read/write</strong>{" "}
-            (a <strong>Actions: read/write</strong> pro „Spustit scan teď") jen k repu{" "}
-            <code>medniledved/flight-watcher</code>. Token zůstává jen ve tvém prohlížeči
-            (localStorage). Bez tokenu použij export/import níže.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label="Personal Access Token" className="min-w-72 flex-1">
-              <Input
-                type="password"
-                placeholder="github_pat_…"
-                value={token}
-                autoComplete="off"
-                onChange={(e) => setToken(e.target.value)}
-              />
-            </Field>
-            <Button variant="outline" onClick={handleSaveToken}>
-              Uložit token
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleCommit} disabled={busy || validationErrors.length > 0}>
-              <Save /> Uložit konfiguraci na GitHub
-            </Button>
-            <Button variant="secondary" onClick={handleTriggerScan} disabled={busy}>
-              <Play /> Spustit scan teď
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download /> Export JSON
-            </Button>
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload /> Import JSON
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={handleImport}
-            />
-          </div>
-          {status.kind !== "idle" && (
-            <p
-              className={cn(
-                "text-sm",
-                status.kind === "ok" && "text-emerald-700 dark:text-emerald-400",
-                status.kind === "err" && "text-destructive",
-                status.kind === "busy" && "text-muted-foreground",
-              )}
-            >
-              {status.msg}
-            </p>
-          )}
-          {validationErrors.length > 0 && (
-            <div className="rounded-md border border-amber-400 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950">
-              <p className="mb-1 font-medium text-amber-800 dark:text-amber-300">
-                Konfigurace má {validationErrors.length}{" "}
-                {validationErrors.length === 1 ? "chybu" : "chyb/y"} – ulož nepůjde:
-              </p>
-              <ul className="list-disc space-y-0.5 pl-5 text-amber-800 dark:text-amber-300">
-                {validationErrors.map((err, i) => (
-                  <li key={i}>{err}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Obecné */}
       <Card>
         <CardHeader>
@@ -512,6 +466,8 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
               withTransport
               onChange={(patch) => patchAirport("europeAirports", i, patch)}
               onRemove={() => removeAirport("europeAirports", i)}
+              onSave={handleSaveAirport}
+              isBusy={busy}
             />
           ))}
           <Button variant="outline" onClick={() => addAirport("europeAirports")}>
@@ -533,6 +489,8 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
               withTransport={false}
               onChange={(patch) => patchAirport("japanAirports", i, patch)}
               onRemove={() => removeAirport("japanAirports", i)}
+              onSave={handleSaveAirport}
+              isBusy={busy}
             />
           ))}
           <Button variant="outline" onClick={() => addAirport("japanAirports")}>
@@ -665,6 +623,84 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
             checked={config.telegramAlerts.dailySummary}
             onChange={(v) => update((d) => (d.telegramAlerts.dailySummary = v))}
           />
+        </CardContent>
+      </Card>
+
+      {/* GitHub přístup a akce */}
+      <Card>
+        <CardHeader>
+          <CardTitle>GitHub přístup a akce</CardTitle>
+          <CardDescription>
+            <strong>Tlačítko Save u každého letiště</strong> — uloží jen toto letiště (doprava, cena).
+            <br />
+            <strong>Uložit konfiguraci</strong> — commitne celou konfiguraci.
+            <br />
+            <strong>Spustit scan</strong> — spustí scan hned (místo čekání na cron).
+            <br />
+            <strong>Export/Import</strong> — pro ručnu archivaci či přesun bez GitHubu.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Personal Access Token" className="min-w-72 flex-1">
+              <Input
+                type="password"
+                placeholder="github_pat_…"
+                value={token}
+                autoComplete="off"
+                onChange={(e) => setToken(e.target.value)}
+              />
+            </Field>
+            <Button variant="outline" onClick={handleSaveToken}>
+              Uložit token
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={handleCommit} disabled={busy || validationErrors.length > 0}>
+              <Save /> Uložit konfiguraci na GitHub
+            </Button>
+            <Button variant="secondary" onClick={handleTriggerScan} disabled={busy}>
+              <Play /> Spustit scan teď
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download /> Export JSON
+            </Button>
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload /> Import JSON
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImport}
+            />
+          </div>
+          {status.kind !== "idle" && (
+            <p
+              className={cn(
+                "text-sm",
+                status.kind === "ok" && "text-emerald-700 dark:text-emerald-400",
+                status.kind === "err" && "text-destructive",
+                status.kind === "busy" && "text-muted-foreground",
+              )}
+            >
+              {status.msg}
+            </p>
+          )}
+          {validationErrors.length > 0 && (
+            <div className="rounded-md border border-amber-400 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950">
+              <p className="mb-1 font-medium text-amber-800 dark:text-amber-300">
+                Konfigurace má {validationErrors.length}{" "}
+                {validationErrors.length === 1 ? "chybu" : "chyb/y"} – ulož nepůjde:
+              </p>
+              <ul className="list-disc space-y-0.5 pl-5 text-amber-800 dark:text-amber-300">
+                {validationErrors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
