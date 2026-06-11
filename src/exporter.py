@@ -167,14 +167,18 @@ class Exporter:
             self.agent.get("alertThresholds", {}).get("bigDropPct",
                                                       DEFAULT_BIG_DROP_PCT)
         )
-        best: dict[str, FlightResult] = {}
+        # Dedup per (route_key, depart_date) — zachová více nabídek na trasu
+        # (různá data odjezdu / různé zdroje), ale vždy nejlevnější za dané combo.
+        best: dict[tuple, FlightResult] = {}
         for f in flights:
-            key = f.route_key()
-            if key not in best or f.price < best[key].price:
-                best[key] = f
+            depart = f.depart_date.isoformat() if f.depart_date else None
+            offer_key = (f.route_key(), depart)
+            if offer_key not in best or f.price < best[offer_key].price:
+                best[offer_key] = f
 
         items: list[dict] = []
-        for key, f in sorted(best.items(), key=lambda kv: kv[1].price):
+        for (route_key, _depart), f in sorted(best.items(), key=lambda kv: kv[1].price):
+            key = route_key
             parsed = parse_route_key(key)
             prev = prev_state.get(key, {})
             prev_min = prev.get("all_time_min")
