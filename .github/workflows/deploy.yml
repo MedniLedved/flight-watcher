@@ -3,7 +3,7 @@ name: Deploy Dashboard
 on:
   push:
     branches:
-      - claude/compassionate-hypatia-0vpun1
+      - main
     paths:
       - 'web/**'
       - 'data/**'
@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: claude/compassionate-hypatia-0vpun1
+          ref: main
           fetch-depth: 0
 
       - name: Fetch gh-pages branch
