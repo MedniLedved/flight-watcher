@@ -1232,7 +1232,7 @@ def test_googleflights_truncates_parse_error(monkeypatch):
     """RuntimeError z fast-flights obsahuje celý markdown stránky – do logu
     (a tedy výjimky) smí jít jen krátká diagnóza."""
     import pytest
-    import fast_flights
+    fast_flights = pytest.importorskip("fast_flights")
     from src.sources import googleflights as gf_mod
     monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
 

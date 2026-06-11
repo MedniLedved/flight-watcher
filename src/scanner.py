@@ -570,8 +570,6 @@ class Scanner:
             self.history.record_quota(
                 "serpapi", sa.quota_remaining, sa.quota_reset_at, sa.quota_limit
             )
-        if sa.request_count:
-            self.history.add_serpapi_usage(sa.request_count)
         if sa.quota_exhausted:
             until = sa.quota_reset_at or _first_of_next_month()
             self.history.disable_source("serpapi", until)
@@ -833,6 +831,7 @@ class Scanner:
             self.history.add_skyscrapper_usage(self.skyscrapper.request_count)
             self._update_skyscrapper_quota()
         if self.serpapi:
+            self.history.add_serpapi_usage(self.serpapi.request_count)
             self._update_serpapi_quota()
         if self.flightlabs and self.flightlabs.request_count:
             self.history.add_flightlabs_usage(self.flightlabs.request_count)

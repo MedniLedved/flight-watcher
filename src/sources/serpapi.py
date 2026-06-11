@@ -77,7 +77,7 @@ class SerpApiSource:
         self.request_count += 1
         self._note_quota(resp)
         if resp.status_code == 429 or (
-            self.quota_remaining is not None and self.quota_remaining == 0
+            self.quota_remaining is not None and self.quota_remaining <= 0
         ):
             self.quota_exhausted = True
         time.sleep(_REQUEST_DELAY)
@@ -191,7 +191,6 @@ class SerpApiSource:
         airlines: list[str] = []
         seen: set[str] = set()
         for seg in flights:
-            code = seg.get("airline_logo", "")
             # Preferuj IATA kód z pole "airline" pokud je to 2 znaky.
             carrier = seg.get("airline", "")
             if carrier and len(carrier) <= 3:
