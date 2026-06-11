@@ -198,9 +198,11 @@ class SerpApiSource:
                     seen.add(carrier)
                     airlines.append(carrier)
             elif carrier:
-                # Zkus vytáhnout kód z čísla letu (např. "LH 714" → "LH")
+                # Zkus vytáhnout IATA kód z čísla letu (např. "LH 714" → "LH").
+                # Vyžadujeme přesně 2 znaky, aby se zabránilo zachycení slov jako
+                # "Air" z "Air France" (IATA kódy jsou vždy dvoumístné).
                 parts = carrier.split()
-                if parts and len(parts[0]) <= 3 and parts[0].isalpha():
+                if parts and len(parts[0]) == 2 and parts[0].isalpha():
                     key = parts[0]
                     if key not in seen:
                         seen.add(key)

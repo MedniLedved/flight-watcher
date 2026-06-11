@@ -375,18 +375,18 @@ class Exporter:
             return
         out = {}
         for src, e in eff_raw.items():
-            reqs = e.get("total_requests", 0) or 1
+            reqs = e.get("total_requests", 0)
             results = e.get("total_results", 0)
             deals = e.get("total_deals", 0)
-            runs = e.get("runs", 1) or 1
+            runs = e.get("runs", 0)
             out[src] = {
-                "runs": e.get("runs", 0),
+                "runs": runs,
                 "totalResults": results,
                 "totalDeals": deals,
-                "totalRequests": e.get("total_requests", 0),
-                "avgResultsPerRun": round(results / runs, 2),
-                "avgDealsPerRun": round(deals / runs, 2),
-                "avgDealsPerRequest": round(deals / reqs, 3),
+                "totalRequests": reqs,
+                "avgResultsPerRun": round(results / runs, 2) if runs else None,
+                "avgDealsPerRun": round(deals / runs, 2) if runs else None,
+                "avgDealsPerRequest": round(deals / reqs, 3) if reqs else None,
                 "lastRun": e.get("last_run"),
             }
         _write_json(self.out_dir / "source_efficiency.json", out)

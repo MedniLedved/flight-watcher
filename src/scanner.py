@@ -550,7 +550,7 @@ class Scanner:
         """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
         resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
         sk = self.skyscrapper
-        if sk.quota_remaining is not None or sk.quota_reset_at is not None:
+        if sk.quota_remaining is not None and sk.quota_reset_at is not None:
             self.history.record_quota(
                 "skyscrapper", sk.quota_remaining, sk.quota_reset_at, sk.quota_limit
             )
@@ -566,7 +566,7 @@ class Scanner:
         """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
         resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
         sa = self.serpapi
-        if sa.quota_remaining is not None or sa.quota_reset_at is not None:
+        if sa.quota_remaining is not None and sa.quota_reset_at is not None:
             self.history.record_quota(
                 "serpapi", sa.quota_remaining, sa.quota_reset_at, sa.quota_limit
             )
@@ -794,7 +794,7 @@ class Scanner:
         airport_stats = self._apply_dynamic_priority()
         self.api_count = sum(
             1 for s in (self.googleflights, self.letsfg, self.flightlabs,
-                        self.duffel, self.skyscrapper,
+                        self.duffel, self.skyscrapper, self.serpapi,
                         self.amadeus, self.travelpayouts) if s
         )
 
@@ -992,7 +992,8 @@ class Scanner:
         if eff:
             _src_label = {
                 "googleflights": "Google Flights", "travelpayouts": "Travelpayouts",
-                "skyscrapper": "SkyScrapper", "amadeus": "Amadeus",
+                "skyscrapper": "SkyScrapper", "serpapi": "SerpAPI",
+                "amadeus": "Amadeus",
                 "duffel": "Duffel", "flightlabs": "FlightLabs", "letsfg": "LetsFG",
             }
             eff_rows = []
