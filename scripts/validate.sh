@@ -53,6 +53,7 @@ CHECKS=(
   "Načítám historii:route detail view"
   "Aktuální nejlepší nabídky:offers table"
   "nejnižší nalezená cena:summary stats"
+  "Uložit konfiguraci na GitHub:settings page"
 )
 FAILED=0
 for check in "${CHECKS[@]}"; do

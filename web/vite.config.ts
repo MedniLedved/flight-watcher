@@ -13,7 +13,7 @@ export default defineConfig({
     },
   },
   build: {
-    // Recharts + React = ~660 KB minified; limit raised pro SPA bez lazy-loadingu.
-    chunkSizeWarningLimit: 800,
+    // Recharts + Leaflet + React ≈ 850 KB minified; limit zvednut pro SPA bez lazy-loadingu.
+    chunkSizeWarningLimit: 900,
   },
 });
