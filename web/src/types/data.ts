@@ -205,8 +205,11 @@ export interface AgentConfig {
     googleFlights: boolean;
     duffel: boolean;
     skyScrapper: boolean;
+    serpApi: boolean;
     amadeus: boolean;
     travelpayouts: boolean;
+    flightLabs: boolean;
+    letsFG: boolean;
     rss: {
       secretFlying: boolean;
       cestujlevne: boolean;
