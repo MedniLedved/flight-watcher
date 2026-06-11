@@ -14,6 +14,7 @@ const MONTH_NAMES = [
 ];
 
 const DAY_MS = 86_400_000;
+const DEAL_THRESHOLD_DEFAULT = 550;
 
 function utcMs(iso: string): number {
   return Date.parse(iso + "T00:00:00Z");
@@ -24,10 +25,19 @@ function fmtDay(iso: string): string {
   return `${d.getUTCDate()}. ${d.getUTCMonth() + 1}. ${d.getUTCFullYear()}`;
 }
 
+// Unikátní klíč pro nabídku – dvě nabídky stejné trasy s různými daty jsou různé řádky.
+function offerKey(o: LatestOffer): string {
+  return `${o.routeKey}--${o.departDate ?? "nd"}--${o.price}`;
+}
+
+// Popisek řádku obsahuje i datum odletu, aby byly odlišitelné dvě nabídky stejné trasy.
 function laneLabel(o: LatestOffer): string {
-  return o.type === "openjaw" && o.returnOrigin
-    ? `${o.origin}→${o.destination} · ${o.returnOrigin}→${o.returnDestination ?? o.origin}`
-    : `${o.origin}→${o.destination}`;
+  const route =
+    o.type === "openjaw" && o.returnOrigin
+      ? `${o.origin}→${o.destination} · ${o.returnOrigin}→${o.returnDestination ?? o.origin}`
+      : `${o.origin}→${o.destination}`;
+  const dep = o.departDate ? ` ${o.departDate.slice(5).replace("-", "/")}` : "";
+  return route + dep;
 }
 
 interface Props {
@@ -44,14 +54,19 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const [includeTransport, setIncludeTransport] = useState(false);
 
   const offers = latest ?? [];
+  const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? DEAL_THRESHOLD_DEFAULT;
+
+  // Zobrazujeme POUZE dealy pod limitem; nabídky bez termínu nebo nad limitem skrýváme.
   const lanes = useMemo(
     () =>
       offers
-        .filter((o) => o.departDate && o.returnDate)
+        .filter((o) => o.departDate && o.returnDate && o.price <= dealMax)
         .sort((a, b) => a.departDate!.localeCompare(b.departDate!)),
-    [offers],
+    [offers, dealMax],
   );
-  const undated = offers.length - lanes.length;
+  const undated = offers.filter((o) => !o.departDate || !o.returnDate).length;
+  const overBudget =
+    offers.filter((o) => o.departDate && o.returnDate).length - lanes.length;
 
   // Časový rozsah zarovnaný na hranice měsíců → čisté měsíční ticky.
   const { start, end, monthTicks, weekTicks } = useMemo(() => {
@@ -109,8 +124,9 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
           <div>
             <CardTitle>Časová osa nabídek</CardTitle>
             <CardDescription>
-              {lanes.length} nabídek seřazených podle nejbližšího odletu
+              {lanes.length} deal{lanes.length === 1 ? "" : "ů"} pod {dealMax} € seřazených podle odletu
               {undated > 0 ? ` · ${undated} bez termínu skryto` : ""}
+              {overBudget > 0 ? ` · ${overBudget} nad limitem skryto` : ""}
               {" · "}Kliknutím na bar zobrazíš detail nabídky.
             </CardDescription>
           </div>
@@ -156,7 +172,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               <div className="h-7" />
               {lanes.map((o) => (
                 <div
-                  key={o.routeKey}
+                  key={offerKey(o)}
                   className="flex h-9 items-center gap-1.5 text-xs font-medium"
                 >
                   {o.flags.isNewLow && (
@@ -200,11 +216,11 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                 const left = pct(utcMs(o.departDate!));
                 const width = Math.max(pct(utcMs(o.returnDate!)) - left, 1.5);
                 const eff = effPrices[i];
-                const isSel = selected?.routeKey === o.routeKey;
+                const isSel = selected ? offerKey(selected) === offerKey(o) : false;
                 return (
-                  <div key={o.routeKey} className="relative h-9">
+                  <div key={offerKey(o)} className="relative h-9">
                     <button
-                      onClick={() => setSelected((prev) => (prev?.routeKey === o.routeKey ? null : o))}
+                      onClick={() => setSelected((prev) => (prev && offerKey(prev) === offerKey(o) ? null : o))}
                       className={cn(
                         "absolute inset-y-1 flex items-center overflow-hidden rounded px-2",
                         "text-[11px] font-semibold text-white transition-all hover:brightness-110",
