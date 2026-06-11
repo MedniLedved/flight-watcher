@@ -74,11 +74,11 @@ Historie zachycených typů chyb (každý už má svou kontrolu — neopakovat):
 - ruční deploy s přepínáním větví rozbil working tree → deploy výhradně přes `deploy.sh` (worktree)
 
 ## Git
-Vyvíjej na designované feature branchi, commituj s popisnými zprávami, push až je hotovo.
-Pull requesty nevytvářej bez explicitního pokynu.
+Všechny změny se dělají **přímo na `main`** — nevytvářej feature branche. Commituj s popisnými
+zprávami a pushuj ihned po commitnutí. Pull requesty se nevytvářejí.
 
 ## Deploy na GitHub Pages
-Po projití všech bodů checklistu spusť (z kořene repozitáře, na dev větvi):
+Po projití všech bodů checklistu spusť (z kořene repozitáře, na `main`):
 ```
 bash scripts/deploy.sh
 ```
