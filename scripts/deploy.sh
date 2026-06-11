@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Builds the dashboard, validates, and deploys to gh-pages via git worktree.
 # Usage (from repo root): ./scripts/deploy.sh
-# Must be run from the dev branch (claude/funny-hamilton-8eodbf).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,12 +27,18 @@ NEW_CSS=$(grep -o 'assets/index-[^"]*\.css' dist/index.html)
 
 git -C "$REPO_ROOT" worktree add "$WORKTREE_DIR" gh-pages
 
-# Replace assets and index.html
-rm -rf "$WORKTREE_DIR/assets"
+# Clean slate: remove everything except .git, then rebuild from dist
+find "$WORKTREE_DIR" -maxdepth 1 -mindepth 1 ! -name '.git' -exec rm -rf {} +
+
+# Ensure Jekyll is disabled (required for Pages to serve raw JS/CSS correctly)
+touch "$WORKTREE_DIR/.nojekyll"
+
+# Copy built assets and index
 cp -r dist/assets "$WORKTREE_DIR/"
 cp dist/index.html "$WORKTREE_DIR/"
 
-# Sync public data (calendar, history, config)
+# Sync data and config
+mkdir -p "$WORKTREE_DIR/data/calendar" "$WORKTREE_DIR/data/history" "$WORKTREE_DIR/config"
 cp -r "$REPO_ROOT/web/public/data/." "$WORKTREE_DIR/data/"
 cp -r "$REPO_ROOT/web/public/config/." "$WORKTREE_DIR/config/"
 

@@ -1,0 +1,63 @@
+name: Deploy Dashboard
+
+on:
+  push:
+    branches:
+      - claude/compassionate-hypatia-0vpun1
+    paths:
+      - 'web/**'
+      - 'data/**'
+      - 'config/**'
+      - 'scripts/deploy.sh'
+      - 'scripts/validate.sh'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Prevent concurrent deploys; cancel stale run if a newer one queues up.
+    concurrency:
+      group: gh-pages-deploy
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: claude/compassionate-hypatia-0vpun1
+          fetch-depth: 0
+
+      - name: Fetch gh-pages branch
+        run: |
+          git fetch origin gh-pages
+          git branch --track gh-pages origin/gh-pages 2>/dev/null || true
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      # Copy fresh scanner data from root data/ to web/public/data/
+      # so validate.sh and the build see the latest scan output.
+      - name: Sync scanner data to web/public/data
+        run: |
+          mkdir -p web/public/data/calendar web/public/data/history web/public/config
+          for f in latest.json stats.json routes.json meta.json insights.json; do
+            [ -f "data/$f" ] && cp "data/$f" "web/public/data/$f" || true
+          done
+          [ -d "data/history" ] && cp -r data/history/. web/public/data/history/ || true
+          [ -d "data/calendar" ] && cp -r data/calendar/. web/public/data/calendar/ || true
+          cp config/agent.json web/public/config/agent.json
+
+      - name: Deploy
+        run: bash scripts/deploy.sh
