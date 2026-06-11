@@ -207,11 +207,12 @@ function AirportRow({
               onChange={(n) => setTransport({ costEur: n })}
             />
           </Field>
-          <Field label="Doba (min)" className="w-28">
+          <Field label="Doba (h)" className="w-28">
             <NumberInput
-              value={t.durationMin}
+              value={t.durationMin / 60}
               min={0}
-              onChange={(n) => setTransport({ durationMin: n })}
+              step={0.5}
+              onChange={(n) => setTransport({ durationMin: n * 60 })}
             />
           </Field>
           <Field label="Prostředek" className="min-w-40 flex-1">
