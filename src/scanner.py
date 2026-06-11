@@ -48,6 +48,7 @@ from .sources.miles_and_more import MilesAndMoreSource
 from .sources.miles_and_more import should_run_today as mm_should_run_today
 from .sources.secret_flying import SecretFlyingSource
 from .sources.skyscrapper import SkyScrapperSource
+from .sources.flightlabs import FlightLabsSource
 from .sources.letsfg_source import LetsFGSource
 from .sources.travelpayouts import TravelpayoutsSource
 
@@ -55,6 +56,7 @@ logger = logging.getLogger(__name__)
 
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
+FLIGHTLABS_TRIAL_LIMIT = 50      # celkový limit trialu (bez měsíčního resetu)
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
 # (Duffel, Travelpayouts). Paralelizace zkracuje ~100 volání z 15+ min, ale
@@ -167,6 +169,11 @@ class Scanner:
         self.letsfg = (
             LetsFGSource()
             if self.settings.source_enabled("letsFG") else None
+        )
+        self.flightlabs = (
+            FlightLabsSource(self.settings.flightlabs_key)
+            if self.settings.flightlabs_key
+            and self.settings.source_enabled("flightLabs") else None
         )
         self.duffel_test_token = bool(
             self.settings.duffel_token
@@ -347,6 +354,15 @@ class Scanner:
                 budget_check=self._amadeus_has_budget,
             )
 
+        # --- FlightLabs (trial 50 req – bootstrap statistik dní/letišť) ---
+        if self.flightlabs and self._flightlabs_has_budget():
+            results += self._scan_per_combo(
+                self.flightlabs, "flightlabs", legs, is_openjaw,
+                depart, ret, name,
+                limit=RATE_LIMIT_COMBINATIONS["flightlabs"],
+                budget_check=self._flightlabs_has_budget,
+            )
+
         # --- Travelpayouts (záloha/trend) ---
         if self.travelpayouts:
             try:
@@ -431,6 +447,15 @@ class Scanner:
             return False
         used = self.history.amadeus_usage() + self.amadeus.request_count
         return used < AMADEUS_MONTHLY_LIMIT
+
+    def _flightlabs_has_budget(self) -> bool:
+        if not self.flightlabs:
+            return False
+        used = self.history.flightlabs_usage() + self.flightlabs.request_count
+        remaining = FLIGHTLABS_TRIAL_LIMIT - used
+        if remaining <= 0:
+            logger.warning("FlightLabs: trial vyčerpán (%d/%d req) – vypni v agent.json", used, FLIGHTLABS_TRIAL_LIMIT)
+        return remaining > 0
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
@@ -719,6 +744,14 @@ class Scanner:
         if self.skyscrapper:
             self.history.add_skyscrapper_usage(self.skyscrapper.request_count)
             self._update_skyscrapper_quota()
+        if self.flightlabs and self.flightlabs.request_count:
+            self.history.add_flightlabs_usage(self.flightlabs.request_count)
+            logger.info(
+                "FlightLabs: %d req tento scan, celkem %d/%d",
+                self.flightlabs.request_count,
+                self.history.flightlabs_usage(),
+                FLIGHTLABS_TRIAL_LIMIT,
+            )
 
         # Denní souhrn.
         if self.settings.telegram_alert_enabled("dailySummary"):

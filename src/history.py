@@ -252,6 +252,15 @@ class PriceHistory:
     def add_skyscrapper_usage(self, count: int, month: Optional[str] = None) -> None:
         self._add_usage("skyscrapper_requests", count, month)
 
+    # -- FlightLabs počítadlo (trial: 50 req celkem, ne per-měsíc) --------
+    def flightlabs_usage(self) -> int:
+        """Celkový počet spotřebovaných FlightLabs requestů (trial bez resetu)."""
+        return self.data.get(META_KEY, {}).get("flightlabs_requests_total", 0)
+
+    def add_flightlabs_usage(self, count: int) -> None:
+        meta = self.data.setdefault(META_KEY, {})
+        meta["flightlabs_requests_total"] = meta.get("flightlabs_requests_total", 0) + count
+
     # -- kvóty zdrojů: auto-vypnutí při vyčerpání + zjištěný stav ---------
     def is_source_disabled(self, name: str, now: Optional[datetime] = None) -> bool:
         """True, pokud je zdroj dočasně vypnutý (vyčerpaná kvóta) a lhůta

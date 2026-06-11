@@ -44,6 +44,7 @@ jobs:
         env:
           GOOGLEFLIGHTS_FETCH_MODE: ${{ vars.GOOGLEFLIGHTS_FETCH_MODE }}
           DUFFEL_TOKEN: ${{ secrets.DUFFEL_TOKEN }}
+          FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           AMADEUS_CLIENT_ID: ${{ secrets.AMADEUS_CLIENT_ID }}
           AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
