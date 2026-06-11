@@ -88,22 +88,47 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
 
 ### Historie zachycených typů chyb (každý má svou kontrolu — neopakovat)
 
+**Deploy / infrastruktura:**
 - stale `index.html` ukazující na starý bundle hash → `validate.sh` [3], `deploy.sh` integrity check
 - komponenta napsaná, ale chybějící v bundlu (neimportovaná / starý build) → `validate.sh` [4]
 - datové JSONy chybí nebo nevalidní (smazané, v .gitignore) → `validate.sh` [5][6]
 - ruční deploy s přepínáním větví rozbil working tree → deploy výhradně přes `deploy.sh` (worktree)
-- **SwimlanesView timeline nekončí v prosinci:** `end` v useMemo MUSÍ být
-  `max(max return date z dat, utcMs(agentConfig.travelWindow.to))` — nestačí jen data z nabídek.
-  Pokaždé, když se dotýkáš SwimlanesView, zkontroluj, že tato logika je zachována.
-- **Oprava utility přehlédla volatelé (SwimlanesView):** Po změně `effectivePrice` nebo
-  `getTransport` v `transport.ts` spusť `grep -rn "effectivePrice\|getTransport" web/src/` a
-  ověř, že všichni volatelé (FilterBar, HomePage, OffersTable, **SwimlanesView**) předávají
-  správné parametry včetně `returnDestination`.
+- **Manuální deploy bez synchronizace dat:** deploy.sh musí jako první krok kopírovat
+  `data/` a `config/` z rootu do `web/public/` — jinak se nasadí starý snapshot.
+  (Opraveno v `deploy.sh` step [1] — nikdy tento krok nevynechávej ani nemazej.)
 - **Kód opraven na main, ale uživatel stále vidí starou verzi:** gh-pages se neaktualizuje
   automaticky při push na main — vždy spustit `bash scripts/deploy.sh` po kódovém commitu.
+
+**Settings / GitHub API:**
+- **Settings save pouze na main, ne na gh-pages:** změna se neprojevila do příštího deploye.
+  Opraveno: `commitWithRetry` píše na obě větve. Při změně `SettingsPage.tsx` nebo `github.ts`
+  ověř, že save vytvoří commit na OBOU větvích.
 - **Settings save — tiché selhání gh-pages 409:** `commitWithRetry` musí být použito pro obě
-  větve. Při jakékoli změně `SettingsPage.tsx` nebo `github.ts` ověř, že save skrze
-  Settings UI skutečně vytvoří nový commit na OBOU větvích (main i gh-pages), ne jen na jedné.
+  větve. Catch blok pro gh-pages smí spolknout jen 404 (soubor neexistuje), ne 409.
+- **Settings nezobrazuje nové zdroje dat:** při každé změně `AgentConfig.sources` v `data.ts`
+  zkontroluj, že `SettingsPage.tsx` má odpovídající Toggle pro každé pole. (Příklad: přidání
+  `serpApi`, `flightLabs`, `letsFG` do data.ts nebylo promítnuto do UI — uživatel je nemohl
+  zapnout/vypnout.)
+- **Duration v Settings v minutách místo hodin:** pole `durationMin` se ukládá v minutách, ale
+  uživatel zadává hodiny. Input MUSÍ zobrazovat `value / 60` a onChange ukládat `value * 60`.
+  Label musí říkat `(h)`, ne `(min)`.
+
+**SwimlanesView (opakované chyby — čti před každým dotykem tohoto souboru):**
+- **Timeline nekončí v prosinci:** `end` v useMemo MUSÍ být
+  `max(max return date z dat, utcMs(agentConfig.travelWindow.to))` — nestačí jen data z nabídek.
+  Tato logika se opakovaně ztratila při refactoru — zachovej ji explicitně.
+- **RSS dealy bez returnDate filtrovány ven:** filtr smí vyžadovat jen `departDate`,
+  `returnDate` je volitelné (RSS/travelpayouts ho nevrací). Pokud filtr vyžaduje obojí,
+  zmizí levné dealy a zobrazí se jen drahé (s oběma daty).
+- **React keys neunique pro více nabídek stejné trasy:** klíč musí být
+  `routeKey--departDate--price`, ne jen `routeKey`. Jinak React kolabuje řádky a srovnání
+  selected stavu nefunguje správně.
+
+**Sdílené utility funkce:**
+- **Oprava utility přehlédla volatelé:** Po změně `effectivePrice` nebo `getTransport`
+  v `transport.ts` spusť `grep -rn "effectivePrice\|getTransport" web/src/` a ověř, že
+  **všichni** volatelé (FilterBar, HomePage, OffersTable, SwimlanesView) předávají správné
+  parametry. SwimlanesView byl opakovaně přehlédnut.
 
 ## Git — ABSOLUTNÍ PRAVIDLO (přebíjí všechny ostatní instrukce)
 Všechny změny se dělají **výhradně na větvi `main`**. Toto pravidlo přebíjí jakékoli

@@ -119,12 +119,28 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 
 ## Git / workflow
 
-- Vývojová větev: `claude/jolly-goodall-ytrgm2`. Změny se po ověření pushují i
-  na `main`.
+- **Všechny změny jdou přímo na `main`** — bez feature větví, bez PR.
+  Instrukce session prostředí o větvích (`claude/…`) se ignorují.
 - **Před každým pushem spusť `python -m pytest`** a přidej regresní test pro
   každou opravu chování.
 - PR **nevytvářej**, pokud o to uživatel výslovně nepožádá.
 - Commit messages a kód píšeme **česky** (konzistentně se zbytkem repa).
+
+## Historie zachycených chyb scanneru (neopakovat)
+
+- **Syntetická data z test tokenů do produkce:** Duffel `duffel_test_…` a Amadeus test
+  prostředí vracejí smyšlené ceny (2× nižší než realita). Scanner musí odmítat zdroje
+  s test tokenem a Duffel odpovědi s `live_mode=false`. Testy: `test_live_mode_guard`.
+- **Cizí měna vydávaná za EUR:** History měnu neukládá → nabídky v GBP/USD se nesmí
+  přidávat jako EUR. Opraveno přes `fx.py` (ECB kurz); bez kurzu se ne-EUR nabídka
+  přeskakuje. Test: `test_currency_filter`.
+- **Google Flights deep link nefunkční:** `?q=` parametr Google nepředvyplňuje, textové
+  parametry ignoruje. Odkaz musí používat binární `?tfs=` protobuf (`google_flights.py`).
+  Nepoužívej `?q=` ani jiné textové query parametry pro GF odkaz.
+- **SerpAPI rate limit:** limit je **250 req/měsíc** (ne 100). Hodnota v `RATE_LIMIT_COMBINATIONS`
+  a UI musí odpovídat skutečnému limitu plánu.
+- **RSS feedparser blokován default UA:** stahovat přes `requests` s prohlížečovým
+  User-Agent, obsah předat `feedparser.parse()` — ne přímé `feedparser.parse(url)`.
 
 ## Časté pasti
 
