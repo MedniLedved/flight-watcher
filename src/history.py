@@ -261,6 +261,17 @@ class PriceHistory:
         meta = self.data.setdefault(META_KEY, {})
         meta["flightlabs_requests_total"] = meta.get("flightlabs_requests_total", 0) + count
 
+    def serpapi_usage(self, month: Optional[str] = None) -> int:
+        month = month or datetime.now().strftime("%Y-%m")
+        return (
+            self.data.get(META_KEY, {})
+            .get("serpapi_requests", {})
+            .get(month, 0)
+        )
+
+    def add_serpapi_usage(self, count: int, month: Optional[str] = None) -> None:
+        self._add_usage("serpapi_requests", count, month)
+
     # -- kvóty zdrojů: auto-vypnutí při vyčerpání + zjištěný stav ---------
     def is_source_disabled(self, name: str, now: Optional[datetime] = None) -> bool:
         """True, pokud je zdroj dočasně vypnutý (vyčerpaná kvóta) a lhůta
@@ -310,6 +321,31 @@ class PriceHistory:
         meta = self.data.setdefault(META_KEY, {})
         reqs = meta.setdefault(meta_field, {})
         reqs[month] = reqs.get(month, 0) + count
+
+    # -- efektivita zdrojů (deals/request) --------------------------------
+    def source_efficiency(self) -> dict[str, Any]:
+        """Per-source akumulované statistiky efektivity z _meta."""
+        return self.data.get(META_KEY, {}).get("source_efficiency", {})
+
+    def update_source_efficiency(self, run_stats: dict[str, dict]) -> None:
+        """Přičte výsledky jednoho běhu k akumulovaným metrikám v _meta.
+
+        run_stats: {source_name: {"results": int, "deals": int, "requests": int}}
+        Kumuluje: runs, total_results, total_deals, total_requests.
+        """
+        meta = self.data.setdefault(META_KEY, {})
+        eff = meta.setdefault("source_efficiency", {})
+        today = date.today().isoformat()
+        for name, s in run_stats.items():
+            e = eff.setdefault(name, {
+                "runs": 0, "total_results": 0,
+                "total_deals": 0, "total_requests": 0,
+            })
+            e["runs"] = e.get("runs", 0) + 1
+            e["total_results"] = e.get("total_results", 0) + s.get("results", 0)
+            e["total_deals"] = e.get("total_deals", 0) + s.get("deals", 0)
+            e["total_requests"] = e.get("total_requests", 0) + s.get("requests", 0)
+            e["last_run"] = today
 
     # -- statistika dne v týdnu ------------------------------------------
     def weekday_stats(

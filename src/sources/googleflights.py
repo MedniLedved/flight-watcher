@@ -61,6 +61,7 @@ class GoogleFlightsSource:
         # price/name (viz fast_flights.schema.Flight). None = reálný scraping.
         self._fetcher = fetcher
         self._openjaw_warned = False
+        self.request_count = 0  # počet skutečných search() volání (pro efficiency tracking)
 
     def search(
         self,
@@ -109,6 +110,7 @@ class GoogleFlightsSource:
         try:
             flights = self._fetch(legs, trip, adults)
         finally:
+            self.request_count += 1
             time.sleep(_REQUEST_DELAY)
 
         r_o = (return_origin or destination) if return_date else ""

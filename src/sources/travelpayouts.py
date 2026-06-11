@@ -28,6 +28,7 @@ class TravelpayoutsSource:
     def __init__(self, token: str, session: Optional[requests.Session] = None):
         self.token = token
         self.session = session or requests.Session()
+        self.request_count = 0
 
     def search(
         self,
@@ -57,6 +58,7 @@ class TravelpayoutsSource:
                 BASE_URL, params=params, headers=headers, timeout=30
             )
             resp.raise_for_status()
+            self.request_count += 1
         except requests.RequestException as exc:
             logger.error(
                 "Travelpayouts chyba %s→%s: %s", origin, destination, exc

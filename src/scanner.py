@@ -51,11 +51,13 @@ from .sources.skyscrapper import SkyScrapperSource
 from .sources.flightlabs import FlightLabsSource
 from .sources.letsfg_source import LetsFGSource
 from .sources.travelpayouts import TravelpayoutsSource
+from .sources.serpapi import SerpApiSource
 
 logger = logging.getLogger(__name__)
 
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
+SERPAPI_MONTHLY_LIMIT = 250       # SerpAPI free tier
 FLIGHTLABS_TRIAL_LIMIT = 50      # celkový limit trialu (bez měsíčního resetu)
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
@@ -197,6 +199,11 @@ class Scanner:
             if self.settings.rapidapi_key
             and self.settings.source_enabled("skyScrapper") else None
         )
+        self.serpapi = (
+            SerpApiSource(self.settings.serpapi_key)
+            if self.settings.serpapi_key
+            and self.settings.source_enabled("serpApi") else None
+        )
         amadeus_configured = bool(
             self.settings.amadeus_client_id
             and self.settings.amadeus_client_secret
@@ -311,8 +318,7 @@ class Scanner:
                     budget_check=lambda: True,
                 )
 
-        # --- LetsFG (free, 400+ aerolinky) – všechny vzorky termínů.
-        # Bez API klíče, paralelní volání jako Google Flights.
+        # --- LetsFG (free, 400+ aerolinky) – browser engine, jen manual use ---
         if self.letsfg:
             for depart, ret in date_pairs:
                 results += self._scan_per_combo(
@@ -343,6 +349,15 @@ class Scanner:
                 depart, ret, name,
                 limit=RATE_LIMIT_COMBINATIONS["skyscrapper"],
                 budget_check=self._skyscrapper_has_budget,
+            )
+
+        # --- SerpAPI / Google Flights (100 req/měsíc) ---
+        if self.serpapi and self._serpapi_has_budget():
+            results += self._scan_per_combo(
+                self.serpapi, "serpapi", legs, is_openjaw,
+                depart, ret, name,
+                limit=RATE_LIMIT_COMBINATIONS["serpapi"],
+                budget_check=self._serpapi_has_budget,
             )
 
         # --- Amadeus ---
@@ -448,13 +463,33 @@ class Scanner:
         used = self.history.amadeus_usage() + self.amadeus.request_count
         return used < AMADEUS_MONTHLY_LIMIT
 
+    def _serpapi_has_budget(self) -> bool:
+        if not self.serpapi:
+            return False
+        if self.history.is_source_disabled("serpapi"):
+            return False
+        quota = self.history.get_quota("serpapi")
+        remaining = quota.get("remaining")
+        if remaining is not None:
+            if remaining <= 0:
+                return False
+            per_run = _spread_budget(remaining, quota.get("reset_at"))
+            if self.serpapi.request_count >= per_run:
+                return False
+            return True
+        used = self.history.serpapi_usage() + self.serpapi.request_count
+        return used < SERPAPI_MONTHLY_LIMIT
+
     def _flightlabs_has_budget(self) -> bool:
         if not self.flightlabs:
             return False
         used = self.history.flightlabs_usage() + self.flightlabs.request_count
         remaining = FLIGHTLABS_TRIAL_LIMIT - used
         if remaining <= 0:
-            logger.warning("FlightLabs: trial vyčerpán (%d/%d req) – vypni v agent.json", used, FLIGHTLABS_TRIAL_LIMIT)
+            logger.warning(
+                "FlightLabs: trial vyčerpán (%d/%d req) – vypni v agent.json",
+                used, FLIGHTLABS_TRIAL_LIMIT,
+            )
         return remaining > 0
 
     def _skyscrapper_has_budget(self) -> bool:
@@ -477,6 +512,40 @@ class Scanner:
         used = self.history.skyscrapper_usage() + self.skyscrapper.request_count
         return used < SKYSCRAPPER_MONTHLY_LIMIT
 
+    def _compute_source_efficiency(
+        self, flights: list[FlightResult]
+    ) -> dict[str, dict]:
+        """Per-source statistika jednoho běhu: výsledky, dealy, requesty.
+
+        Vrací {source_name: {"results": int, "deals": int, "requests": int}}.
+        """
+        threshold = self.settings.price_threshold_eur
+        stats: dict[str, dict] = {}
+        for f in flights:
+            s = stats.setdefault(f.source, {"results": 0, "deals": 0, "requests": 0})
+            s["results"] += 1
+            if f.price < threshold:
+                s["deals"] += 1
+        def _req_count(attr: str) -> int:
+            src = getattr(self, attr, None)
+            return getattr(src, "request_count", 0) if src else 0
+
+        request_map = {
+            "googleflights": _req_count("googleflights"),
+            "travelpayouts": _req_count("travelpayouts"),
+            "skyscrapper": _req_count("skyscrapper"),
+            "serpapi": _req_count("serpapi"),
+            "amadeus": _req_count("amadeus"),
+            "duffel": _req_count("duffel"),
+            "flightlabs": _req_count("flightlabs"),
+            "letsfg": _req_count("letsfg"),
+        }
+        for name, reqs in request_map.items():
+            if reqs > 0:
+                stats.setdefault(name, {"results": 0, "deals": 0, "requests": 0})
+                stats[name]["requests"] = reqs
+        return stats
+
     def _update_skyscrapper_quota(self) -> None:
         """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
         resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
@@ -490,6 +559,22 @@ class Scanner:
             self.history.disable_source("skyscrapper", until)
             logger.warning(
                 "Sky Scrapper: kvóta vyčerpána → vypínám do %s (pak se sám zapne)",
+                until.isoformat(timespec="minutes"),
+            )
+
+    def _update_serpapi_quota(self) -> None:
+        """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
+        resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
+        sa = self.serpapi
+        if sa.quota_remaining is not None or sa.quota_reset_at is not None:
+            self.history.record_quota(
+                "serpapi", sa.quota_remaining, sa.quota_reset_at, sa.quota_limit
+            )
+        if sa.quota_exhausted:
+            until = sa.quota_reset_at or _first_of_next_month()
+            self.history.disable_source("serpapi", until)
+            logger.warning(
+                "SerpAPI: kvóta vyčerpána → vypínám do %s (pak se sám zapne)",
                 until.isoformat(timespec="minutes"),
             )
 
@@ -708,7 +793,8 @@ class Scanner:
         # aby levnější letiště přežila ořezání dle rate limitů.
         airport_stats = self._apply_dynamic_priority()
         self.api_count = sum(
-            1 for s in (self.googleflights, self.duffel, self.skyscrapper,
+            1 for s in (self.googleflights, self.letsfg, self.flightlabs,
+                        self.duffel, self.skyscrapper,
                         self.amadeus, self.travelpayouts) if s
         )
 
@@ -744,6 +830,9 @@ class Scanner:
         if self.skyscrapper:
             self.history.add_skyscrapper_usage(self.skyscrapper.request_count)
             self._update_skyscrapper_quota()
+        if self.serpapi:
+            self.history.add_serpapi_usage(self.serpapi.request_count)
+            self._update_serpapi_quota()
         if self.flightlabs and self.flightlabs.request_count:
             self.history.add_flightlabs_usage(self.flightlabs.request_count)
             logger.info(
@@ -752,6 +841,10 @@ class Scanner:
                 self.history.flightlabs_usage(),
                 FLIGHTLABS_TRIAL_LIMIT,
             )
+
+        # Per-source efektivita (výsledky/run, dealy/run, dealy/request).
+        run_source_stats = self._compute_source_efficiency(all_flights)
+        self.history.update_source_efficiency(run_source_stats)
 
         # Denní souhrn.
         if self.settings.telegram_alert_enabled("dailySummary"):
@@ -894,6 +987,29 @@ class Scanner:
                         f"Sky Scrapper využití: {self.history.skyscrapper_usage()}/"
                         f"{SKYSCRAPPER_MONTHLY_LIMIT} requestů tento měsíc"
                     )
+        # Mini-tabulka efektivity zdrojů (akumulovaná, sdílí _meta s historií).
+        eff = self.history.source_efficiency()
+        if eff:
+            _src_label = {
+                "googleflights": "Google Flights", "travelpayouts": "Travelpayouts",
+                "skyscrapper": "SkyScrapper", "amadeus": "Amadeus",
+                "duffel": "Duffel", "flightlabs": "FlightLabs", "letsfg": "LetsFG",
+            }
+            eff_rows = []
+            for src, e in sorted(eff.items(),
+                                  key=lambda kv: -(kv[1].get("total_deals", 0)
+                                                    / max(kv[1].get("total_requests", 1), 1))):
+                reqs = e.get("total_requests", 0) or 1
+                deals = e.get("total_deals", 0)
+                results = e.get("total_results", 0)
+                runs = e.get("runs", 1) or 1
+                label = _src_label.get(src, src)
+                eff_rows.append(
+                    f"  {label}: {deals/reqs:.2f} d/req "
+                    f"({deals} dealů / {reqs} req, {results/runs:.1f} výsl/run)"
+                )
+            stats["efficiency"] = "📊 Efektivita zdrojů (historicky):\n" + "\n".join(eff_rows)
+
         # Statistika letišť dle podílu dealů (vč. dnešních záznamů) – seřazeno
         # od nejakčnějšího. Reflektuje dynamicky upravenou prioritu.
         airport_stats = self.history.airport_stats(threshold=threshold)

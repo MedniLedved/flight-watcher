@@ -122,6 +122,7 @@ class Exporter:
         self.write_insights()
         self.write_routes(series, flights)
         self.write_meta(now)
+        self.write_source_efficiency()
         logger.info("Export pro dashboard zapsán do %s/", self.out_dir)
 
     # -- append-only dlouhodobé řady ----------------------------------------
@@ -362,6 +363,33 @@ class Exporter:
                 },
             })
         _write_json(self.out_dir / "routes.json", routes)
+
+    # -- source_efficiency.json ----------------------------------------------
+    def write_source_efficiency(self) -> None:
+        """Exportuje per-source akumulované metriky efektivity (dealy/request).
+
+        Odvozené hodnoty se počítají z akumulovaných počítadel v _meta.
+        """
+        eff_raw = self.history.source_efficiency()
+        if not eff_raw:
+            return
+        out = {}
+        for src, e in eff_raw.items():
+            reqs = e.get("total_requests", 0) or 1
+            results = e.get("total_results", 0)
+            deals = e.get("total_deals", 0)
+            runs = e.get("runs", 1) or 1
+            out[src] = {
+                "runs": e.get("runs", 0),
+                "totalResults": results,
+                "totalDeals": deals,
+                "totalRequests": e.get("total_requests", 0),
+                "avgResultsPerRun": round(results / runs, 2),
+                "avgDealsPerRun": round(deals / runs, 2),
+                "avgDealsPerRequest": round(deals / reqs, 3),
+                "lastRun": e.get("last_run"),
+            }
+        _write_json(self.out_dir / "source_efficiency.json", out)
 
     # -- meta.json -----------------------------------------------------------
     def write_meta(self, now: datetime) -> None:

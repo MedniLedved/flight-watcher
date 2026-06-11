@@ -80,6 +80,7 @@ RATE_LIMIT_COMBINATIONS = {
     "amadeus":       20,   # 2 000 req/měsíc → ~66/den, bereme méně pro jistotu
     "skyscrapper":   3,    # RapidAPI free tier 100 req/MĚSÍC → ~3/den!
     "travelpayouts": 100,  # neomezeno, ale rozumná hranice
+    "serpapi":        8,   # SerpAPI free tier 250 req/MĚSÍC → ~8/den
     "secret_flying": None, # RSS – bez limitu kombinací
     "jacks":         None, # scraping – bez limitu kombinací
     "cestujlevne":   None, # RSS – bez limitu kombinací
@@ -197,6 +198,7 @@ class Settings:
     duffel_token: str | None = None
     flightlabs_key: str | None = None
     rapidapi_key: str | None = None
+    serpapi_key: str | None = None
     amadeus_client_id: str | None = None
     amadeus_client_secret: str | None = None
     amadeus_env: str = "test"
@@ -260,6 +262,7 @@ class Settings:
             amadeus_client_id=os.getenv("AMADEUS_CLIENT_ID"),
             amadeus_client_secret=os.getenv("AMADEUS_CLIENT_SECRET"),
             amadeus_env=os.getenv("AMADEUS_ENV", "test"),
+            serpapi_key=os.getenv("SERPAPI_KEY"),
             travelpayouts_token=os.getenv("TRAVELPAYOUTS_TOKEN"),
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
             telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID"),
