@@ -193,7 +193,7 @@ class SerpApiSource:
         for seg in flights:
             # Preferuj IATA kód z pole "airline" pokud je to 2 znaky.
             carrier = seg.get("airline", "")
-            if carrier and len(carrier) <= 3:
+            if carrier and len(carrier) == 2:
                 if carrier not in seen:
                     seen.add(carrier)
                     airlines.append(carrier)

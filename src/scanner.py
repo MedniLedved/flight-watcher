@@ -545,9 +545,12 @@ class Scanner:
             "letsfg": _req_count("letsfg"),
         }
         for name, reqs in request_map.items():
-            if reqs > 0:
+            if getattr(self, name, None) is not None:
+                # Zahrnout všechny aktivní zdroje, i ty s 0 requesty (vyčerpaná kvóta,
+                # přeskočené combos) — jinak by `runs` byl nafouklý směrem nahoru.
                 stats.setdefault(name, {"results": 0, "deals": 0, "requests": 0})
-                stats[name]["requests"] = reqs
+                if reqs:
+                    stats[name]["requests"] = reqs
         return stats
 
     def _update_skyscrapper_quota(self) -> None:

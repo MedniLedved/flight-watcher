@@ -39,6 +39,7 @@ class LetsFGSource:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key
+        self.request_count = 0
 
     def search(
         self,
@@ -68,6 +69,7 @@ class LetsFGSource:
             # jinak se blokujeme na doběhnutí prohlížeče i po TimeoutError.
             ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             fut = ex.submit(bt.search, origin, destination, dep_str)
+            self.request_count += 1
             try:
                 results_obj = fut.result(timeout=SEARCH_TIMEOUT_S)
             except concurrent.futures.TimeoutError:

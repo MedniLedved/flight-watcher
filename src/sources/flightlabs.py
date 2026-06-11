@@ -88,8 +88,8 @@ class FlightLabsSource:
                 fr = self._parse_item(
                     item, origin, destination,
                     departure_date, return_date,
-                    return_origin or destination,
-                    return_destination or origin,
+                    destination,  # FlightLabs API je vždy roundtrip, ne open-jaw
+                    origin,
                     route_name,
                 )
                 if fr is not None:
