@@ -466,6 +466,8 @@ class Scanner:
     def _serpapi_has_budget(self) -> bool:
         if not self.serpapi:
             return False
+        if self.serpapi.quota_exhausted:
+            return False
         if self.history.is_source_disabled("serpapi"):
             return False
         quota = self.history.get_quota("serpapi")
@@ -494,6 +496,8 @@ class Scanner:
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
+            return False
+        if self.skyscrapper.quota_exhausted:
             return False
         # Vyčerpaná kvóta → zdroj je dočasně vypnutý (sám se zapne po resetu).
         if self.history.is_source_disabled("skyscrapper"):
@@ -1000,14 +1004,16 @@ class Scanner:
             for src, e in sorted(eff.items(),
                                   key=lambda kv: -(kv[1].get("total_deals", 0)
                                                     / max(kv[1].get("total_requests", 1), 1))):
-                reqs = e.get("total_requests", 0) or 1
+                reqs = e.get("total_requests", 0)
                 deals = e.get("total_deals", 0)
                 results = e.get("total_results", 0)
-                runs = e.get("runs", 1) or 1
+                runs = e.get("runs", 0)
                 label = _src_label.get(src, src)
+                dpr = f"{deals/reqs:.2f}" if reqs else "?"
+                rpr = f"{results/runs:.1f}" if runs else "?"
                 eff_rows.append(
-                    f"  {label}: {deals/reqs:.2f} d/req "
-                    f"({deals} dealů / {reqs} req, {results/runs:.1f} výsl/run)"
+                    f"  {label}: {dpr} d/req "
+                    f"({deals} dealů / {reqs} req, {rpr} výsl/run)"
                 )
             stats["efficiency"] = "📊 Efektivita zdrojů (historicky):\n" + "\n".join(eff_rows)
 

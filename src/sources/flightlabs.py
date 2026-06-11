@@ -70,8 +70,9 @@ class FlightLabsSource:
         payload = resp.json()
 
         # Různé FlightLabs response shapes – normalizujeme.
-        if not payload.get("success", True) is False:
-            pass  # success=True nebo chybí → pokračujeme
+        if payload.get("success") is False:
+            logger.error("FlightLabs API: success=false %s→%s", origin, destination)
+            return []
         if "error" in payload:
             logger.error("FlightLabs API chyba %s→%s: %s", origin, destination, payload["error"])
             return []
@@ -197,9 +198,9 @@ class FlightLabsSource:
             if isinstance(val, dict):
                 val = val.get("at") or val.get("time") or val.get("date") or ""
             if isinstance(val, str) and val:
-                for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"):
-                    try:
-                        return datetime.strptime(val[:len(fmt) - 2 if "T" in fmt else 10], fmt[:10]).date()
-                    except ValueError:
-                        pass
+                # Parse ISO date or datetime — always extract the date portion (first 10 chars).
+                try:
+                    return datetime.strptime(val[:10], "%Y-%m-%d").date()
+                except ValueError:
+                    pass
         return None

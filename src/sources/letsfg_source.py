@@ -63,16 +63,22 @@ class LetsFGSource:
         try:
             bt = LetsFG(api_key=self.api_key) if self.api_key else LetsFG()
             # LetsFG spouští browsers → obalíme timeoutem aby CI neviselo donekonečna.
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-                fut = ex.submit(bt.search, origin, destination, dep_str)
-                try:
-                    results_obj = fut.result(timeout=SEARCH_TIMEOUT_S)
-                except concurrent.futures.TimeoutError:
-                    logger.warning(
-                        "LetsFG timeout %ds pro %s→%s – přeskakuji",
-                        SEARCH_TIMEOUT_S, origin, destination,
-                    )
-                    return []
+            # POZOR: ThreadPoolExecutor.__exit__ volá shutdown(wait=True), takže
+            # nesmíme použít `with` blok — místo toho shutdown(wait=False) manuálně,
+            # jinak se blokujeme na doběhnutí prohlížeče i po TimeoutError.
+            ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            fut = ex.submit(bt.search, origin, destination, dep_str)
+            try:
+                results_obj = fut.result(timeout=SEARCH_TIMEOUT_S)
+            except concurrent.futures.TimeoutError:
+                logger.warning(
+                    "LetsFG timeout %ds pro %s→%s – přeskakuji",
+                    SEARCH_TIMEOUT_S, origin, destination,
+                )
+                ex.shutdown(wait=False)
+                return []
+            finally:
+                ex.shutdown(wait=False)
         except Exception as exc:
             logger.error("LetsFG search %s→%s %s: %s", origin, destination, dep_str, exc)
             return []
