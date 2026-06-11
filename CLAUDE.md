@@ -60,9 +60,18 @@ Po projití všech bodů checklistu spusť (z kořene repozitáře, na dev větv
 ```
 bash scripts/deploy.sh
 ```
-Skript: (1) vybuiluje `web/dist`, (2) spustí `validate.sh`, (3) zkopíruje vše do gh-pages
-přes `git worktree`, (4) commitne a pushne. Neselže-li žádný bod checklistu, deploy uspěje.
-**Nikdy nedeployuj ručně.**
+Skript: (1) **synchronizuje čerstvá data** z root `data/` do `web/public/data/` (stejně jako
+CI `deploy.yml`), (2) vybuiluje `web/dist`, (3) spustí `validate.sh`, (4) zkopíruje do gh-pages
+přes `git worktree`, commitne a pushne. Neselže-li žádný bod checklistu, deploy uspěje.
+**Nikdy nedeployuj ručně** (mimo `deploy.sh`).
+
+### Pravidlo: deploy nikdy neztratí data
+- **Sync krok je povinný a běží jako první** – bez něj by se nasadil starý snapshot z
+  `web/public/data` a přepsal živá agregovaná data. Kopíruje se s guardy (`[ -f ] && cp`),
+  takže chybějící zdroj nikdy nic nevymaže.
+- **`data/` a `config/` jsou na gh-pages append-only** – deploy je jen *overlay* (přepíše
+  stejnojmenné soubory, cizí nemaže). Clean-slate krok je proto z mazání vynechává; nikdy
+  je nemaž ručně ani neměň tuto logiku, jinak zmizí nasazená historie/kalendář.
 
 ---
 Plné zadání viz @docs/zadani-flight-dashboard.md
