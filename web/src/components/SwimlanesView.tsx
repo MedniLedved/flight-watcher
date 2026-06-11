@@ -14,6 +14,7 @@ const MONTH_NAMES = [
 ];
 
 const DAY_MS = 86_400_000;
+const DEAL_THRESHOLD_DEFAULT = 550;
 
 function utcMs(iso: string): number {
   return Date.parse(iso + "T00:00:00Z");
@@ -24,10 +25,31 @@ function fmtDay(iso: string): string {
   return `${d.getUTCDate()}. ${d.getUTCMonth() + 1}.`;
 }
 
+// Unikátní klíč pro nabídku – dvě nabídky stejné trasy s různými daty jsou různé řádky.
+function offerKey(o: LatestOffer): string {
+  return `${o.routeKey}--${o.departDate ?? "nd"}--${o.price}`;
+}
+
+// Popisek řádku obsahuje i datum odletu, aby byly odlišitelné dvě nabídky stejné trasy.
 function laneLabel(o: LatestOffer): string {
-  return o.type === "openjaw" && o.returnOrigin
-    ? `${o.origin}→${o.destination} · ${o.returnOrigin}→${o.returnDestination ?? o.origin}`
-    : `${o.origin}→${o.destination}`;
+  const route =
+    o.type === "openjaw" && o.returnOrigin
+      ? `${o.origin}→${o.destination} · ${o.returnOrigin}→${o.returnDestination ?? o.origin}`
+      : `${o.origin}→${o.destination}`;
+  const dep = o.departDate ? ` ${o.departDate.slice(5).replace("-", "/")}` : "";
+  return route + dep;
+}
+
+const FALLBACK_NIGHTS = 14;
+
+/** Konec letu pro potřeby vykreslení baru. Pokud returnDate chybí (RSS deal),
+ *  odhadne se z nights nebo minNights z configu. */
+function barEndDate(o: LatestOffer, minNights: number): string {
+  if (o.returnDate) return o.returnDate;
+  const nights = o.nights ?? minNights;
+  const d = new Date(utcMs(o.departDate!));
+  d.setUTCDate(d.getUTCDate() + nights);
+  return d.toISOString().slice(0, 10);
 }
 
 interface Props {
@@ -44,20 +66,26 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const [includeTransport, setIncludeTransport] = useState(false);
 
   const offers = latest ?? [];
+  const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? DEAL_THRESHOLD_DEFAULT;
+  const minNights = agentConfig?.stayLength?.minNights ?? FALLBACK_NIGHTS;
+
+  // Zobrazujeme POUZE dealy pod limitem s alespoň departDate.
+  // Nabídky bez returnDate (RSS dealy) zobrazíme s odhadnutou délkou.
   const lanes = useMemo(
     () =>
       offers
-        .filter((o) => o.departDate && o.returnDate)
+        .filter((o) => o.departDate && o.price <= dealMax)
         .sort((a, b) => a.departDate!.localeCompare(b.departDate!)),
-    [offers],
+    [offers, dealMax],
   );
-  const undated = offers.length - lanes.length;
+  const undated = offers.filter((o) => !o.departDate).length;
+  const overBudget = offers.filter((o) => o.departDate).length - lanes.length;
 
   // Časový rozsah zarovnaný na hranice měsíců → čisté měsíční ticky.
   const { start, end, monthTicks, weekTicks, weekendBands } = useMemo(() => {
     if (lanes.length === 0) return { start: 0, end: 1, monthTicks: [], weekTicks: [], weekendBands: [] };
     const minDepart = new Date(Math.min(...lanes.map((o) => utcMs(o.departDate!))));
-    const maxReturn = new Date(Math.max(...lanes.map((o) => utcMs(o.returnDate!))));
+    const maxReturn = new Date(Math.max(...lanes.map((o) => utcMs(barEndDate(o, minNights)))));
     const start = Date.UTC(minDepart.getUTCFullYear(), minDepart.getUTCMonth(), 1);
     const end = Date.UTC(maxReturn.getUTCFullYear(), maxReturn.getUTCMonth() + 1, 1);
 
@@ -117,8 +145,9 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
           <div>
             <CardTitle>Časová osa nabídek</CardTitle>
             <CardDescription>
-              {lanes.length} nabídek seřazených podle nejbližšího odletu
+              {lanes.length} deal{lanes.length === 1 ? "" : "ů"} pod {dealMax} € seřazených podle odletu
               {undated > 0 ? ` · ${undated} bez termínu skryto` : ""}
+              {overBudget > 0 ? ` · ${overBudget} nad limitem skryto` : ""}
               {" · "}Kliknutím na bar zobrazíš detail nabídky.
             </CardDescription>
           </div>
@@ -164,7 +193,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               <div className="h-7" />
               {lanes.map((o) => (
                 <div
-                  key={o.routeKey}
+                  key={offerKey(o)}
                   className="flex h-9 items-center gap-1.5 text-xs font-medium"
                 >
                   {o.flags.isNewLow && (
@@ -213,16 +242,19 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               <div className="h-7" />
               {lanes.map((o, i) => {
                 const left = pct(utcMs(o.departDate!));
-                const width = Math.max(pct(utcMs(o.returnDate!)) - left, 1.5);
+                const endIso = barEndDate(o, minNights);
+                const width = Math.max(pct(utcMs(endIso)) - left, 1.5);
                 const eff = effPrices[i];
-                const isSel = selected?.routeKey === o.routeKey;
+                const isSel = selected ? offerKey(selected) === offerKey(o) : false;
+                const estimated = !o.returnDate;
                 return (
-                  <div key={o.routeKey} className="relative h-9">
+                  <div key={offerKey(o)} className="relative h-9">
                     <button
-                      onClick={() => setSelected((prev) => (prev?.routeKey === o.routeKey ? null : o))}
+                      onClick={() => setSelected((prev) => (prev && offerKey(prev) === offerKey(o) ? null : o))}
                       className={cn(
                         "absolute inset-y-1 flex items-center overflow-hidden rounded px-2",
                         "text-[11px] font-semibold text-white transition-all hover:brightness-110",
+                        estimated && "border-r-2 border-dashed border-white/60",
                         isSel && "outline outline-2 outline-offset-1 outline-foreground",
                       )}
                       style={{
@@ -230,7 +262,11 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                         width: `${width}%`,
                         background: priceColor(eff, minPrice, maxPrice),
                       }}
-                      title={`${laneLabel(o)} · ${fmtDay(o.departDate!)} – ${fmtDay(o.returnDate!)}`}
+                      title={
+                        estimated
+                          ? `${laneLabel(o)} · od ${fmtDay(o.departDate!)} · délka pobytu odhadnuta (${o.nights ?? minNights} nocí)`
+                          : `${laneLabel(o)} · ${fmtDay(o.departDate!)} – ${fmtDay(o.returnDate!)}`
+                      }
                     >
                       <span className="truncate tabular-nums">{Math.round(eff)} €</span>
                     </button>
@@ -272,7 +308,11 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
             <dt className="text-muted-foreground">Odlet</dt>
             <dd className="tabular-nums">{fmtDay(selected.departDate!)}</dd>
             <dt className="text-muted-foreground">Návrat</dt>
-            <dd className="tabular-nums">{fmtDay(selected.returnDate!)}</dd>
+            <dd className="tabular-nums">
+              {selected.returnDate
+                ? fmtDay(selected.returnDate)
+                : `~ ${fmtDay(barEndDate(selected, minNights))} (odhad)`}
+            </dd>
             <dt className="text-muted-foreground">Délka pobytu</dt>
             <dd>{selected.nights != null ? `${selected.nights} nocí` : "—"}</dd>
             <dt className="text-muted-foreground">

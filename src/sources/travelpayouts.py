@@ -57,8 +57,8 @@ class TravelpayoutsSource:
             resp = self.session.get(
                 BASE_URL, params=params, headers=headers, timeout=30
             )
-            resp.raise_for_status()
             self.request_count += 1
+            resp.raise_for_status()
         except requests.RequestException as exc:
             logger.error(
                 "Travelpayouts chyba %s→%s: %s", origin, destination, exc

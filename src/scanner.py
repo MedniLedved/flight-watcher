@@ -466,6 +466,8 @@ class Scanner:
     def _serpapi_has_budget(self) -> bool:
         if not self.serpapi:
             return False
+        if self.serpapi.quota_exhausted:
+            return False
         if self.history.is_source_disabled("serpapi"):
             return False
         quota = self.history.get_quota("serpapi")
@@ -494,6 +496,8 @@ class Scanner:
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
+            return False
+        if self.skyscrapper.quota_exhausted:
             return False
         # Vyčerpaná kvóta → zdroj je dočasně vypnutý (sám se zapne po resetu).
         if self.history.is_source_disabled("skyscrapper"):
@@ -541,16 +545,19 @@ class Scanner:
             "letsfg": _req_count("letsfg"),
         }
         for name, reqs in request_map.items():
-            if reqs > 0:
+            if getattr(self, name, None) is not None:
+                # Zahrnout všechny aktivní zdroje, i ty s 0 requesty (vyčerpaná kvóta,
+                # přeskočené combos) — jinak by `runs` byl nafouklý směrem nahoru.
                 stats.setdefault(name, {"results": 0, "deals": 0, "requests": 0})
-                stats[name]["requests"] = reqs
+                if reqs:
+                    stats[name]["requests"] = reqs
         return stats
 
     def _update_skyscrapper_quota(self) -> None:
         """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
         resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
         sk = self.skyscrapper
-        if sk.quota_remaining is not None or sk.quota_reset_at is not None:
+        if sk.quota_remaining is not None and sk.quota_reset_at is not None:
             self.history.record_quota(
                 "skyscrapper", sk.quota_remaining, sk.quota_reset_at, sk.quota_limit
             )
@@ -566,7 +573,7 @@ class Scanner:
         """Po scanu: ulož zjištěný stav kvóty a při vyčerpání zdroj vypni do
         resetu (auto-zapnutí proběhne, až lhůta uplyne)."""
         sa = self.serpapi
-        if sa.quota_remaining is not None or sa.quota_reset_at is not None:
+        if sa.quota_remaining is not None and sa.quota_reset_at is not None:
             self.history.record_quota(
                 "serpapi", sa.quota_remaining, sa.quota_reset_at, sa.quota_limit
             )
@@ -794,7 +801,7 @@ class Scanner:
         airport_stats = self._apply_dynamic_priority()
         self.api_count = sum(
             1 for s in (self.googleflights, self.letsfg, self.flightlabs,
-                        self.duffel, self.skyscrapper,
+                        self.duffel, self.skyscrapper, self.serpapi,
                         self.amadeus, self.travelpayouts) if s
         )
 
@@ -992,21 +999,24 @@ class Scanner:
         if eff:
             _src_label = {
                 "googleflights": "Google Flights", "travelpayouts": "Travelpayouts",
-                "skyscrapper": "SkyScrapper", "amadeus": "Amadeus",
+                "skyscrapper": "SkyScrapper", "serpapi": "SerpAPI",
+                "amadeus": "Amadeus",
                 "duffel": "Duffel", "flightlabs": "FlightLabs", "letsfg": "LetsFG",
             }
             eff_rows = []
             for src, e in sorted(eff.items(),
                                   key=lambda kv: -(kv[1].get("total_deals", 0)
                                                     / max(kv[1].get("total_requests", 1), 1))):
-                reqs = e.get("total_requests", 0) or 1
+                reqs = e.get("total_requests", 0)
                 deals = e.get("total_deals", 0)
                 results = e.get("total_results", 0)
-                runs = e.get("runs", 1) or 1
+                runs = e.get("runs", 0)
                 label = _src_label.get(src, src)
+                dpr = f"{deals/reqs:.2f}" if reqs else "?"
+                rpr = f"{results/runs:.1f}" if runs else "?"
                 eff_rows.append(
-                    f"  {label}: {deals/reqs:.2f} d/req "
-                    f"({deals} dealů / {reqs} req, {results/runs:.1f} výsl/run)"
+                    f"  {label}: {dpr} d/req "
+                    f"({deals} dealů / {reqs} req, {rpr} výsl/run)"
                 )
             stats["efficiency"] = "📊 Efektivita zdrojů (historicky):\n" + "\n".join(eff_rows)
 

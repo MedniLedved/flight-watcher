@@ -588,6 +588,11 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
             onChange={(v) => update((d) => (d.sources.skyScrapper = v))}
           />
           <Toggle
+            label="SerpAPI"
+            checked={config.sources.serpApi}
+            onChange={(v) => update((d) => (d.sources.serpApi = v))}
+          />
+          <Toggle
             label="Amadeus"
             checked={config.sources.amadeus}
             onChange={(v) => update((d) => (d.sources.amadeus = v))}
@@ -596,6 +601,16 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
             label="Travelpayouts"
             checked={config.sources.travelpayouts}
             onChange={(v) => update((d) => (d.sources.travelpayouts = v))}
+          />
+          <Toggle
+            label="FlightLabs"
+            checked={config.sources.flightLabs}
+            onChange={(v) => update((d) => (d.sources.flightLabs = v))}
+          />
+          <Toggle
+            label="LetsFG"
+            checked={config.sources.letsFG}
+            onChange={(v) => update((d) => (d.sources.letsFG = v))}
           />
           <Toggle
             label="RSS: Secret Flying"
