@@ -103,20 +103,24 @@ export interface RemoteFile {
 }
 
 /** Načte aktuální config z repa (kvůli živému SHA i obsahu). */
-export async function fetchAgentConfigFile(token: string): Promise<RemoteFile> {
+export async function fetchAgentConfigFile(
+  token: string,
+  branch: string = TARGET_BRANCH,
+): Promise<RemoteFile> {
   const data = await gh<ContentsResponse>(
     token,
-    `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${AGENT_CONFIG_PATH}?ref=${TARGET_BRANCH}`,
+    `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${AGENT_CONFIG_PATH}?ref=${branch}`,
   );
   return { text: base64ToUtf8(data.content), sha: data.sha };
 }
 
-/** Commitne nový obsah configu. Vyžaduje aktuální `sha`. */
+/** Commitne nový obsah configu na danou větev. Vyžaduje aktuální `sha`. */
 export async function commitAgentConfig(
   token: string,
   contentText: string,
   sha: string,
   message: string,
+  branch: string = TARGET_BRANCH,
 ): Promise<string> {
   const data = await gh<{ commit: { sha: string } }>(
     token,
@@ -127,7 +131,7 @@ export async function commitAgentConfig(
         message,
         content: utf8ToBase64(contentText),
         sha,
-        branch: TARGET_BRANCH,
+        branch,
       }),
     },
   );

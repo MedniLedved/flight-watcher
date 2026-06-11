@@ -24,7 +24,6 @@ import {
   fetchAgentConfigFile,
   loadToken,
   saveToken,
-  TARGET_BRANCH,
   triggerScan,
 } from "@/lib/github";
 import type { AgentAirport, AgentConfig } from "@/types/data";
@@ -303,17 +302,24 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
     }
     setStatus({ kind: "busy", msg: "Ukládám config na GitHub…" });
     try {
-      // Načti živý SHA (config mohl mezitím změnit scan / jiný commit).
-      const remote = await fetchAgentConfigFile(token);
-      await commitAgentConfig(
-        token,
-        serializeConfig(config),
-        remote.sha,
-        "config: úprava agenta přes dashboard (Nastavení)",
-      );
+      const serialized = serializeConfig(config);
+      const commitMsg = "config: úprava agenta přes dashboard (Nastavení)";
+
+      // 1) main — scanner čte config odsud při každém běhu
+      const remoteMain = await fetchAgentConfigFile(token, "main");
+      await commitAgentConfig(token, serialized, remoteMain.sha, commitMsg, "main");
+
+      // 2) gh-pages — dashboard čte config odsud; okamžitý efekt po reloadu
+      try {
+        const remotePages = await fetchAgentConfigFile(token, "gh-pages");
+        await commitAgentConfig(token, serialized, remotePages.sha, commitMsg, "gh-pages");
+      } catch {
+        // gh-pages nemusí mít soubor (první deploy) — nevadí, main stačí
+      }
+
       setStatus({
         kind: "ok",
-        msg: `Uloženo do ${AGENT_CONFIG_PATH} (větev ${TARGET_BRANCH}). Projeví se při dalším scanu.`,
+        msg: `Uloženo do ${AGENT_CONFIG_PATH}. Projeví se ihned po reloadu.`,
       });
     } catch (e) {
       setStatus({ kind: "err", msg: e instanceof Error ? e.message : String(e) });
