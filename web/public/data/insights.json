@@ -1,37 +1,184 @@
 {
   "airportPriority": {
     "europe": [
-      { "code": "MUC", "dealRatePct": 42, "medianEur": 520, "observations": 30 },
-      { "code": "PRG", "dealRatePct": 38, "medianEur": 487, "observations": 22 },
-      { "code": "FRA", "dealRatePct": 28, "medianEur": 545, "observations": 18 },
-      { "code": "BUD", "dealRatePct": 35, "medianEur": 489, "observations": 20 },
-      { "code": "VIE", "dealRatePct": 22, "medianEur": 598, "observations": 14 },
-      { "code": "AMS", "dealRatePct": 18, "medianEur": 655, "observations": 10 }
+      {
+        "code": "VIE",
+        "dealRatePct": 47.3,
+        "medianEur": 555.0,
+        "observations": 169
+      },
+      {
+        "code": "BUD",
+        "dealRatePct": 36.8,
+        "medianEur": 608.9,
+        "observations": 114
+      },
+      {
+        "code": "MUC",
+        "dealRatePct": 25.4,
+        "medianEur": 585.0,
+        "observations": 177
+      },
+      {
+        "code": "PRG",
+        "dealRatePct": 24.1,
+        "medianEur": 638.8,
+        "observations": 83
+      },
+      {
+        "code": "MXP",
+        "dealRatePct": 8.3,
+        "medianEur": 679.2,
+        "observations": 48
+      },
+      {
+        "code": "FCO",
+        "dealRatePct": 8.3,
+        "medianEur": 690.3,
+        "observations": 48
+      },
+      {
+        "code": "AMS",
+        "dealRatePct": 7.7,
+        "medianEur": 656.8,
+        "observations": 52
+      },
+      {
+        "code": "NUE",
+        "dealRatePct": 3.6,
+        "medianEur": 660.4,
+        "observations": 55
+      },
+      {
+        "code": "FRA",
+        "dealRatePct": 3.4,
+        "medianEur": 659.7,
+        "observations": 59
+      },
+      {
+        "code": "FMM",
+        "dealRatePct": 0.0,
+        "medianEur": 676.3,
+        "observations": 48
+      }
     ],
     "japan": [
-      { "code": "TYO", "dealRatePct": 45, "medianEur": 498, "observations": 42 },
-      { "code": "HND", "dealRatePct": 40, "medianEur": 512, "observations": 28 },
-      { "code": "NRT", "dealRatePct": 35, "medianEur": 505, "observations": 34 },
-      { "code": "KIX", "dealRatePct": 30, "medianEur": 570, "observations": 20 },
-      { "code": "NGO", "dealRatePct": 18, "medianEur": 655, "observations": 10 }
+      {
+        "code": "OSA",
+        "dealRatePct": 71.0,
+        "medianEur": 534.0,
+        "observations": 62
+      },
+      {
+        "code": "TYO",
+        "dealRatePct": 60.0,
+        "medianEur": 547.0,
+        "observations": 300
+      },
+      {
+        "code": "KIX",
+        "dealRatePct": 4.7,
+        "medianEur": 662.5,
+        "observations": 256
+      },
+      {
+        "code": "HND",
+        "dealRatePct": 3.2,
+        "medianEur": 659.1,
+        "observations": 186
+      },
+      {
+        "code": "NRT",
+        "dealRatePct": 2.8,
+        "medianEur": 664.0,
+        "observations": 107
+      },
+      {
+        "code": "NGO",
+        "dealRatePct": 2.4,
+        "medianEur": 660.9,
+        "observations": 124
+      },
+      {
+        "code": "ITM",
+        "dealRatePct": 0.0,
+        "medianEur": 658.9,
+        "observations": 94
+      }
     ]
   },
   "cheapestDepartureDow": [
-    { "dow": "ÚT", "dealRatePct": 35, "medianEur": 489 },
-    { "dow": "ST", "dealRatePct": 28, "medianEur": 502 },
-    { "dow": "PÁ", "dealRatePct": 25, "medianEur": 510 },
-    { "dow": "PO", "dealRatePct": 22, "medianEur": 525 },
-    { "dow": "ČT", "dealRatePct": 18, "medianEur": 535 },
-    { "dow": "SO", "dealRatePct": 15, "medianEur": 548 },
-    { "dow": "NE", "dealRatePct": 12, "medianEur": 562 }
+    {
+      "dow": "ST",
+      "dealRatePct": 56.5,
+      "medianEur": 549.0
+    },
+    {
+      "dow": "NE",
+      "dealRatePct": 48.6,
+      "medianEur": 560.0
+    },
+    {
+      "dow": "SO",
+      "dealRatePct": 45.5,
+      "medianEur": 561.0
+    },
+    {
+      "dow": "PO",
+      "dealRatePct": 23.9,
+      "medianEur": 652.4
+    },
+    {
+      "dow": "ÚT",
+      "dealRatePct": 21.9,
+      "medianEur": 649.4
+    },
+    {
+      "dow": "ČT",
+      "dealRatePct": 21.0,
+      "medianEur": 643.2
+    },
+    {
+      "dow": "PÁ",
+      "dealRatePct": 11.9,
+      "medianEur": 646.4
+    }
   ],
   "cheapestArrivalDow": [
-    { "dow": "ÚT", "dealRatePct": 32, "medianEur": 495 },
-    { "dow": "ST", "dealRatePct": 26, "medianEur": 508 },
-    { "dow": "PO", "dealRatePct": 20, "medianEur": 518 },
-    { "dow": "PÁ", "dealRatePct": 18, "medianEur": 530 },
-    { "dow": "ČT", "dealRatePct": 15, "medianEur": 542 },
-    { "dow": "SO", "dealRatePct": 12, "medianEur": 555 },
-    { "dow": "NE", "dealRatePct": 10, "medianEur": 568 }
+    {
+      "dow": "ST",
+      "dealRatePct": 10.2,
+      "medianEur": 659.6
+    },
+    {
+      "dow": "PO",
+      "dealRatePct": 0.0,
+      "medianEur": 657.9
+    },
+    {
+      "dow": "NE",
+      "dealRatePct": 0.0,
+      "medianEur": 660.8
+    },
+    {
+      "dow": "ÚT",
+      "dealRatePct": 0.0,
+      "medianEur": 661.7
+    },
+    {
+      "dow": "SO",
+      "dealRatePct": 0.0,
+      "medianEur": 661.9
+    },
+    {
+      "dow": "ČT",
+      "dealRatePct": 0.0,
+      "medianEur": 677.8
+    },
+    {
+      "dow": "PÁ",
+      "dealRatePct": 0.0,
+      "medianEur": 1215.0
+    }
   ]
 }

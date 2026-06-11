@@ -37,9 +37,13 @@
   },
   "alertThresholds": { "dealMaxEur": 550, "bigDropPct": 15, "newLowSensitivityPct": 2 },
   "sources": {
-    "duffel": true,
+    "googleFlights": true,
+    "flightLabs": true,
+    "letsFG": false,
+    "duffel": false,
     "skyScrapper": true,
-    "amadeus": true,
+    "serpApi": true,
+    "amadeus": false,
     "travelpayouts": true,
     "rss": { "secretFlying": true, "cestujlevne": true, "jacks": true, "milesAndMore": true }
   },

@@ -1,50 +1,1254 @@
 {
-  "PRG-TYO-roundtrip": {
-    "allTimeMin": 487, "min90d": 487, "max90d": 620, "avg90d": 555.2,
-    "trend30d": -8.2,
-    "biggestDrop": { "from": 598, "to": 521, "date": "2026-05-20" },
-    "lastPrice": 487, "currentVsAvgPct": -12.3
-  },
-  "MUC-KIX-OSA-openjaw": {
-    "allTimeMin": 598, "min90d": 598, "max90d": 740, "avg90d": 662.0,
-    "trend30d": 3.1,
-    "biggestDrop": { "from": 740, "to": 640, "date": "2026-05-10" },
-    "lastPrice": 612, "currentVsAvgPct": -7.5
-  },
-  "MUC-TYO-roundtrip": {
-    "allTimeMin": 520, "min90d": 520, "max90d": 670, "avg90d": 585.0,
-    "trend30d": -5.4,
-    "biggestDrop": { "from": 650, "to": 545, "date": "2026-06-02" },
-    "lastPrice": 545, "currentVsAvgPct": -6.8
-  },
-  "VIE-NRT-roundtrip": {
-    "allTimeMin": 560, "min90d": 560, "max90d": 680, "avg90d": 625.5,
-    "trend30d": -2.1,
+  "AMS-HND-KIX-openjaw": {
+    "allTimeMin": 619.72,
+    "min90d": 619.72,
+    "max90d": 675.37,
+    "avg90d": 644.1,
+    "trend30d": 3.5,
     "biggestDrop": null,
-    "lastPrice": 598, "currentVsAvgPct": -4.4
+    "lastPrice": 675.37,
+    "currentVsAvgPct": 4.9
   },
-  "FRA-HND-roundtrip": {
-    "allTimeMin": 499, "min90d": 499, "max90d": 640, "avg90d": 568.0,
-    "trend30d": -11.8,
-    "biggestDrop": { "from": 640, "to": 521, "date": "2026-06-01" },
-    "lastPrice": 521, "currentVsAvgPct": -8.3
+  "AMS-HND-roundtrip": {
+    "allTimeMin": 652.87,
+    "min90d": 652.87,
+    "max90d": 676.04,
+    "avg90d": 663.4,
+    "trend30d": -0.8,
+    "biggestDrop": {
+      "from": 658.03,
+      "to": 652.87,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 671.01,
+    "currentVsAvgPct": 1.1
   },
-  "PRG-KIX-roundtrip": {
-    "allTimeMin": 610, "min90d": 610, "max90d": 720, "avg90d": 660.0,
-    "trend30d": 1.2,
+  "AMS-ITM-HND-openjaw": {
+    "allTimeMin": 641.14,
+    "min90d": 641.14,
+    "max90d": 653.26,
+    "avg90d": 647.9,
+    "trend30d": 1.3,
     "biggestDrop": null,
-    "lastPrice": 634, "currentVsAvgPct": -3.9
+    "lastPrice": 653.26,
+    "currentVsAvgPct": 0.8
+  },
+  "AMS-ITM-roundtrip": {
+    "allTimeMin": 650.07,
+    "min90d": 650.07,
+    "max90d": 667.59,
+    "avg90d": 658.0,
+    "trend30d": -0.4,
+    "biggestDrop": {
+      "from": 652.83,
+      "to": 650.07,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 667.59,
+    "currentVsAvgPct": 1.5
+  },
+  "AMS-KIX-HND-openjaw": {
+    "allTimeMin": 617.21,
+    "min90d": 617.21,
+    "max90d": 677.15,
+    "avg90d": 648.7,
+    "trend30d": 6.1,
+    "biggestDrop": null,
+    "lastPrice": 677.15,
+    "currentVsAvgPct": 4.4
+  },
+  "AMS-KIX-roundtrip": {
+    "allTimeMin": 645.28,
+    "min90d": 645.28,
+    "max90d": 684.73,
+    "avg90d": 662.3,
+    "trend30d": 2.6,
+    "biggestDrop": null,
+    "lastPrice": 662.08,
+    "currentVsAvgPct": -0.0
+  },
+  "AMS-NGO-KIX-openjaw": {
+    "allTimeMin": 619.72,
+    "min90d": 619.72,
+    "max90d": 681.22,
+    "avg90d": 658.6,
+    "trend30d": 3.9,
+    "biggestDrop": null,
+    "lastPrice": 678.67,
+    "currentVsAvgPct": 3.0
+  },
+  "AMS-NGO-roundtrip": {
+    "allTimeMin": 647.57,
+    "min90d": 647.57,
+    "max90d": 685.22,
+    "avg90d": 659.7,
+    "trend30d": 1.8,
+    "biggestDrop": null,
+    "lastPrice": 685.22,
+    "currentVsAvgPct": 3.9
+  },
+  "AMS-NRT-KIX-openjaw": {
+    "allTimeMin": 619.72,
+    "min90d": 619.72,
+    "max90d": 701.63,
+    "avg90d": 663.0,
+    "trend30d": 4.1,
+    "biggestDrop": null,
+    "lastPrice": 685.74,
+    "currentVsAvgPct": 3.4
+  },
+  "AMS-NRT-roundtrip": {
+    "allTimeMin": 658.56,
+    "min90d": 658.56,
+    "max90d": 678.97,
+    "avg90d": 670.3,
+    "trend30d": 0.2,
+    "biggestDrop": null,
+    "lastPrice": 678.49,
+    "currentVsAvgPct": 1.2
+  },
+  "AMS-TYO-roundtrip": {
+    "allTimeMin": 505.0,
+    "min90d": 505.0,
+    "max90d": 505.0,
+    "avg90d": 505.0,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 505.0,
+    "currentVsAvgPct": 0.0
+  },
+  "BUD-HND-KIX-openjaw": {
+    "allTimeMin": 495.64,
+    "min90d": 495.64,
+    "max90d": 644.05,
+    "avg90d": 590.4,
+    "trend30d": 23.2,
+    "biggestDrop": null,
+    "lastPrice": 610.87,
+    "currentVsAvgPct": 3.5
+  },
+  "BUD-HND-roundtrip": {
+    "allTimeMin": 640.06,
+    "min90d": 640.06,
+    "max90d": 1335.0,
+    "avg90d": 888.8,
+    "trend30d": 0.5,
+    "biggestDrop": null,
+    "lastPrice": 1112.0,
+    "currentVsAvgPct": 25.1
+  },
+  "BUD-ITM-HND-openjaw": {
+    "allTimeMin": 631.03,
+    "min90d": 631.03,
+    "max90d": 650.96,
+    "avg90d": 641.2,
+    "trend30d": 1.4,
+    "biggestDrop": null,
+    "lastPrice": 650.96,
+    "currentVsAvgPct": 1.5
+  },
+  "BUD-ITM-roundtrip": {
+    "allTimeMin": 622.27,
+    "min90d": 622.27,
+    "max90d": 631.67,
+    "avg90d": 625.8,
+    "trend30d": -0.2,
+    "biggestDrop": {
+      "from": 623.45,
+      "to": 622.27,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 631.67,
+    "currentVsAvgPct": 0.9
+  },
+  "BUD-KIX-HND-openjaw": {
+    "allTimeMin": 493.24,
+    "min90d": 493.24,
+    "max90d": 682.9,
+    "avg90d": 626.7,
+    "trend30d": 33.4,
+    "biggestDrop": null,
+    "lastPrice": 672.45,
+    "currentVsAvgPct": 7.3
+  },
+  "BUD-KIX-roundtrip": {
+    "allTimeMin": 622.94,
+    "min90d": 622.94,
+    "max90d": 1430.0,
+    "avg90d": 892.5,
+    "trend30d": 3.7,
+    "biggestDrop": null,
+    "lastPrice": 1112.0,
+    "currentVsAvgPct": 24.6
+  },
+  "BUD-NGO-KIX-openjaw": {
+    "allTimeMin": 495.64,
+    "min90d": 495.64,
+    "max90d": 702.43,
+    "avg90d": 613.5,
+    "trend30d": 23.2,
+    "biggestDrop": null,
+    "lastPrice": 610.87,
+    "currentVsAvgPct": -0.4
+  },
+  "BUD-NGO-roundtrip": {
+    "allTimeMin": 630.04,
+    "min90d": 630.04,
+    "max90d": 648.73,
+    "avg90d": 636.6,
+    "trend30d": 1.3,
+    "biggestDrop": null,
+    "lastPrice": 648.73,
+    "currentVsAvgPct": 1.9
+  },
+  "BUD-NRT-KIX-openjaw": {
+    "allTimeMin": 495.64,
+    "min90d": 495.64,
+    "max90d": 640.17,
+    "avg90d": 589.4,
+    "trend30d": 23.2,
+    "biggestDrop": null,
+    "lastPrice": 610.87,
+    "currentVsAvgPct": 3.6
   },
   "BUD-NRT-roundtrip": {
-    "allTimeMin": 489, "min90d": 489, "max90d": 690, "avg90d": 572.0,
-    "trend30d": -14.6,
-    "biggestDrop": { "from": 690, "to": 489, "date": "2026-06-08" },
-    "lastPrice": 489, "currentVsAvgPct": -14.5
+    "allTimeMin": 636.34,
+    "min90d": 636.34,
+    "max90d": 1405.0,
+    "avg90d": 875.9,
+    "trend30d": -0.4,
+    "biggestDrop": {
+      "from": 639.11,
+      "to": 636.34,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 1060.0,
+    "currentVsAvgPct": 21.0
   },
-  "AMS-TYO-NGO-openjaw": {
-    "allTimeMin": 630, "min90d": 630, "max90d": 720, "avg90d": 678.0,
-    "trend30d": -2.8,
-    "biggestDrop": { "from": 720, "to": 655, "date": "2026-05-15" },
-    "lastPrice": 655, "currentVsAvgPct": -3.4
+  "BUD-OSA-roundtrip": {
+    "allTimeMin": 520.0,
+    "min90d": 520.0,
+    "max90d": 643.0,
+    "avg90d": 565.1,
+    "trend30d": 0.0,
+    "biggestDrop": null,
+    "lastPrice": 579.0,
+    "currentVsAvgPct": 2.5
+  },
+  "BUD-TYO-roundtrip": {
+    "allTimeMin": 415.0,
+    "min90d": 415.0,
+    "max90d": 416.0,
+    "avg90d": 415.7,
+    "trend30d": -0.2,
+    "biggestDrop": {
+      "from": 416.0,
+      "to": 415.0,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 416.0,
+    "currentVsAvgPct": 0.1
+  },
+  "FCO-HND-KIX-openjaw": {
+    "allTimeMin": 517.39,
+    "min90d": 517.39,
+    "max90d": 706.17,
+    "avg90d": 628.5,
+    "trend30d": 21.9,
+    "biggestDrop": null,
+    "lastPrice": 706.17,
+    "currentVsAvgPct": 12.4
+  },
+  "FCO-HND-roundtrip": {
+    "allTimeMin": 696.11,
+    "min90d": 696.11,
+    "max90d": 720.64,
+    "avg90d": 708.9,
+    "trend30d": -2.7,
+    "biggestDrop": {
+      "from": 715.72,
+      "to": 696.11,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 696.38,
+    "currentVsAvgPct": -1.8
+  },
+  "FCO-ITM-HND-openjaw": {
+    "allTimeMin": 659.23,
+    "min90d": 659.23,
+    "max90d": 671.62,
+    "avg90d": 663.9,
+    "trend30d": 0.4,
+    "biggestDrop": null,
+    "lastPrice": 671.62,
+    "currentVsAvgPct": 1.2
+  },
+  "FCO-ITM-roundtrip": {
+    "allTimeMin": 678.69,
+    "min90d": 678.69,
+    "max90d": 716.67,
+    "avg90d": 696.5,
+    "trend30d": 3.2,
+    "biggestDrop": null,
+    "lastPrice": 716.67,
+    "currentVsAvgPct": 2.9
+  },
+  "FCO-KIX-HND-openjaw": {
+    "allTimeMin": 514.88,
+    "min90d": 514.88,
+    "max90d": 676.02,
+    "avg90d": 622.7,
+    "trend30d": 22.0,
+    "biggestDrop": null,
+    "lastPrice": 671.46,
+    "currentVsAvgPct": 7.8
+  },
+  "FCO-KIX-roundtrip": {
+    "allTimeMin": 679.31,
+    "min90d": 679.31,
+    "max90d": 718.24,
+    "avg90d": 699.3,
+    "trend30d": 1.0,
+    "biggestDrop": null,
+    "lastPrice": 708.24,
+    "currentVsAvgPct": 1.3
+  },
+  "FCO-NGO-KIX-openjaw": {
+    "allTimeMin": 517.39,
+    "min90d": 517.39,
+    "max90d": 714.51,
+    "avg90d": 658.4,
+    "trend30d": 21.9,
+    "biggestDrop": null,
+    "lastPrice": 659.87,
+    "currentVsAvgPct": 0.2
+  },
+  "FCO-NGO-roundtrip": {
+    "allTimeMin": 685.55,
+    "min90d": 685.55,
+    "max90d": 715.9,
+    "avg90d": 697.2,
+    "trend30d": 1.7,
+    "biggestDrop": null,
+    "lastPrice": 697.41,
+    "currentVsAvgPct": 0.0
+  },
+  "FCO-NRT-KIX-openjaw": {
+    "allTimeMin": 517.39,
+    "min90d": 517.39,
+    "max90d": 690.61,
+    "avg90d": 625.2,
+    "trend30d": 21.9,
+    "biggestDrop": null,
+    "lastPrice": 690.61,
+    "currentVsAvgPct": 10.5
+  },
+  "FCO-NRT-roundtrip": {
+    "allTimeMin": 692.61,
+    "min90d": 692.61,
+    "max90d": 734.13,
+    "avg90d": 705.6,
+    "trend30d": 0.2,
+    "biggestDrop": null,
+    "lastPrice": 709.1,
+    "currentVsAvgPct": 0.5
+  },
+  "FMM-HND-KIX-openjaw": {
+    "allTimeMin": 657.89,
+    "min90d": 657.89,
+    "max90d": 677.36,
+    "avg90d": 667.6,
+    "trend30d": 1.2,
+    "biggestDrop": null,
+    "lastPrice": 677.36,
+    "currentVsAvgPct": 1.5
+  },
+  "FMM-HND-roundtrip": {
+    "allTimeMin": 661.93,
+    "min90d": 661.93,
+    "max90d": 702.44,
+    "avg90d": 691.8,
+    "trend30d": -5.0,
+    "biggestDrop": {
+      "from": 697.08,
+      "to": 661.93,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 695.53,
+    "currentVsAvgPct": 0.5
+  },
+  "FMM-ITM-HND-openjaw": {
+    "allTimeMin": 664.91,
+    "min90d": 664.91,
+    "max90d": 692.79,
+    "avg90d": 677.5,
+    "trend30d": 0.7,
+    "biggestDrop": null,
+    "lastPrice": 683.13,
+    "currentVsAvgPct": 0.8
+  },
+  "FMM-ITM-roundtrip": {
+    "allTimeMin": 662.91,
+    "min90d": 662.91,
+    "max90d": 712.77,
+    "avg90d": 693.6,
+    "trend30d": 6.9,
+    "biggestDrop": null,
+    "lastPrice": 712.77,
+    "currentVsAvgPct": 2.8
+  },
+  "FMM-KIX-HND-openjaw": {
+    "allTimeMin": 651.6,
+    "min90d": 651.6,
+    "max90d": 671.25,
+    "avg90d": 663.4,
+    "trend30d": -1.7,
+    "biggestDrop": {
+      "from": 663.08,
+      "to": 651.6,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 667.5,
+    "currentVsAvgPct": 0.6
+  },
+  "FMM-KIX-roundtrip": {
+    "allTimeMin": 661.14,
+    "min90d": 661.14,
+    "max90d": 696.56,
+    "avg90d": 679.2,
+    "trend30d": 0.3,
+    "biggestDrop": null,
+    "lastPrice": 696.56,
+    "currentVsAvgPct": 2.6
+  },
+  "FMM-NGO-KIX-openjaw": {
+    "allTimeMin": 649.6,
+    "min90d": 649.6,
+    "max90d": 727.58,
+    "avg90d": 688.7,
+    "trend30d": -1.1,
+    "biggestDrop": {
+      "from": 656.6,
+      "to": 649.6,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 699.36,
+    "currentVsAvgPct": 1.5
+  },
+  "FMM-NGO-roundtrip": {
+    "allTimeMin": 656.79,
+    "min90d": 656.79,
+    "max90d": 688.15,
+    "avg90d": 672.4,
+    "trend30d": 0.4,
+    "biggestDrop": null,
+    "lastPrice": 670.5,
+    "currentVsAvgPct": -0.3
+  },
+  "FMM-NRT-KIX-openjaw": {
+    "allTimeMin": 659.85,
+    "min90d": 659.85,
+    "max90d": 704.35,
+    "avg90d": 684.2,
+    "trend30d": 6.4,
+    "biggestDrop": null,
+    "lastPrice": 704.35,
+    "currentVsAvgPct": 2.9
+  },
+  "FMM-NRT-roundtrip": {
+    "allTimeMin": 660.58,
+    "min90d": 660.58,
+    "max90d": 718.27,
+    "avg90d": 685.7,
+    "trend30d": 0.3,
+    "biggestDrop": null,
+    "lastPrice": 718.27,
+    "currentVsAvgPct": 4.7
+  },
+  "FRA-HND-KIX-openjaw": {
+    "allTimeMin": 590.09,
+    "min90d": 590.09,
+    "max90d": 668.06,
+    "avg90d": 640.3,
+    "trend30d": 9.8,
+    "biggestDrop": null,
+    "lastPrice": 655.16,
+    "currentVsAvgPct": 2.3
+  },
+  "FRA-HND-roundtrip": {
+    "allTimeMin": 653.68,
+    "min90d": 653.68,
+    "max90d": 666.65,
+    "avg90d": 661.2,
+    "trend30d": 0.7,
+    "biggestDrop": null,
+    "lastPrice": 664.06,
+    "currentVsAvgPct": 0.4
+  },
+  "FRA-ITM-HND-openjaw": {
+    "allTimeMin": 648.28,
+    "min90d": 648.28,
+    "max90d": 669.18,
+    "avg90d": 658.9,
+    "trend30d": 1.1,
+    "biggestDrop": null,
+    "lastPrice": 669.18,
+    "currentVsAvgPct": 1.6
+  },
+  "FRA-ITM-roundtrip": {
+    "allTimeMin": 648.39,
+    "min90d": 648.39,
+    "max90d": 667.53,
+    "avg90d": 658.4,
+    "trend30d": 1.3,
+    "biggestDrop": null,
+    "lastPrice": 667.53,
+    "currentVsAvgPct": 1.4
+  },
+  "FRA-KIX-HND-openjaw": {
+    "allTimeMin": 587.58,
+    "min90d": 587.58,
+    "max90d": 678.23,
+    "avg90d": 649.4,
+    "trend30d": 12.5,
+    "biggestDrop": null,
+    "lastPrice": 670.81,
+    "currentVsAvgPct": 3.3
+  },
+  "FRA-KIX-roundtrip": {
+    "allTimeMin": 655.31,
+    "min90d": 655.31,
+    "max90d": 682.32,
+    "avg90d": 670.0,
+    "trend30d": 2.8,
+    "biggestDrop": null,
+    "lastPrice": 682.32,
+    "currentVsAvgPct": 1.8
+  },
+  "FRA-NGO-KIX-openjaw": {
+    "allTimeMin": 590.09,
+    "min90d": 590.09,
+    "max90d": 683.39,
+    "avg90d": 657.7,
+    "trend30d": 13.4,
+    "biggestDrop": null,
+    "lastPrice": 674.06,
+    "currentVsAvgPct": 2.5
+  },
+  "FRA-NGO-roundtrip": {
+    "allTimeMin": 657.75,
+    "min90d": 657.75,
+    "max90d": 669.62,
+    "avg90d": 662.2,
+    "trend30d": -0.4,
+    "biggestDrop": {
+      "from": 660.66,
+      "to": 657.75,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 659.67,
+    "currentVsAvgPct": -0.4
+  },
+  "FRA-NRT-KIX-openjaw": {
+    "allTimeMin": 590.09,
+    "min90d": 590.09,
+    "max90d": 674.06,
+    "avg90d": 647.7,
+    "trend30d": 12.7,
+    "biggestDrop": null,
+    "lastPrice": 674.06,
+    "currentVsAvgPct": 4.1
+  },
+  "FRA-NRT-roundtrip": {
+    "allTimeMin": 655.44,
+    "min90d": 655.44,
+    "max90d": 670.49,
+    "avg90d": 661.5,
+    "trend30d": 0.6,
+    "biggestDrop": null,
+    "lastPrice": 665.62,
+    "currentVsAvgPct": 0.6
+  },
+  "FRA-TYO-roundtrip": {
+    "allTimeMin": 534.0,
+    "min90d": 534.0,
+    "max90d": 574.0,
+    "avg90d": 556.6,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 574.0,
+    "currentVsAvgPct": 3.1
+  },
+  "MIL-OSA-roundtrip": {
+    "allTimeMin": 474.0,
+    "min90d": 474.0,
+    "max90d": 477.0,
+    "avg90d": 475.5,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 474.0,
+    "currentVsAvgPct": -0.3
+  },
+  "MIL-TYO-roundtrip": {
+    "allTimeMin": 435.0,
+    "min90d": 435.0,
+    "max90d": 636.0,
+    "avg90d": 498.1,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 636.0,
+    "currentVsAvgPct": 27.7
+  },
+  "MUC-HND-KIX-openjaw": {
+    "allTimeMin": 645.96,
+    "min90d": 645.96,
+    "max90d": 669.18,
+    "avg90d": 657.3,
+    "trend30d": 0.8,
+    "biggestDrop": null,
+    "lastPrice": 662.86,
+    "currentVsAvgPct": 0.8
+  },
+  "MUC-HND-roundtrip": {
+    "allTimeMin": 652.38,
+    "min90d": 652.38,
+    "max90d": 1204.0,
+    "avg90d": 834.9,
+    "trend30d": 0.1,
+    "biggestDrop": null,
+    "lastPrice": 1025.0,
+    "currentVsAvgPct": 22.8
+  },
+  "MUC-ITM-HND-openjaw": {
+    "allTimeMin": 640.61,
+    "min90d": 640.61,
+    "max90d": 661.65,
+    "avg90d": 652.6,
+    "trend30d": -1.4,
+    "biggestDrop": {
+      "from": 649.43,
+      "to": 640.61,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 658.87,
+    "currentVsAvgPct": 1.0
+  },
+  "MUC-ITM-roundtrip": {
+    "allTimeMin": 649.55,
+    "min90d": 649.55,
+    "max90d": 683.96,
+    "avg90d": 664.6,
+    "trend30d": 0.7,
+    "biggestDrop": null,
+    "lastPrice": 668.58,
+    "currentVsAvgPct": 0.6
+  },
+  "MUC-KIX-HND-openjaw": {
+    "allTimeMin": 651.37,
+    "min90d": 651.37,
+    "max90d": 699.54,
+    "avg90d": 671.2,
+    "trend30d": 2.4,
+    "biggestDrop": null,
+    "lastPrice": 699.54,
+    "currentVsAvgPct": 4.2
+  },
+  "MUC-KIX-roundtrip": {
+    "allTimeMin": 652.79,
+    "min90d": 652.79,
+    "max90d": 1254.0,
+    "avg90d": 856.2,
+    "trend30d": 4.4,
+    "biggestDrop": null,
+    "lastPrice": 1150.0,
+    "currentVsAvgPct": 34.3
+  },
+  "MUC-NGO-KIX-openjaw": {
+    "allTimeMin": 639.24,
+    "min90d": 639.24,
+    "max90d": 681.88,
+    "avg90d": 656.9,
+    "trend30d": 0.2,
+    "biggestDrop": null,
+    "lastPrice": 679.31,
+    "currentVsAvgPct": 3.4
+  },
+  "MUC-NGO-roundtrip": {
+    "allTimeMin": 652.14,
+    "min90d": 652.14,
+    "max90d": 697.85,
+    "avg90d": 669.8,
+    "trend30d": 1.4,
+    "biggestDrop": null,
+    "lastPrice": 697.85,
+    "currentVsAvgPct": 4.2
+  },
+  "MUC-NRT-KIX-openjaw": {
+    "allTimeMin": 643.5,
+    "min90d": 643.5,
+    "max90d": 693.57,
+    "avg90d": 662.3,
+    "trend30d": 0.7,
+    "biggestDrop": null,
+    "lastPrice": 693.57,
+    "currentVsAvgPct": 4.7
+  },
+  "MUC-NRT-roundtrip": {
+    "allTimeMin": 661.53,
+    "min90d": 661.53,
+    "max90d": 1302.0,
+    "avg90d": 852.3,
+    "trend30d": -0.7,
+    "biggestDrop": {
+      "from": 666.02,
+      "to": 661.53,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 1023.0,
+    "currentVsAvgPct": 20.0
+  },
+  "MUC-OSA-roundtrip": {
+    "allTimeMin": 519.0,
+    "min90d": 519.0,
+    "max90d": 637.0,
+    "avg90d": 548.5,
+    "trend30d": 0.0,
+    "biggestDrop": null,
+    "lastPrice": 519.0,
+    "currentVsAvgPct": -5.4
+  },
+  "MUC-TYO-roundtrip": {
+    "allTimeMin": 515.0,
+    "min90d": 515.0,
+    "max90d": 607.0,
+    "avg90d": 560.9,
+    "trend30d": 0.0,
+    "biggestDrop": null,
+    "lastPrice": 589.0,
+    "currentVsAvgPct": 5.0
+  },
+  "MXP-HND-KIX-openjaw": {
+    "allTimeMin": 503.78,
+    "min90d": 503.78,
+    "max90d": 677.23,
+    "avg90d": 615.4,
+    "trend30d": 22.5,
+    "biggestDrop": null,
+    "lastPrice": 663.17,
+    "currentVsAvgPct": 7.8
+  },
+  "MXP-HND-roundtrip": {
+    "allTimeMin": 677.75,
+    "min90d": 677.75,
+    "max90d": 699.5,
+    "avg90d": 685.8,
+    "trend30d": -0.5,
+    "biggestDrop": {
+      "from": 680.95,
+      "to": 677.75,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 699.5,
+    "currentVsAvgPct": 2.0
+  },
+  "MXP-ITM-HND-openjaw": {
+    "allTimeMin": 658.54,
+    "min90d": 658.54,
+    "max90d": 675.77,
+    "avg90d": 667.4,
+    "trend30d": -1.2,
+    "biggestDrop": {
+      "from": 666.6,
+      "to": 658.54,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 668.87,
+    "currentVsAvgPct": 0.2
+  },
+  "MXP-ITM-roundtrip": {
+    "allTimeMin": 669.81,
+    "min90d": 669.81,
+    "max90d": 682.6,
+    "avg90d": 677.8,
+    "trend30d": 0.4,
+    "biggestDrop": null,
+    "lastPrice": 682.22,
+    "currentVsAvgPct": 0.7
+  },
+  "MXP-KIX-HND-openjaw": {
+    "allTimeMin": 501.27,
+    "min90d": 501.27,
+    "max90d": 690.07,
+    "avg90d": 626.7,
+    "trend30d": 30.4,
+    "biggestDrop": null,
+    "lastPrice": 690.07,
+    "currentVsAvgPct": 10.1
+  },
+  "MXP-KIX-roundtrip": {
+    "allTimeMin": 674.68,
+    "min90d": 674.68,
+    "max90d": 691.67,
+    "avg90d": 682.8,
+    "trend30d": -0.2,
+    "biggestDrop": {
+      "from": 675.8,
+      "to": 674.68,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 690.36,
+    "currentVsAvgPct": 1.1
+  },
+  "MXP-NGO-KIX-openjaw": {
+    "allTimeMin": 503.78,
+    "min90d": 503.78,
+    "max90d": 701.46,
+    "avg90d": 648.6,
+    "trend30d": 22.5,
+    "biggestDrop": null,
+    "lastPrice": 664.02,
+    "currentVsAvgPct": 2.4
+  },
+  "MXP-NGO-roundtrip": {
+    "allTimeMin": 675.64,
+    "min90d": 675.64,
+    "max90d": 688.51,
+    "avg90d": 684.5,
+    "trend30d": 1.4,
+    "biggestDrop": null,
+    "lastPrice": 687.3,
+    "currentVsAvgPct": 0.4
+  },
+  "MXP-NRT-KIX-openjaw": {
+    "allTimeMin": 503.78,
+    "min90d": 503.78,
+    "max90d": 689.19,
+    "avg90d": 618.9,
+    "trend30d": 22.5,
+    "biggestDrop": null,
+    "lastPrice": 665.32,
+    "currentVsAvgPct": 7.5
+  },
+  "MXP-NRT-roundtrip": {
+    "allTimeMin": 680.67,
+    "min90d": 680.67,
+    "max90d": 701.45,
+    "avg90d": 692.0,
+    "trend30d": 1.2,
+    "biggestDrop": null,
+    "lastPrice": 701.24,
+    "currentVsAvgPct": 1.3
+  },
+  "NUE-HND-KIX-openjaw": {
+    "allTimeMin": 647.15,
+    "min90d": 647.15,
+    "max90d": 678.23,
+    "avg90d": 666.8,
+    "trend30d": -3.3,
+    "biggestDrop": {
+      "from": 669.02,
+      "to": 647.15,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 672.63,
+    "currentVsAvgPct": 0.9
+  },
+  "NUE-HND-roundtrip": {
+    "allTimeMin": 648.92,
+    "min90d": 648.92,
+    "max90d": 677.68,
+    "avg90d": 659.2,
+    "trend30d": -0.9,
+    "biggestDrop": {
+      "from": 654.87,
+      "to": 648.92,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 654.34,
+    "currentVsAvgPct": -0.7
+  },
+  "NUE-ITM-HND-openjaw": {
+    "allTimeMin": 641.95,
+    "min90d": 641.95,
+    "max90d": 689.49,
+    "avg90d": 658.3,
+    "trend30d": 2.1,
+    "biggestDrop": null,
+    "lastPrice": 689.49,
+    "currentVsAvgPct": 4.7
+  },
+  "NUE-ITM-roundtrip": {
+    "allTimeMin": 641.98,
+    "min90d": 641.98,
+    "max90d": 697.45,
+    "avg90d": 667.4,
+    "trend30d": 3.3,
+    "biggestDrop": null,
+    "lastPrice": 697.45,
+    "currentVsAvgPct": 4.5
+  },
+  "NUE-KIX-HND-openjaw": {
+    "allTimeMin": 650.64,
+    "min90d": 650.64,
+    "max90d": 687.06,
+    "avg90d": 668.7,
+    "trend30d": 1.1,
+    "biggestDrop": null,
+    "lastPrice": 679.4,
+    "currentVsAvgPct": 1.6
+  },
+  "NUE-KIX-roundtrip": {
+    "allTimeMin": 642.77,
+    "min90d": 642.77,
+    "max90d": 670.47,
+    "avg90d": 656.9,
+    "trend30d": 0.6,
+    "biggestDrop": null,
+    "lastPrice": 649.4,
+    "currentVsAvgPct": -1.1
+  },
+  "NUE-NGO-KIX-openjaw": {
+    "allTimeMin": 643.2,
+    "min90d": 643.2,
+    "max90d": 679.66,
+    "avg90d": 661.2,
+    "trend30d": -0.6,
+    "biggestDrop": {
+      "from": 647.4,
+      "to": 643.2,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 679.66,
+    "currentVsAvgPct": 2.8
+  },
+  "NUE-NGO-roundtrip": {
+    "allTimeMin": 643.61,
+    "min90d": 643.61,
+    "max90d": 682.01,
+    "avg90d": 666.2,
+    "trend30d": -2.0,
+    "biggestDrop": {
+      "from": 656.59,
+      "to": 643.61,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 682.01,
+    "currentVsAvgPct": 2.4
+  },
+  "NUE-NRT-KIX-openjaw": {
+    "allTimeMin": 640.93,
+    "min90d": 640.93,
+    "max90d": 669.52,
+    "avg90d": 653.4,
+    "trend30d": -3.2,
+    "biggestDrop": {
+      "from": 661.98,
+      "to": 640.93,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 641.05,
+    "currentVsAvgPct": -1.9
+  },
+  "NUE-NRT-roundtrip": {
+    "allTimeMin": 650.32,
+    "min90d": 650.32,
+    "max90d": 678.34,
+    "avg90d": 662.8,
+    "trend30d": 4.1,
+    "biggestDrop": null,
+    "lastPrice": 678.34,
+    "currentVsAvgPct": 2.3
+  },
+  "NUE-OSA-roundtrip": {
+    "allTimeMin": 428.0,
+    "min90d": 428.0,
+    "max90d": 428.0,
+    "avg90d": 428.0,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 428.0,
+    "currentVsAvgPct": 0.0
+  },
+  "PRG-HND-KIX-openjaw": {
+    "allTimeMin": 658.27,
+    "min90d": 658.27,
+    "max90d": 674.67,
+    "avg90d": 665.3,
+    "trend30d": 0.6,
+    "biggestDrop": null,
+    "lastPrice": 674.67,
+    "currentVsAvgPct": 1.4
+  },
+  "PRG-HND-roundtrip": {
+    "allTimeMin": 638.76,
+    "min90d": 638.76,
+    "max90d": 677.19,
+    "avg90d": 657.0,
+    "trend30d": 1.0,
+    "biggestDrop": null,
+    "lastPrice": 675.98,
+    "currentVsAvgPct": 2.9
+  },
+  "PRG-ITM-HND-openjaw": {
+    "allTimeMin": 641.0,
+    "min90d": 641.0,
+    "max90d": 662.72,
+    "avg90d": 652.3,
+    "trend30d": -0.9,
+    "biggestDrop": {
+      "from": 646.55,
+      "to": 641.0,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 658.86,
+    "currentVsAvgPct": 1.0
+  },
+  "PRG-ITM-roundtrip": {
+    "allTimeMin": 626.71,
+    "min90d": 626.71,
+    "max90d": 659.66,
+    "avg90d": 639.9,
+    "trend30d": -0.2,
+    "biggestDrop": {
+      "from": 628.03,
+      "to": 626.71,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 636.49,
+    "currentVsAvgPct": -0.5
+  },
+  "PRG-KIX-HND-openjaw": {
+    "allTimeMin": 632.85,
+    "min90d": 632.85,
+    "max90d": 677.77,
+    "avg90d": 650.9,
+    "trend30d": -2.7,
+    "biggestDrop": {
+      "from": 650.54,
+      "to": 632.85,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 642.57,
+    "currentVsAvgPct": -1.3
+  },
+  "PRG-KIX-roundtrip": {
+    "allTimeMin": 627.26,
+    "min90d": 627.26,
+    "max90d": 669.12,
+    "avg90d": 650.2,
+    "trend30d": -1.4,
+    "biggestDrop": {
+      "from": 636.25,
+      "to": 627.26,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 659.35,
+    "currentVsAvgPct": 1.4
+  },
+  "PRG-NGO-KIX-openjaw": {
+    "allTimeMin": 636.86,
+    "min90d": 636.86,
+    "max90d": 678.95,
+    "avg90d": 663.2,
+    "trend30d": -3.2,
+    "biggestDrop": {
+      "from": 657.96,
+      "to": 636.86,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 654.83,
+    "currentVsAvgPct": -1.3
+  },
+  "PRG-NGO-roundtrip": {
+    "allTimeMin": 629.55,
+    "min90d": 629.55,
+    "max90d": 646.3,
+    "avg90d": 638.1,
+    "trend30d": 1.9,
+    "biggestDrop": null,
+    "lastPrice": 646.3,
+    "currentVsAvgPct": 1.3
+  },
+  "PRG-NRT-KIX-openjaw": {
+    "allTimeMin": 633.56,
+    "min90d": 633.56,
+    "max90d": 666.64,
+    "avg90d": 654.7,
+    "trend30d": -4.2,
+    "biggestDrop": {
+      "from": 661.5,
+      "to": 633.56,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 656.97,
+    "currentVsAvgPct": 0.3
+  },
+  "PRG-NRT-roundtrip": {
+    "allTimeMin": 639.05,
+    "min90d": 639.05,
+    "max90d": 660.42,
+    "avg90d": 650.3,
+    "trend30d": -0.4,
+    "biggestDrop": {
+      "from": 641.92,
+      "to": 639.05,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 659.53,
+    "currentVsAvgPct": 1.4
+  },
+  "PRG-TYO-roundtrip": {
+    "allTimeMin": 473.0,
+    "min90d": 473.0,
+    "max90d": 557.0,
+    "avg90d": 507.0,
+    "trend30d": 0.0,
+    "biggestDrop": null,
+    "lastPrice": 557.0,
+    "currentVsAvgPct": 9.9
+  },
+  "ROM-OSA-roundtrip": {
+    "allTimeMin": 501.0,
+    "min90d": 501.0,
+    "max90d": 626.0,
+    "avg90d": 563.5,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 501.0,
+    "currentVsAvgPct": -11.1
+  },
+  "VIE-HND-KIX-openjaw": {
+    "allTimeMin": 639.46,
+    "min90d": 639.46,
+    "max90d": 677.18,
+    "avg90d": 650.5,
+    "trend30d": 0.2,
+    "biggestDrop": null,
+    "lastPrice": 677.18,
+    "currentVsAvgPct": 4.1
+  },
+  "VIE-HND-roundtrip": {
+    "allTimeMin": 638.01,
+    "min90d": 638.01,
+    "max90d": 1224.0,
+    "avg90d": 817.1,
+    "trend30d": -0.4,
+    "biggestDrop": {
+      "from": 640.56,
+      "to": 638.01,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 1098.0,
+    "currentVsAvgPct": 34.4
+  },
+  "VIE-ITM-HND-openjaw": {
+    "allTimeMin": 635.06,
+    "min90d": 635.06,
+    "max90d": 653.87,
+    "avg90d": 642.5,
+    "trend30d": -1.4,
+    "biggestDrop": {
+      "from": 644.25,
+      "to": 635.06,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 636.78,
+    "currentVsAvgPct": -0.9
+  },
+  "VIE-ITM-roundtrip": {
+    "allTimeMin": 630.25,
+    "min90d": 630.25,
+    "max90d": 662.74,
+    "avg90d": 647.3,
+    "trend30d": -0.7,
+    "biggestDrop": {
+      "from": 635.0,
+      "to": 630.25,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 646.1,
+    "currentVsAvgPct": -0.2
+  },
+  "VIE-KIX-HND-openjaw": {
+    "allTimeMin": 637.63,
+    "min90d": 637.63,
+    "max90d": 673.42,
+    "avg90d": 648.8,
+    "trend30d": 0.2,
+    "biggestDrop": null,
+    "lastPrice": 673.42,
+    "currentVsAvgPct": 3.8
+  },
+  "VIE-KIX-roundtrip": {
+    "allTimeMin": 628.83,
+    "min90d": 628.83,
+    "max90d": 1224.0,
+    "avg90d": 821.2,
+    "trend30d": -1.3,
+    "biggestDrop": {
+      "from": 636.8,
+      "to": 628.83,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 1224.0,
+    "currentVsAvgPct": 49.1
+  },
+  "VIE-NGO-KIX-openjaw": {
+    "allTimeMin": 631.39,
+    "min90d": 631.39,
+    "max90d": 666.91,
+    "avg90d": 652.8,
+    "trend30d": 4.0,
+    "biggestDrop": null,
+    "lastPrice": 666.91,
+    "currentVsAvgPct": 2.2
+  },
+  "VIE-NGO-roundtrip": {
+    "allTimeMin": 632.05,
+    "min90d": 632.05,
+    "max90d": 671.28,
+    "avg90d": 648.5,
+    "trend30d": -0.3,
+    "biggestDrop": {
+      "from": 633.84,
+      "to": 632.05,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 656.33,
+    "currentVsAvgPct": 1.2
+  },
+  "VIE-NRT-KIX-openjaw": {
+    "allTimeMin": 655.07,
+    "min90d": 655.07,
+    "max90d": 685.42,
+    "avg90d": 671.5,
+    "trend30d": 3.5,
+    "biggestDrop": null,
+    "lastPrice": 685.42,
+    "currentVsAvgPct": 2.1
+  },
+  "VIE-NRT-roundtrip": {
+    "allTimeMin": 646.08,
+    "min90d": 646.08,
+    "max90d": 1218.0,
+    "avg90d": 849.8,
+    "trend30d": 0.3,
+    "biggestDrop": null,
+    "lastPrice": 1129.0,
+    "currentVsAvgPct": 32.9
+  },
+  "VIE-TYO-roundtrip": {
+    "allTimeMin": 418.0,
+    "min90d": 418.0,
+    "max90d": 566.0,
+    "avg90d": 504.7,
+    "trend30d": -3.9,
+    "biggestDrop": {
+      "from": 435.0,
+      "to": 418.0,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 566.0,
+    "currentVsAvgPct": 12.1
   }
 }
