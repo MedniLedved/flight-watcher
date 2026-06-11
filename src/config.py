@@ -74,6 +74,8 @@ CZECH_WEEKDAYS = ["po", "út", "st", "čt", "pá", "so", "ne"]
 
 RATE_LIMIT_COMBINATIONS = {
     "googleflights": 12,   # scraping Google Flights → šetrně (×2 termíny/běh)
+    "letsfg":        30,   # LetsFG free tier – rozumná hranice kombinací/běh
+    "flightlabs":    8,    # trial 50 req celkem → ~8/scan = ~6 scanů
     "duffel":        50,   # Duffel – štědrý test režim, šetříme kvótu
     "amadeus":       20,   # 2 000 req/měsíc → ~66/den, bereme méně pro jistotu
     "skyscrapper":   3,    # RapidAPI free tier 100 req/MĚSÍC → ~3/den!
@@ -193,6 +195,7 @@ class Settings:
 
     # Sekrety / credentials
     duffel_token: str | None = None
+    flightlabs_key: str | None = None
     rapidapi_key: str | None = None
     amadeus_client_id: str | None = None
     amadeus_client_secret: str | None = None
@@ -252,6 +255,7 @@ class Settings:
 
         return cls(
             duffel_token=os.getenv("DUFFEL_TOKEN"),
+            flightlabs_key=os.getenv("FLIGHTLABS_KEY"),
             rapidapi_key=os.getenv("RAPIDAPI_KEY"),
             amadeus_client_id=os.getenv("AMADEUS_CLIENT_ID"),
             amadeus_client_secret=os.getenv("AMADEUS_CLIENT_SECRET"),

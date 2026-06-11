@@ -302,6 +302,31 @@ class PriceHistory:
         reqs = meta.setdefault(meta_field, {})
         reqs[month] = reqs.get(month, 0) + count
 
+    # -- efektivita zdrojů (deals/request) --------------------------------
+    def source_efficiency(self) -> dict[str, Any]:
+        """Per-source akumulované statistiky efektivity z _meta."""
+        return self.data.get(META_KEY, {}).get("source_efficiency", {})
+
+    def update_source_efficiency(self, run_stats: dict[str, dict]) -> None:
+        """Přičte výsledky jednoho běhu k akumulovaným metrikám v _meta.
+
+        run_stats: {source_name: {"results": int, "deals": int, "requests": int}}
+        Kumuluje: runs, total_results, total_deals, total_requests.
+        """
+        meta = self.data.setdefault(META_KEY, {})
+        eff = meta.setdefault("source_efficiency", {})
+        today = date.today().isoformat()
+        for name, s in run_stats.items():
+            e = eff.setdefault(name, {
+                "runs": 0, "total_results": 0,
+                "total_deals": 0, "total_requests": 0,
+            })
+            e["runs"] = e.get("runs", 0) + 1
+            e["total_results"] = e.get("total_results", 0) + s.get("results", 0)
+            e["total_deals"] = e.get("total_deals", 0) + s.get("deals", 0)
+            e["total_requests"] = e.get("total_requests", 0) + s.get("requests", 0)
+            e["last_run"] = today
+
     # -- statistika dne v týdnu ------------------------------------------
     def weekday_stats(
         self, threshold: float
