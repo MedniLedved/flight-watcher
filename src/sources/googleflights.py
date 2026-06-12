@@ -23,13 +23,13 @@ from __future__ import annotations
 import logging
 import os
 import re
-import time
 from datetime import date
 from typing import Callable, Optional
 
 from . import FlightResult
 from .fx import FxRates
 from .google_flights import google_flights_url
+from .http_utils import random_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class GoogleFlightsSource:
             flights = self._fetch(legs, trip, adults)
         finally:
             self.request_count += 1
-            time.sleep(_REQUEST_DELAY)
+            random_sleep(_REQUEST_DELAY)
 
         r_o = (return_origin or destination) if return_date else ""
         r_d = (return_destination or origin) if return_date else ""

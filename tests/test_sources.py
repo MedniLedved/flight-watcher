@@ -980,7 +980,8 @@ def test_skyscrapper_reads_quota_headers_and_flags_429(monkeypatch, tmp_path):
     from src.sources import skyscrapper as sk_mod
     from src.sources.skyscrapper import SkyScrapperSource
 
-    monkeypatch.setattr(sk_mod.time, "sleep", lambda *a, **k: None)
+    import src.sources.http_utils as http_utils_mod
+    monkeypatch.setattr(http_utils_mod, "random_sleep", lambda *a, **k: None)
 
     class _Resp:
         def __init__(self, status, headers):
@@ -1116,7 +1117,7 @@ def _gf_source(flights, captured=None, fx=None, fetch_mode="common"):
 
 def test_googleflights_roundtrip_maps_results(monkeypatch):
     from src.sources import googleflights as gf_mod
-    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
     captured: dict = {}
     src = _gf_source([_GfFlight("€533"), _GfFlight("€489", name="ANA")],
                      captured=captured)
@@ -1141,7 +1142,7 @@ def test_googleflights_roundtrip_maps_results(monkeypatch):
 
 def test_googleflights_openjaw_uses_multicity(monkeypatch):
     from src.sources import googleflights as gf_mod
-    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
     captured: dict = {}
     # Open-jaw vyžaduje JS render → mód local (v common se přeskakuje).
     src = _gf_source([_GfFlight("€612")], captured=captured,
@@ -1159,7 +1160,7 @@ def test_googleflights_converts_foreign_currency_and_skips_unknown(monkeypatch):
     """Kdyby Google ignoroval curr=EUR: USD se převede kurzem ECB, cena
     s nerozpoznanou měnou se zahodí (nikdy nehádat)."""
     from src.sources import googleflights as gf_mod
-    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
     src = _gf_source([_GfFlight("$540"), _GfFlight("1 234"),
                       _GfFlight("€510")],
                      fx=_FakeFx(rates={"USD": 1.08}))
@@ -1199,7 +1200,7 @@ def test_googleflights_openjaw_skipped_in_common_mode(monkeypatch):
     je mrtvý (401) → v common módu se open-jaw přeskakuje BEZ dotazu na
     Google; s local/fallback módem se vyhledává jako multi-city."""
     from src.sources import googleflights as gf_mod
-    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
     calls: list = []
 
     def fetcher(legs, trip, adults):
@@ -1228,7 +1229,7 @@ def test_googleflights_truncates_parse_error(monkeypatch):
     import pytest
     fast_flights = pytest.importorskip("fast_flights")
     from src.sources import googleflights as gf_mod
-    monkeypatch.setattr(gf_mod.time, "sleep", lambda *a, **k: None)
+    import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
 
     def fake_gfff(*a, **k):
         raise RuntimeError("No flights found:\n" + "x" * 50000)

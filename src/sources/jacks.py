@@ -21,15 +21,12 @@ from urllib.parse import urlparse
 import requests
 
 from . import DealResult
+from .http_utils import make_scraper_session
 from .secret_flying import JAPAN_KEYWORDS
 
 logger = logging.getLogger(__name__)
 
 DEALS_URL = "https://jacksflightclub.com/eu/flights"
-USER_AGENT = (
-    "Mozilla/5.0 (compatible; JapanFlightTracker/1.0; "
-    "+https://github.com/medniledved/flight-watcher)"
-)
 
 
 def _robots_allows(url: str, user_agent: str) -> bool:
@@ -57,17 +54,18 @@ class JacksFlightClubSource:
     def __init__(self, deals_url: str = DEALS_URL,
                  session: Optional[requests.Session] = None):
         self.deals_url = deals_url
-        self.session = session or requests.Session()
+        self.session = session or make_scraper_session()
+        # UA used for both robots.txt check and the actual request.
+        self._ua: str = self.session.headers.get("User-Agent", "")
 
     def fetch(self) -> list[DealResult]:
-        if not _robots_allows(self.deals_url, USER_AGENT):
+        if not _robots_allows(self.deals_url, self._ua):
             logger.warning("robots.txt zakazuje scraping %s – přeskakuji",
                            self.deals_url)
             return []
 
-        headers = {"User-Agent": USER_AGENT, "Accept": "text/html"}
         try:
-            resp = self.session.get(self.deals_url, headers=headers, timeout=30)
+            resp = self.session.get(self.deals_url, timeout=30)
             resp.raise_for_status()
         except requests.RequestException as exc:
             logger.error("Jack's Flight Club scraping selhal: %s", exc)

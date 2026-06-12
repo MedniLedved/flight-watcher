@@ -18,7 +18,6 @@ neopakuje do 6 hodin) a počítáme spotřebu.
 from __future__ import annotations
 
 import logging
-import time
 from datetime import date, datetime
 from typing import Optional
 
@@ -26,6 +25,7 @@ import requests
 
 from . import FlightResult
 from .google_flights import google_flights_url
+from .http_utils import make_api_session, random_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class AmadeusSource:
         self.client_id = client_id
         self.client_secret = client_secret
         self.host = PROD_HOST if env == "production" else TEST_HOST
-        self.session = session or requests.Session()
+        self.session = session or make_api_session()
         self._token: Optional[str] = None
         self._token_expiry: float = 0.0
         # Jednoduchá in-memory cache: klíč -> (timestamp, results)
@@ -124,7 +124,7 @@ class AmadeusSource:
                     adults, max_results, route_name,
                 )
         finally:
-            time.sleep(_REQUEST_DELAY)
+            random_sleep(_REQUEST_DELAY)
 
         self._cache[cache_key] = (time.time(), results)
         return results

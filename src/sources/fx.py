@@ -16,6 +16,8 @@ from typing import Optional
 
 import requests
 
+from .http_utils import make_api_session
+
 logger = logging.getLogger(__name__)
 
 # Bez parametrů vrací kurzy s bází EUR (ECB) – imunní vůči přejmenování
@@ -28,7 +30,7 @@ class FxRates:
     """Líné, per-běh cachované kurzy EUR→měna z ECB."""
 
     def __init__(self, session: Optional[requests.Session] = None):
-        self.session = session or requests.Session()
+        self.session = session or make_api_session()
         self._rates: Optional[dict[str, float]] = None
         self._fetch_failed = False
 

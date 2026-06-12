@@ -13,7 +13,6 @@ Autentizace: parametr `api_key` (env SERPAPI_KEY).
 from __future__ import annotations
 
 import logging
-import time
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -21,6 +20,7 @@ import requests
 
 from . import FlightResult, Segment
 from .google_flights import google_flights_url
+from .http_utils import make_api_session, random_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class SerpApiSource:
 
     def __init__(self, api_key: str, session: Optional[requests.Session] = None):
         self.api_key = api_key
-        self.session = session or requests.Session()
+        self.session = session or make_api_session()
         self.request_count = 0
         self.quota_remaining: Optional[int] = None
         self.quota_limit: Optional[int] = None
@@ -80,7 +80,7 @@ class SerpApiSource:
             self.quota_remaining is not None and self.quota_remaining <= 0
         ):
             self.quota_exhausted = True
-        time.sleep(_REQUEST_DELAY)
+        random_sleep(_REQUEST_DELAY)
         resp.raise_for_status()
         return resp
 

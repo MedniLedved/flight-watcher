@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -27,6 +26,7 @@ import requests
 
 from . import FlightResult, Segment
 from .google_flights import google_flights_url
+from .http_utils import make_api_session, random_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class SkyScrapperSource:
     def __init__(self, rapidapi_key: str, session: Optional[requests.Session] = None,
                  cache_path: Path | str = _AIRPORT_CACHE_PATH):
         self.rapidapi_key = rapidapi_key
-        self.session = session or requests.Session()
+        self.session = session or make_api_session()
         self.cache_path = Path(cache_path)
         self.request_count = 0
         self._airports = self._load_airport_cache()
@@ -107,7 +107,7 @@ class SkyScrapperSource:
         self._note_quota(resp)
         if resp.status_code == 429 or self.quota_remaining == 0:
             self.quota_exhausted = True
-        time.sleep(_REQUEST_DELAY)
+        random_sleep(_REQUEST_DELAY)
         resp.raise_for_status()
         return resp
 

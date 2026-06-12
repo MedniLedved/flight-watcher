@@ -25,6 +25,7 @@ import requests
 from . import FlightResult
 from .fx import FxRates
 from .google_flights import google_flights_url
+from .http_utils import make_api_session, random_sleep
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class DuffelSource:
     def __init__(self, token: str, session: Optional[requests.Session] = None,
                  fx: Optional[FxRates] = None):
         self.token = token
-        self.session = session or requests.Session()
+        self.session = session or make_api_session()
         # Duffel (na rozdíl od ostatních zdrojů) neumí vynutit měnu odpovědi –
         # ne-EUR nabídky se převádějí denním kurzem ECB (viz fx.py).
         self.fx = fx or FxRates()
@@ -194,7 +195,7 @@ class DuffelSource:
                 logger.error("Duffel chyba %s→%s: %s", origin, destination, exc)
                 raise
             finally:
-                time.sleep(_REQUEST_DELAY)
+                random_sleep(_REQUEST_DELAY)
         # Sem se nedostaneme (poslední pokus buď vrátí, nebo raise), ale pro
         # jistotu:
         raise last_exc if last_exc else RuntimeError("Duffel: neznámá chyba")

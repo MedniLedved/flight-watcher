@@ -21,6 +21,7 @@ from typing import Optional
 import requests
 
 from . import FlightResult
+from .http_utils import make_api_session
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class FlightLabsSource:
 
     def __init__(self, access_key: str, session: Optional[requests.Session] = None):
         self.access_key = access_key
-        self.session = session or requests.Session()
+        self.session = session or make_api_session()
         self.request_count = 0
 
     def search(

@@ -11,7 +11,10 @@ import re
 from datetime import date, datetime, timezone
 from typing import Optional
 
+import requests
+
 from . import DealResult
+from .http_utils import make_scraper_session
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +46,11 @@ def _matches(text: str) -> bool:
 class CestujLevneSource:
     name = "cestujlevne"
 
-    def __init__(self, feed_url: str = FEED_URL, czk_eur_rate: float = 25.0):
+    def __init__(self, feed_url: str = FEED_URL, czk_eur_rate: float = 25.0,
+                 session: Optional[requests.Session] = None):
         self.feed_url = feed_url
         self.czk_eur_rate = czk_eur_rate
+        self.session = session or make_scraper_session()
 
     def _extract_price_eur(self, text: str) -> Optional[float]:
         eur_match = _EUR_RE.search(text)
@@ -64,7 +69,21 @@ class CestujLevneSource:
 
     def fetch(self, max_age_days: int = 2) -> list[DealResult]:
         import feedparser  # lazy import – volitelná závislost
-        feed = feedparser.parse(self.feed_url)
+
+        # Fetch manually so feedparser uses our browser UA instead of its own
+        # default (which servers often block with a 403 or redirect to a CAPTCHA).
+        try:
+            resp = self.session.get(
+                self.feed_url,
+                headers={"Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logger.error("Cestujlevně feed se nepodařilo stáhnout: %s", exc)
+            raise RuntimeError("Cestujlevně feed nedostupný") from exc
+
+        feed = feedparser.parse(resp.content)
         if getattr(feed, "bozo", 0) and not feed.entries:
             logger.error("Cestujlevně feed se nepodařilo načíst: %s",
                          getattr(feed, "bozo_exception", "neznámá chyba"))
