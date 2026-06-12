@@ -121,7 +121,7 @@ export function OffersTable({
             o.returnDestination,
           );
           return (
-            <TableRow key={o.routeKey + o.source}>
+            <TableRow key={`${o.routeKey}--${o.source}--${o.departDate ?? ""}--${o.price}`}>
               <TableCell className="font-medium">
                 {onSelectRoute ? (
                   <button
