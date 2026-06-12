@@ -100,7 +100,7 @@ function buildTransportLink(
 ): { href: string; label: string }[] {
   const origin = encodeURIComponent(homeLocation);
   const dest = encodeURIComponent(`${airport.name} airport`);
-  if (mode === "vlak/bus") {
+  if (mode === "vlak/bus" || (mode !== "auto" && mode !== "let" && mode.toLowerCase().includes("vlak"))) {
     return [{
       href: `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=transit`,
       label: "Trasa MHD / vlak",
@@ -235,7 +235,7 @@ function AirportRow({
     : [];
 
   const modeLabel: React.ReactNode = transportLinks[0]
-    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-muted-foreground hover:underline">Prostředek</a>
+    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline">Prostředek</a>
     : "Prostředek";
 
   return (
