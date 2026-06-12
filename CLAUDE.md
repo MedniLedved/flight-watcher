@@ -85,6 +85,9 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
 - Je fix nasazený na gh-pages? (deploy.sh)
 - Může stejná chyba existovat v jiné komponentě, která dělá totéž? (SwimlanesView vs OffersTable)
 - Pokud opravuji chování funkce — mění se tím i kontrakt pro volatelé? Aktualizuj je.
+- **Vytvořil jsem pro testování mock data?** Pokud ano, musím je po testu smazat (revert nebo
+  ruční odebrání) a změnu commitnout na `main`. Mock data nesmí zůstat v repu — jsou zdrojem
+  zmatení a „znečišťují" reálnou historii. Totéž platí pro dočasné testovací skripty.
 
 ### Historie zachycených typů chyb (každý má svou kontrolu — neopakovat)
 
