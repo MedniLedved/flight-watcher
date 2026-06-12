@@ -70,6 +70,18 @@ function DealRateBar({ pct }: { pct: number | null }) {
   );
 }
 
+// ---- Sort helper types -------------------------------------------------------
+type SortDir = "asc" | "desc";
+type AirportSortCol = "code" | "dealRate" | "median" | "effective" | "observations";
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  return (
+    <span className={`ml-0.5 inline-block text-[10px] leading-none ${active ? "text-gray-800" : "text-gray-300"}`}>
+      {active && dir === "asc" ? "▲" : "▼"}
+    </span>
+  );
+}
+
 // ---- Airport insights table -------------------------------------------------
 function AirportInsightsTable({
   title,
@@ -82,26 +94,72 @@ function AirportInsightsTable({
   transportByCode?: Record<string, number>;
   color: string;
 }) {
+  const hasTransport = !!transportByCode && Object.keys(transportByCode).length > 0;
+  const defaultCol: AirportSortCol = hasTransport ? "effective" : "dealRate";
+  const [sort, setSort] = useState<{ col: AirportSortCol; dir: SortDir }>({
+    col: defaultCol,
+    dir: "desc",
+  });
+
+  function toggleSort(col: AirportSortCol) {
+    setSort((prev) =>
+      prev.col === col
+        ? { col, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { col, dir: col === "code" ? "asc" : "desc" },
+    );
+  }
+
+  const enriched = airports.map((ap) => {
+    const transport = transportByCode?.[ap.code];
+    const effectivePrice =
+      ap.medianEur != null && transport != null ? ap.medianEur + 2 * transport : null;
+    return { ap, effectivePrice };
+  });
+
+  const sorted = [...enriched].sort((a, b) => {
+    const mul = sort.dir === "asc" ? 1 : -1;
+    switch (sort.col) {
+      case "code":
+        return mul * a.ap.code.localeCompare(b.ap.code);
+      case "dealRate":
+        return mul * ((a.ap.dealRatePct ?? -1) - (b.ap.dealRatePct ?? -1));
+      case "median":
+        return mul * ((a.ap.medianEur ?? Infinity) - (b.ap.medianEur ?? Infinity));
+      case "effective":
+        return mul * ((a.effectivePrice ?? a.ap.medianEur ?? Infinity) - (b.effectivePrice ?? b.ap.medianEur ?? Infinity));
+      case "observations":
+        return mul * (a.ap.observations - b.ap.observations);
+    }
+  });
+
+  function Th({ col, label, right }: { col: AirportSortCol; label: string; right?: boolean }) {
+    const active = sort.col === col;
+    return (
+      <th
+        className={`cursor-pointer select-none pb-1 pr-3 font-medium hover:text-gray-800 ${right ? "text-right" : ""} ${active ? "text-gray-700" : ""}`}
+        onClick={() => toggleSort(col)}
+      >
+        {label}
+        <SortIcon active={active} dir={sort.dir} />
+      </th>
+    );
+  }
+
   return (
     <div>
       <h3 className="mb-2 text-sm font-semibold text-gray-700">{title}</h3>
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b text-left text-gray-500">
-            <th className="pb-1 pr-3 font-medium">Letiště</th>
-            <th className="pb-1 pr-3 font-medium">Podíl dealů</th>
-            <th className="pb-1 pr-3 font-medium text-right">Medián</th>
-            {transportByCode && <th className="pb-1 pr-3 font-medium text-right">+ doprava</th>}
-            <th className="pb-1 font-medium text-right">Pozorování</th>
+            <Th col="code" label="Letiště" />
+            <Th col="dealRate" label="Podíl dealů" />
+            <Th col="median" label="Medián" right />
+            {hasTransport && <Th col="effective" label="vč. dopravy" right />}
+            <Th col="observations" label="Pozorování" right />
           </tr>
         </thead>
         <tbody>
-          {airports.map((ap, i) => {
-            const transport = transportByCode?.[ap.code];
-            const effectivePrice =
-              ap.medianEur != null && transport != null
-                ? ap.medianEur + 2 * transport
-                : null;
+          {sorted.map(({ ap, effectivePrice }, i) => {
             const isBest = i === 0;
             return (
               <tr key={ap.code} className={`border-b border-gray-100 ${isBest ? "font-semibold" : ""}`}>
@@ -115,7 +173,7 @@ function AirportInsightsTable({
                 <td className="py-1 pr-3 text-right tabular-nums">
                   {ap.medianEur != null ? `${ap.medianEur.toFixed(0)} €` : "—"}
                 </td>
-                {transportByCode && (
+                {hasTransport && (
                   <td className="py-1 pr-3 text-right tabular-nums text-gray-500">
                     {effectivePrice != null ? `${effectivePrice.toFixed(0)} €` : "—"}
                   </td>
@@ -131,7 +189,15 @@ function AirportInsightsTable({
 }
 
 // ---- Day-of-week table ------------------------------------------------------
-function DowTable({ title, rows }: { title: string; rows: DowInsight[] }) {
+function DowTable({
+  title,
+  rows,
+  minTransportCost,
+}: {
+  title: string;
+  rows: DowInsight[];
+  minTransportCost?: number;
+}) {
   const bestDealRate = Math.max(...rows.map((r) => r.dealRatePct ?? 0));
   return (
     <div>
@@ -141,10 +207,14 @@ function DowTable({ title, rows }: { title: string; rows: DowInsight[] }) {
           const isTopDay = (row.dealRatePct ?? 0) === bestDealRate && bestDealRate > 0;
           const rate = row.dealRatePct ?? 0;
           const barColor = rate >= 40 ? "#10b981" : rate >= 20 ? "#f59e0b" : "#9ca3af";
+          const effectivePrice =
+            row.medianEur != null && minTransportCost != null
+              ? row.medianEur + 2 * minTransportCost
+              : row.medianEur;
           return (
             <div
               key={row.dow}
-              className={`flex min-w-[72px] flex-col items-center rounded-lg border px-2 py-2 text-center ${isTopDay ? "border-green-400 bg-green-50" : "border-gray-200 bg-gray-50"}`}
+              className={`flex min-w-[76px] flex-col items-center rounded-lg border px-2 py-2 text-center ${isTopDay ? "border-green-400 bg-green-50" : "border-gray-200 bg-gray-50"}`}
             >
               <span className="text-sm font-bold text-gray-800">
                 {row.dow}
@@ -154,8 +224,15 @@ function DowTable({ title, rows }: { title: string; rows: DowInsight[] }) {
                 <div style={{ width: `${Math.min(rate, 100)}%`, background: barColor }} className="h-full rounded-full" />
               </div>
               <span className="text-xs tabular-nums text-gray-500">{rate.toFixed(0)}% dealů</span>
-              {row.medianEur != null && (
-                <span className="text-xs tabular-nums text-gray-600">{row.medianEur.toFixed(0)} €</span>
+              {effectivePrice != null && (
+                <span className="text-xs font-semibold tabular-nums text-gray-800">
+                  {effectivePrice.toFixed(0)} €
+                </span>
+              )}
+              {minTransportCost != null && row.medianEur != null && (
+                <span className="text-[10px] tabular-nums text-gray-400">
+                  let {row.medianEur.toFixed(0)} €
+                </span>
               )}
             </div>
           );
@@ -181,6 +258,8 @@ function InsightsPanel({
       }
     }
   }
+  const transportValues = Object.values(transportByCode);
+  const minTransportCost = transportValues.length > 0 ? Math.min(...transportValues) : undefined;
 
   return (
     <div className="mt-4 space-y-6 rounded-lg border bg-white p-4 shadow-sm">
@@ -206,17 +285,20 @@ function InsightsPanel({
         <DowTable
           title="Nejlevnější dny odletu"
           rows={insights.cheapestDepartureDow}
+          minTransportCost={minTransportCost}
         />
         <DowTable
           title="Nejlevnější dny návratu"
           rows={insights.cheapestArrivalDow}
+          minTransportCost={minTransportCost}
         />
       </div>
 
       {Object.keys(transportByCode).length > 0 && (
         <p className="text-xs text-gray-400">
-          Sloupec „+ doprava" = medián + 2 × cena veřejné dopravy tam i zpět
-          (z&nbsp;{agentConfig?.homeLocation}).
+          „vč. dopravy" = medián letenky + 2 × cena veřejné dopravy tam i zpět
+          (z&nbsp;{agentConfig?.homeLocation}). Dny: přepočteno na nejlevnější dostupné letiště
+          ({Math.min(...Object.values(transportByCode))} € / cesta).
         </p>
       )}
     </div>
