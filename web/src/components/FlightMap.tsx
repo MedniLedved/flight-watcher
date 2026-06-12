@@ -320,7 +320,7 @@ function InsightsPanel({
       if (t?.costEur != null) {
         const total =
           t.mode === "let"
-            ? (t.costEurRoundtrip ?? t.costEur * 2) + 2 * (t.airportTransferCostEur ?? 0)
+            ? (t.costEurRoundtrip ?? t.costEur * 2) + 2 * (t.airportTransferCostEur ?? 25)
             : 2 * t.costEur;
         transportByCode[ap.code] = total;
         if (ap.cityCode) transportByCode[ap.cityCode] = total;

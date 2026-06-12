@@ -225,7 +225,11 @@ function AirportRow({
   onSave: () => void;
   isBusy: boolean;
 }) {
-  const t = airport.transport ?? { costEur: 0, durationMin: 0, mode: "vlak/bus" };
+  const rawT = airport.transport ?? { costEur: 0, durationMin: 0, mode: "vlak/bus" };
+  // Pro mode="let" doplň výchozí hodnoty transferu, aby se vždy uložily do agent.json
+  const t = rawT.mode === "let"
+    ? { airportTransferCostEur: 25, airportTransferTimeH: 2.5, ...rawT }
+    : rawT;
   const setTransport = (patch: Partial<typeof t>) =>
     onChange({ transport: { ...t, ...patch } });
 
@@ -264,7 +268,15 @@ function AirportRow({
         <>
           <div className="self-stretch w-px bg-border mx-0.5 my-0.5" />
           <Field label={modeLabel} className="w-28">
-            <select value={mode} onChange={(e) => setTransport({ mode: e.target.value })}
+            <select value={mode} onChange={(e) => {
+              const newMode = e.target.value;
+              const patch: Partial<typeof t> = { mode: newMode };
+              if (newMode === "let") {
+                if (t.airportTransferCostEur == null) patch.airportTransferCostEur = 25;
+                if (t.airportTransferTimeH == null) patch.airportTransferTimeH = 2.5;
+              }
+              setTransport(patch);
+            }}
               className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
               <option value="vlak/bus">vlak / bus</option>
               <option value="auto">auto</option>
