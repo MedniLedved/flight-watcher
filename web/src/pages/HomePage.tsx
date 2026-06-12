@@ -43,7 +43,7 @@ function SummaryBar({
   const bestPrice = useMemo(() => {
     if (includeTransport && offers.length > 0) {
       return Math.min(
-        ...offers.map((o) => effectivePrice(o.price, o.origin, agentConfig, true, o.returnDestination, o.type === "openjaw")),
+        ...offers.map((o) => effectivePrice(o.price, o.origin, agentConfig, true, o.returnDestination)),
       );
     }
     const allMins = routes
