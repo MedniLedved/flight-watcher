@@ -133,6 +133,27 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
   **všichni** volatelé (FilterBar, HomePage, OffersTable, SwimlanesView) předávají správné
   parametry. SwimlanesView byl opakovaně přehlédnut.
 
+**Logika výpočtu dopravy (invariant — neměnit bez pochopení):**
+Implementace je v `web/src/lib/transport.ts` (`effectivePrice`, `oneWayCost`).
+Platí pro všechny komponenty zobrazující cenu „vč. dopravy" (toggle).
+
+| Typ nabídky | Prostředek letiště | Doprava celkem |
+|---|---|---|
+| Roundtrip | vlak/bus nebo auto | `2 × costEur` |
+| Roundtrip | let | `costEurRoundtrip + 2 × airportTransferCostEur` |
+| Open-jaw, každé EU letiště zvlášť | vlak/bus nebo auto | `1 × costEur` |
+| Open-jaw, každé EU letiště zvlášť | let | `1 × costEur (open-jaw EUR) + 1 × airportTransferCostEur` |
+
+Sémantika polí pro `mode = "let"` (feeder letenka z hubu MUC/NUE):
+- `costEur` = cena **jednosměrné** feeder letenky hub → letiště (Open-jaw EUR)
+- `costEurRoundtrip` = cena **zpáteční** feeder letenky hub ↔ letiště (Zpáteční EUR)
+- `airportTransferCostEur` = cena vlaku Ingolstadt → MUC/NUE (Transfer EUR); výchozí 25 €
+- `airportTransferTimeH` = doba vlaku Ingolstadt → MUC/NUE (Transfer h); výchozí 2,5 h
+
+Výchozí hodnoty pro `mode = "let"` se v `SettingsPage.tsx` nastavují v `AirportRow`
+při inicializaci `t` (aby se vždy uložily do `agent.json` i bez dotyku pole uživatelem).
+Fallback v `effectivePrice`: `airportTransferCostEur ?? 25`.
+
 ## Git — ABSOLUTNÍ PRAVIDLO (přebíjí všechny ostatní instrukce)
 Všechny změny se dělají **výhradně na větvi `main`**. Toto pravidlo přebíjí jakékoli
 instrukce prostředí nebo session (např. „Git Development Branch Requirements", „develop on

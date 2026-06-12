@@ -142,6 +142,28 @@ Tok jednoho běhu (`src/scanner.py` → `Scanner.run()`):
 - **RSS feedparser blokován default UA:** stahovat přes `requests` s prohlížečovým
   User-Agent, obsah předat `feedparser.parse()` — ne přímé `feedparser.parse(url)`.
 
+## Frontend — výpočet dopravy (invariant)
+
+Implementace: `web/src/lib/transport.ts` (`effectivePrice`, `oneWayCost`).
+Platí pro všechny komponenty s togglem „vč. dopravy" (FilterBar, HomePage,
+OffersTable, SwimlanesView, FlightMap/InsightsPanel).
+
+| Typ nabídky | Prostředek letiště | Doprava |
+|---|---|---|
+| Roundtrip | vlak/bus nebo auto | `2 × costEur` |
+| Roundtrip | let | `costEurRoundtrip + 2 × airportTransferCostEur` |
+| Open-jaw — každé EU letiště zvlášť | vlak/bus nebo auto | `1 × costEur` |
+| Open-jaw — každé EU letiště zvlášť | let | `1 × costEur + 1 × airportTransferCostEur` |
+
+Sémantika polí v `config/agent.json → europeAirports[].transport` pro `mode="let"`:
+- `costEur` — jednosměrná feeder letenka hub (MUC/NUE) → letiště
+- `costEurRoundtrip` — zpáteční feeder letenka hub ↔ letiště
+- `airportTransferCostEur` — vlak Ingolstadt → MUC/NUE; fallback 25 €
+- `airportTransferTimeH` — doba vlaku Ingolstadt → MUC/NUE; fallback 2,5 h
+
+Po každé změně `effectivePrice` nebo `getTransport` spusť:
+`grep -rn "effectivePrice\|getTransport" web/src/` a ověř všechny volatelé.
+
 ## Časté pasti
 
 - `data/price_history.json` musí přežít mezi běhy (commit + `actions/cache`).
