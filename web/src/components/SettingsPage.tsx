@@ -166,8 +166,6 @@ function AirportRow({
   onRemove,
   onSave,
   isBusy,
-  dragHandleProps,
-  isDragTarget,
 }: {
   airport: AgentAirport;
   withTransport: boolean;
@@ -176,8 +174,6 @@ function AirportRow({
   onRemove: () => void;
   onSave: () => void;
   isBusy: boolean;
-  dragHandleProps: React.HTMLAttributes<HTMLSpanElement>;
-  isDragTarget: boolean;
 }) {
   const t = airport.transport ?? { costEur: 0, durationMin: 0, mode: "vlak/bus" };
   const setTransport = (patch: Partial<typeof t>) =>
@@ -189,22 +185,13 @@ function AirportRow({
     : [];
 
   return (
-    <div
-      className={cn(
-        "rounded-md border bg-muted/30 p-3 transition-all",
-        isDragTarget && "ring-2 ring-primary/50 bg-primary/5",
-      )}
-    >
-      <div className="flex flex-wrap items-end gap-3">
-        {/* Drag handle */}
-        <span
-          {...dragHandleProps}
-          className="flex cursor-grab items-center self-center text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
-          title="Přetáhnout pro změnu pořadí"
-        >
+    <div className="rounded-md border bg-muted/30 p-3">
+      <div className="flex flex-wrap items-end gap-2">
+        {/* Drag handle — visual only, whole card is draggable */}
+        <span className="flex cursor-grab items-center self-center text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing">
           <GripVertical className="h-4 w-4" />
         </span>
-        <Field label="IATA" className="w-20">
+        <Field label="IATA" className="w-16">
           <Input
             value={airport.code}
             maxLength={3}
@@ -212,12 +199,9 @@ function AirportRow({
             onChange={(e) => onChange({ code: e.target.value.toUpperCase() })}
           />
         </Field>
-        <Field label="Název" className="min-w-40 flex-1">
+        <Field label="Název" className="w-48">
           <Input value={airport.name} onChange={(e) => onChange({ name: e.target.value })} />
         </Field>
-        <div className="flex items-end gap-1 self-end text-xs text-muted-foreground/60">
-          <span>📍 GPS doplní scanner</span>
-        </div>
         <Toggle
           checked={airport.enabled}
           onChange={(v) => onChange({ enabled: v })}
@@ -228,14 +212,14 @@ function AirportRow({
           size="icon"
           onClick={onRemove}
           title="Odebrat letiště"
-          className="text-destructive hover:bg-destructive/10"
+          className="self-end text-destructive hover:bg-destructive/10"
         >
           <Trash2 />
         </Button>
       </div>
 
       {withTransport && (
-        <div className="mt-3 rounded-md bg-muted/50 p-3 border-t">
+        <div className="mt-3 rounded-md border bg-muted/50 p-3">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-medium text-muted-foreground">
               Doprava z domova:
@@ -256,7 +240,7 @@ function AirportRow({
             )}
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <Field label="Prostředek" className="w-36">
+            <Field label="Prostředek" className="w-32">
               <select
                 value={mode}
                 onChange={(e) => setTransport({ mode: e.target.value })}
@@ -267,14 +251,14 @@ function AirportRow({
                 <option value="let">let</option>
               </select>
             </Field>
-            <Field label={mode === "let" ? "Cena letu (EUR)" : "Cena (EUR)"} className="w-28">
+            <Field label={mode === "let" ? "Cena letu (EUR)" : "Cena (EUR)"} className="w-24">
               <NumberInput
                 value={t.costEur}
                 min={0}
                 onChange={(n) => setTransport({ costEur: n })}
               />
             </Field>
-            <Field label={mode === "let" ? "Čas letu (h)" : "Doba (h)"} className="w-28">
+            <Field label={mode === "let" ? "Čas letu (h)" : "Doba (h)"} className="w-24">
               <NumberInput
                 value={t.durationMin / 60}
                 min={0}
@@ -284,14 +268,14 @@ function AirportRow({
             </Field>
             {mode === "let" && (
               <>
-                <Field label="Transfer na letiště (EUR)" className="w-36">
+                <Field label="Transfer (EUR)" className="w-28">
                   <NumberInput
                     value={t.airportTransferCostEur ?? 25}
                     min={0}
                     onChange={(n) => setTransport({ airportTransferCostEur: n })}
                   />
                 </Field>
-                <Field label="Transfer čas (h)" className="w-28">
+                <Field label="Transfer (h)" className="w-24">
                   <NumberInput
                     value={t.airportTransferTimeH ?? 2.5}
                     min={0}
@@ -320,12 +304,12 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // D&D state
+  // D&D state — dropInsert is the index to insert before (0..n)
   const [dragState, setDragState] = useState<{
     group: "europeAirports" | "japanAirports";
     fromIdx: number;
   } | null>(null);
-  const [dropIdx, setDropIdx] = useState<{
+  const [dropInsert, setDropInsert] = useState<{
     group: "europeAirports" | "japanAirports";
     idx: number;
   } | null>(null);
@@ -394,15 +378,15 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
     });
   };
 
-  const handleDrop = (
-    group: "europeAirports" | "japanAirports",
-    toIdx: number,
-  ) => {
-    if (dragState && dragState.group === group) {
+  const handleDrop = (group: "europeAirports" | "japanAirports") => {
+    if (dragState && dragState.group === group && dropInsert?.group === group) {
+      let toIdx = dropInsert.idx;
+      // After removing fromIdx the slice shifts down by 1 if toIdx is after it
+      if (toIdx > dragState.fromIdx) toIdx--;
       reorderAirports(group, dragState.fromIdx, toIdx);
     }
     setDragState(null);
-    setDropIdx(null);
+    setDropInsert(null);
   };
 
   // -- akce -------------------------------------------------------------------
@@ -506,18 +490,30 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
 
   const busy = status.kind === "busy";
 
+  const DropLine = ({ group, idx }: { group: "europeAirports" | "japanAirports"; idx: number }) =>
+    dragState?.group === group && dropInsert?.group === group && dropInsert.idx === idx ? (
+      <div className="h-0.5 rounded-full bg-primary mx-1 my-0.5" />
+    ) : null;
+
   const renderAirportList = (group: "europeAirports" | "japanAirports") => {
     const withTransport = group === "europeAirports";
     return (
       <>
+        <DropLine group={group} idx={0} />
         {config[group].map((a, i) => (
           <div
             key={i}
             draggable
-            onDragStart={() => setDragState({ group, fromIdx: i })}
-            onDragEnd={() => { setDragState(null); setDropIdx(null); }}
-            onDragOver={(e) => { e.preventDefault(); setDropIdx({ group, idx: i }); }}
-            onDrop={() => handleDrop(group, i)}
+            onDragStart={(e) => { e.stopPropagation(); setDragState({ group, fromIdx: i }); }}
+            onDragEnd={() => { setDragState(null); setDropInsert(null); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const insertIdx = e.clientY < rect.top + rect.height / 2 ? i : i + 1;
+              setDropInsert({ group, idx: insertIdx });
+            }}
+            onDrop={(e) => { e.preventDefault(); handleDrop(group); }}
+            className={cn(dragState?.group === group && dragState.fromIdx === i && "opacity-40")}
           >
             <AirportRow
               airport={a}
@@ -527,9 +523,8 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
               onRemove={() => removeAirport(group, i)}
               onSave={handleSaveAirport}
               isBusy={busy}
-              isDragTarget={dropIdx?.group === group && dropIdx.idx === i && dragState?.group === group && dragState.fromIdx !== i}
-              dragHandleProps={{}}
             />
+            <DropLine group={group} idx={i + 1} />
           </div>
         ))}
         <Button variant="outline" onClick={() => addAirport(group)}>
@@ -589,8 +584,7 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
         <CardHeader>
           <CardTitle>Evropská odletová letiště</CardTitle>
           <CardDescription>
-            Přetažením řádku změňte pořadí (prioritu). Souřadnice GPS doplní scanner automaticky.
-            Deaktivovaná letiště zůstávají ve statistikách.
+            Přetažením řádku změňte pořadí (prioritu). Deaktivovaná letiště zůstávají ve statistikách.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -603,7 +597,7 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
         <CardHeader>
           <CardTitle>Japonská cílová letiště</CardTitle>
           <CardDescription>
-            Přetažením řádku změňte pořadí (prioritu). Souřadnice GPS doplní scanner automaticky.
+            Přetažením řádku změňte pořadí (prioritu).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
