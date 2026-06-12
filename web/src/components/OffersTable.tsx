@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { effectivePrice, fmtDuration, getTransport } from "@/lib/transport";
+import { effectivePrice, getTransport } from "@/lib/transport";
 import type { AgentConfig, LatestOffer } from "@/types/data";
 
 function fmtDate(iso: string | null): string {
@@ -142,13 +142,13 @@ export function OffersTable({
                 {isOpenJaw && transport && (
                   <div className="text-xs text-muted-foreground">
                     {returnTransport
-                      ? `${fmtDuration(transport.durationMin)} + ${fmtDuration(returnTransport.durationMin)}`
-                      : fmtDuration(transport.durationMin)}
+                      ? `${(transport.durationMin / 60).toFixed(1)}h + ${(returnTransport.durationMin / 60).toFixed(1)}h`
+                      : `${(transport.durationMin / 60).toFixed(1)}h cesta`}
                   </div>
                 )}
                 {!isOpenJaw && transport && (
                   <div className="text-xs text-muted-foreground">
-                    {fmtDuration(transport.durationMin)} tam i zpět
+                    {(transport.durationMin / 60).toFixed(1)}h cesta na letiště
                   </div>
                 )}
                 {includeTransport && !transport && (
