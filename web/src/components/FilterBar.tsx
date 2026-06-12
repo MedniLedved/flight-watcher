@@ -55,7 +55,7 @@ export function applyFilters(
   return offers.filter((o) => {
     if (f.origin !== ALL && o.origin !== f.origin) return false;
     if (f.destination !== ALL && o.destination !== f.destination) return false;
-    const displayedPrice = effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination);
+    const displayedPrice = effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination, o.type === "openjaw");
     if (priceMin !== null && displayedPrice < priceMin) return false;
     if (priceMax !== null && displayedPrice > priceMax) return false;
     if (nightsMin !== null && (o.nights === null || o.nights < nightsMin)) return false;

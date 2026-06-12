@@ -119,7 +119,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   }, [lanes, agentConfig, minNights]);
 
   const effPrices = useMemo(
-    () => lanes.map((o) => effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination)),
+    () => lanes.map((o) => effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination, o.type === "openjaw")),
     [lanes, agentConfig, includeTransport],
   );
   const minPrice = effPrices.length ? Math.min(...effPrices) : 0;
@@ -141,7 +141,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
       ? getTransport(selected.returnDestination, agentConfig)
       : null;
   const selectedEffPrice = selected
-    ? effectivePrice(selected.price, selected.origin, agentConfig, includeTransport, selected.returnDestination)
+    ? effectivePrice(selected.price, selected.origin, agentConfig, includeTransport, selected.returnDestination, selected.type === "openjaw")
     : null;
 
   return (

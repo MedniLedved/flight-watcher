@@ -119,6 +119,7 @@ export function OffersTable({
             agentConfig,
             includeTransport,
             o.returnDestination,
+            isOpenJaw,
           );
           return (
             <TableRow key={`${o.routeKey}--${o.source}--${o.departDate ?? ""}--${o.price}`}>
