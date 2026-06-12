@@ -63,8 +63,8 @@ function buildTransportLink(
     }];
   }
   if (mode === "let") {
-    const q = encodeURIComponent(`flights ${homeLocation} ${airport.name}`);
-    return [{ href: `https://www.google.com/search?q=${q}&hl=cs`, label: "Hledat lety" }];
+    const from = encodeURIComponent(homeLocation);
+    return [{ href: `https://www.google.com/travel/flights?q=flights+${from}+${airport.code}&hl=cs`, label: "Google Flights" }];
   }
   return [];
 }
@@ -183,9 +183,7 @@ function AirportRow({
     ? buildTransportLink(mode, homeLocation, airport)
     : [];
 
-  const modeLabel: React.ReactNode = transportLinks[0]
-    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Prostředek ↗</a>
-    : "Prostředek";
+  const transportLink = transportLinks[0] ?? null;
 
   return (
     <div className="rounded-md border bg-muted/30 px-2 py-2 flex flex-wrap items-end gap-x-2 gap-y-1">
@@ -212,13 +210,19 @@ function AirportRow({
       {withTransport && (
         <>
           <div className="self-stretch w-px bg-border mx-0.5 my-0.5" />
-          <Field label={modeLabel} className="w-28">
-            <select value={mode} onChange={(e) => setTransport({ mode: e.target.value })}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              <option value="vlak/bus">vlak / bus</option>
-              <option value="auto">auto</option>
-              <option value="let">let</option>
-            </select>
+          <Field label="Prostředek" className="w-28">
+            <div className="flex items-center gap-1">
+              <select value={mode} onChange={(e) => setTransport({ mode: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <option value="vlak/bus">vlak / bus</option>
+                <option value="auto">auto</option>
+                <option value="let">let</option>
+              </select>
+              {transportLink && (
+                <a href={transportLink.href} target="_blank" rel="noopener noreferrer"
+                  className="text-primary hover:underline text-xs shrink-0">↗</a>
+              )}
+            </div>
           </Field>
           <Field label={mode === "let" ? "Let EUR" : "Cena EUR"} className="w-20">
             <NumberInput value={t.costEur} min={0}
@@ -471,7 +475,7 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
 
     return (
       <>
-        {showLine(0) && <div className="h-0.5 rounded-full bg-primary" />}
+        {showLine(0) && <div className="relative flex items-center" style={{ height: "4rem" }}><div className="absolute inset-x-0 h-0.5 rounded-full bg-primary" /></div>}
         {config[group].map((a, i) => (
           <Fragment key={i}>
             <div
@@ -496,7 +500,7 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
                 isBusy={busy}
               />
             </div>
-            {showLine(i + 1) && <div className="h-0.5 rounded-full bg-primary" />}
+            {showLine(i + 1) && <div className="relative flex items-center" style={{ height: "4rem" }}><div className="absolute inset-x-0 h-0.5 rounded-full bg-primary" /></div>}
           </Fragment>
         ))}
         <Button variant="outline" onClick={() => addAirport(group)}>
@@ -560,7 +564,7 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-[30px]">
+          <div className="flex flex-col gap-2">
             {renderAirportList("europeAirports")}
           </div>
         </CardContent>
@@ -575,7 +579,7 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-[30px]">
+          <div className="flex flex-col gap-2">
             {renderAirportList("japanAirports")}
           </div>
         </CardContent>
