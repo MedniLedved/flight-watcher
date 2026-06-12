@@ -12,6 +12,7 @@ import type {
   RoutesFile,
   StatsFile,
 } from "@/types/data";
+import { cn } from "@/lib/utils";
 
 // ---- Great-circle arc (SLERP) -----------------------------------------------
 function greatCirclePoints(
@@ -88,11 +89,17 @@ function AirportInsightsTable({
   airports,
   transportByCode,
   color,
+  group,
+  agentConfig,
+  onToggleAirport,
 }: {
   title: string;
   airports: AirportInsight[];
   transportByCode?: Record<string, number>;
   color: string;
+  group?: "europeAirports" | "japanAirports";
+  agentConfig?: AgentConfig | null;
+  onToggleAirport?: (code: string, group: "europeAirports" | "japanAirports", enabled: boolean) => void;
 }) {
   const hasTransport = !!transportByCode && Object.keys(transportByCode).length > 0;
   const defaultCol: AirportSortCol = hasTransport ? "effective" : "dealRate";
@@ -113,7 +120,8 @@ function AirportInsightsTable({
     const transport = transportByCode?.[ap.code];
     const effectivePrice =
       ap.medianEur != null && transport != null ? ap.medianEur + 2 * transport : null;
-    return { ap, effectivePrice };
+    const configAp = group && agentConfig ? agentConfig[group].find((a) => a.code === ap.code) : null;
+    return { ap, effectivePrice, configAp };
   });
 
   const sorted = [...enriched].sort((a, b) => {
@@ -145,6 +153,8 @@ function AirportInsightsTable({
     );
   }
 
+  const showToggleCol = !!(group && agentConfig && onToggleAirport);
+
   return (
     <div>
       <h3 className="mb-2 text-sm font-semibold text-gray-700">{title}</h3>
@@ -156,13 +166,22 @@ function AirportInsightsTable({
             <Th col="median" label="Medián" right />
             {hasTransport && <Th col="effective" label="vč. dopravy" right />}
             <Th col="observations" label="Pozorování" right />
+            {showToggleCol && <th className="pb-1 text-right font-medium">Aktivní</th>}
           </tr>
         </thead>
         <tbody>
-          {sorted.map(({ ap, effectivePrice }, i) => {
+          {sorted.map(({ ap, effectivePrice, configAp }, i) => {
             const isBest = i === 0;
+            const isEnabled = configAp?.enabled ?? true;
             return (
-              <tr key={ap.code} className={`border-b border-gray-100 ${isBest ? "font-semibold" : ""}`}>
+              <tr
+                key={ap.code}
+                className={cn(
+                  "border-b border-gray-100",
+                  isBest ? "font-semibold" : "",
+                  configAp && !isEnabled ? "opacity-50" : "",
+                )}
+              >
                 <td className="py-1 pr-3">
                   <span style={{ color }} className="mr-1 font-bold">{ap.code}</span>
                   {isBest && <span className="text-green-600">★</span>}
@@ -178,7 +197,28 @@ function AirportInsightsTable({
                     {effectivePrice != null ? `${effectivePrice.toFixed(0)} €` : "—"}
                   </td>
                 )}
-                <td className="py-1 text-right tabular-nums text-gray-400">{ap.observations}</td>
+                <td className="py-1 pr-3 text-right tabular-nums text-gray-400">{ap.observations}</td>
+                {showToggleCol && (
+                  <td className="py-1 text-right">
+                    {configAp ? (
+                      <button
+                        onClick={() => onToggleAirport!(ap.code, group!, !isEnabled)}
+                        className={cn(
+                          "relative inline-flex h-5 w-9 rounded-full transition-colors",
+                          isEnabled ? "bg-emerald-500" : "bg-gray-300",
+                        )}
+                        title={isEnabled ? "Deaktivovat" : "Aktivovat"}
+                      >
+                        <span className={cn(
+                          "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all",
+                          isEnabled ? "left-4" : "left-0.5",
+                        )} />
+                      </button>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -198,13 +238,25 @@ function DowTable({
   rows: DowInsight[];
   minTransportCost?: number;
 }) {
+  const [activeDow, setActiveDow] = useState<Set<string>>(() => new Set(rows.map((r) => r.dow)));
   const bestDealRate = Math.max(...rows.map((r) => r.dealRatePct ?? 0));
+
+  function toggleDow(dow: string) {
+    setActiveDow((prev) => {
+      const next = new Set(prev);
+      if (next.has(dow)) next.delete(dow);
+      else next.add(dow);
+      return next;
+    });
+  }
+
   return (
     <div>
       <h3 className="mb-2 text-sm font-semibold text-gray-700">{title}</h3>
       <div className="flex flex-wrap gap-2">
         {rows.map((row) => {
           const isTopDay = (row.dealRatePct ?? 0) === bestDealRate && bestDealRate > 0;
+          const isActive = activeDow.has(row.dow);
           const rate = row.dealRatePct ?? 0;
           const barColor = rate >= 40 ? "#10b981" : rate >= 20 ? "#f59e0b" : "#9ca3af";
           const effectivePrice =
@@ -214,7 +266,13 @@ function DowTable({
           return (
             <div
               key={row.dow}
-              className={`flex min-w-[76px] flex-col items-center rounded-lg border px-2 py-2 text-center ${isTopDay ? "border-green-400 bg-green-50" : "border-gray-200 bg-gray-50"}`}
+              onClick={() => toggleDow(row.dow)}
+              className={cn(
+                "flex min-w-[76px] cursor-pointer flex-col items-center rounded-lg border px-2 py-2 text-center transition-opacity select-none",
+                isTopDay ? "border-green-400 bg-green-50" : "border-gray-200 bg-gray-50",
+                isActive ? "opacity-100" : "opacity-35",
+              )}
+              title={isActive ? "Kliknutím deaktivovat" : "Kliknutím aktivovat"}
             >
               <span className="text-sm font-bold text-gray-800">
                 {row.dow}
@@ -246,9 +304,11 @@ function DowTable({
 function InsightsPanel({
   insights,
   agentConfig,
+  onToggleAirport,
 }: {
   insights: InsightsFile;
   agentConfig: AgentConfig | null;
+  onToggleAirport?: (code: string, group: "europeAirports" | "japanAirports", enabled: boolean) => void;
 }) {
   const transportByCode: Record<string, number> = {};
   if (agentConfig) {
@@ -275,11 +335,17 @@ function InsightsPanel({
           airports={insights.airportPriority.europe}
           transportByCode={Object.keys(transportByCode).length ? transportByCode : undefined}
           color="#1d4ed8"
+          group="europeAirports"
+          agentConfig={agentConfig}
+          onToggleAirport={onToggleAirport}
         />
         <AirportInsightsTable
           title="Japonská cílová letiště — podíl dealů"
           airports={insights.airportPriority.japan}
           color="#b45309"
+          group="japanAirports"
+          agentConfig={agentConfig}
+          onToggleAirport={onToggleAirport}
         />
       </div>
 
@@ -397,15 +463,29 @@ interface Props {
   insights: InsightsFile | null;
   agentConfig: AgentConfig | null;
   onSelectRoute: (routeKey: string) => void;
+  showMap?: boolean;
+  showInsights?: boolean;
+  onToggleAirport?: (code: string, group: "europeAirports" | "japanAirports", enabled: boolean) => void;
 }
 
-export function FlightMap({ routes, latest, stats, insights, agentConfig, onSelectRoute }: Props) {
+export function FlightMap({ routes, latest, stats, insights, agentConfig, onSelectRoute, showMap = true, showInsights = true, onToggleAirport }: Props) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const insightsNode = showInsights && insights ? (
+    <InsightsPanel insights={insights} agentConfig={agentConfig} onToggleAirport={onToggleAirport} />
+  ) : null;
+
+  if (!showMap) {
+    return <div className="space-y-4">{insightsNode}</div>;
+  }
 
   if (!routes || routes.length === 0) {
     return (
-      <div className="flex h-[520px] items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground">
-        Mapová data nejsou k dispozici.
+      <div className="space-y-4">
+        <div className="flex h-[520px] items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+          Mapová data nejsou k dispozici.
+        </div>
+        {insightsNode}
       </div>
     );
   }
@@ -574,9 +654,7 @@ export function FlightMap({ routes, latest, stats, insights, agentConfig, onSele
         </div>
       </div>
 
-      {insights && (
-        <InsightsPanel insights={insights} agentConfig={agentConfig} />
-      )}
+      {insightsNode}
     </div>
   );
 }

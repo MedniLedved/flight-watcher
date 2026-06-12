@@ -63,8 +63,8 @@ function buildTransportLink(
   }
   if (mode === "let") {
     return [
-      { href: `https://www.google.com/flights?hl=cs#flt=MUC.${airport.code}.`, label: "Google Flights z MUC" },
-      { href: `https://www.google.com/flights?hl=cs#flt=NUE.${airport.code}.`, label: "Google Flights z NUE" },
+      { href: `https://www.google.com/flights?hl=cs#search;f=MUC;t=${airport.code}`, label: "Google Flights z MUC" },
+      { href: `https://www.google.com/flights?hl=cs#search;f=NUE;t=${airport.code}`, label: "Google Flights z NUE" },
     ];
   }
   return [];
@@ -184,15 +184,19 @@ function AirportRow({
     ? buildTransportLink(mode, homeLocation, airport)
     : [];
 
-  const modeLabel = (
-    <span className="flex items-center gap-1">
-      {mode === "let" ? "Let" : "Prostředek"}
-      {transportLinks.map((l) => (
-        <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
-          title={l.label} className="text-primary hover:underline leading-none">↗</a>
-      ))}
-    </span>
-  );
+  const modeLabel: React.ReactNode = mode === "let"
+    ? (
+      <span className="flex items-center gap-1">
+        Prostředek
+        {transportLinks.map((l) => (
+          <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
+            title={l.label} className="text-primary hover:underline leading-none">↗</a>
+        ))}
+      </span>
+    )
+    : transportLinks[0]
+      ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Prostředek ↗</a>
+      : "Prostředek";
 
   return (
     <div className="rounded-md border bg-muted/30 px-2 py-2 flex flex-wrap items-end gap-x-2 gap-y-1">
@@ -556,8 +560,10 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
             Přetažením řádku změňte pořadí (prioritu). Deaktivovaná letiště zůstávají ve statistikách.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {renderAirportList("europeAirports")}
+        <CardContent>
+          <div className="flex flex-col gap-2">
+            {renderAirportList("europeAirports")}
+          </div>
         </CardContent>
       </Card>
 
@@ -569,8 +575,10 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
             Přetažením řádku změňte pořadí (prioritu).
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {renderAirportList("japanAirports")}
+        <CardContent>
+          <div className="flex flex-col gap-2">
+            {renderAirportList("japanAirports")}
+          </div>
         </CardContent>
       </Card>
 
