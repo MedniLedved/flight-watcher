@@ -434,8 +434,9 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
       await commitWithRetry(token, "main", serialized, commitMsg);
       try {
         await commitWithRetry(token, "gh-pages", serialized, commitMsg);
-      } catch {
-        /* gh-pages nemusí existovat */
+      } catch (e) {
+        if (!(e instanceof Error && e.message.includes("404"))) throw e;
+        /* gh-pages větev neexistuje – přeskočit */
       }
       setStatus({
         kind: "ok",
@@ -457,7 +458,10 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
       await commitWithRetry(token, "main", serialized, "config: update letiště");
       try {
         await commitWithRetry(token, "gh-pages", serialized, "config: update letiště");
-      } catch { /* gh-pages nemusí existovat */ }
+      } catch (e) {
+        if (!(e instanceof Error && e.message.includes("404"))) throw e;
+        /* gh-pages větev neexistuje – přeskočit */
+      }
       setStatus({ kind: "ok", msg: "Letiště uloženo ✓" });
     } catch (e) {
       setStatus({ kind: "err", msg: e instanceof Error ? e.message : String(e) });

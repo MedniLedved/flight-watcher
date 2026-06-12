@@ -143,30 +143,43 @@ export async function commitAgentConfig(
 
 /** Commitne config s automatickým retry při 409 (stale SHA).
  *  Pokud soubor na větvi neexistuje (404), vytvoří ho bez SHA.
- *  Všechny ostatní chyby (vč. chybějící větve) propaguje výš. */
+ *  Retries up to MAX_ATTEMPTS times with exponential backoff (GitHub Contents
+ *  API has eventual consistency — a fresh fetch right after a commit can still
+ *  return the old SHA from cache).
+ *  Všechny ostatní chyby propaguje výš. */
 export async function commitWithRetry(
   token: string,
   branch: string,
   contentText: string,
   message: string,
 ): Promise<string> {
-  let sha: string | null = null;
-  try {
-    const remote = await fetchAgentConfigFile(token, branch);
-    sha = remote.sha;
-  } catch (e) {
-    if (!(e instanceof Error && e.message.includes("404"))) throw e;
-    // soubor na větvi ještě neexistuje → commit ho vytvoří
-  }
+  const MAX_ATTEMPTS = 4;
+  const BACKOFF_MS = [0, 400, 900, 2000];
 
-  try {
-    return await commitAgentConfig(token, contentText, sha, message, branch);
-  } catch (e) {
-    if (!(e instanceof Error && e.message.includes("409"))) throw e;
-    // SHA bylo stale (mezitím přibyl jiný commit) → načti znovu a zkus ještě jednou
-    const fresh = await fetchAgentConfigFile(token, branch);
-    return await commitAgentConfig(token, contentText, fresh.sha, message, branch);
+  const fetchSha = async (): Promise<string | null> => {
+    try {
+      const remote = await fetchAgentConfigFile(token, branch);
+      return remote.sha;
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("404")) return null;
+      throw e;
+    }
+  };
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
+    }
+    const sha = await fetchSha();
+    try {
+      return await commitAgentConfig(token, contentText, sha, message, branch);
+    } catch (e) {
+      if (!(e instanceof Error && e.message.includes("409"))) throw e;
+      lastErr = e;
+    }
   }
+  throw lastErr;
 }
 
 /** Spustí scan ručně přes workflow_dispatch (vyžaduje Actions: write). */
