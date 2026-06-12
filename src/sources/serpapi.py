@@ -19,7 +19,7 @@ from typing import Optional
 
 import requests
 
-from . import FlightResult
+from . import FlightResult, Segment
 from .google_flights import google_flights_url
 
 logger = logging.getLogger(__name__)
@@ -188,27 +188,51 @@ class SerpApiSource:
         depart_dt = self._parse_dt(dep_airport.get("time"))
         return_dt: Optional[date] = return_date  # SerpAPI roundtrip vrací jen outbound
 
+        # Extrakce segmentů + aerolinek ze všech úseků
+        layovers = it.get("layovers", [])  # [{id, name, duration, overnight}]
+        segments_out: list[Segment] = []
         airlines: list[str] = []
         seen: set[str] = set()
-        for seg in flights:
-            # Preferuj IATA kód z pole "airline" pokud je to 2 znaky.
-            carrier = seg.get("airline", "")
-            if carrier and len(carrier) == 2:
-                if carrier not in seen:
-                    seen.add(carrier)
-                    airlines.append(carrier)
-            elif carrier:
-                # Zkus vytáhnout IATA kód z čísla letu (např. "LH 714" → "LH").
-                # Vyžadujeme přesně 2 znaky, aby se zabránilo zachycení slov jako
-                # "Air" z "Air France" (IATA kódy jsou vždy dvoumístné).
-                parts = carrier.split()
-                if parts and len(parts[0]) == 2 and parts[0].isalpha():
-                    key = parts[0]
-                    if key not in seen:
-                        seen.add(key)
-                        airlines.append(key)
 
-        # Fallback na flight_number prefix ("LH714" → "LH")
+        for i, seg in enumerate(flights):
+            seg_origin = (seg.get("departure_airport") or {}).get("id", "")
+            seg_dest = (seg.get("arrival_airport") or {}).get("id", "")
+            seg_depart = (seg.get("departure_airport") or {}).get("time")
+            seg_arrive = (seg.get("arrival_airport") or {}).get("time")
+            seg_duration = seg.get("duration")  # minuty
+
+            # IATA kód: preferuj flight_number prefix ("CA 841" → "CA")
+            fn = seg.get("flight_number", "")
+            carrier_code = ""
+            if fn:
+                parts_fn = fn.split()
+                if parts_fn and len(parts_fn[0]) == 2 and parts_fn[0].isalpha():
+                    carrier_code = parts_fn[0].upper()
+            # fallback: pole "airline" pokud je přímo 2-písmenný IATA kód
+            if not carrier_code:
+                al = seg.get("airline", "")
+                if al and len(al) == 2 and al.isalpha():
+                    carrier_code = al.upper()
+
+            if carrier_code and carrier_code not in seen:
+                seen.add(carrier_code)
+                airlines.append(carrier_code)
+
+            layover_min = None
+            if i > 0 and len(layovers) >= i:
+                layover_min = layovers[i - 1].get("duration")
+
+            segments_out.append(Segment(
+                origin=seg_origin,
+                destination=seg_dest,
+                airline=carrier_code,
+                duration_min=seg_duration,
+                depart_at=seg_depart,
+                arrive_at=seg_arrive,
+                layover_min=layover_min,
+            ))
+
+        # Fallback na flight_number prefix když žádný carrier nenalezen
         if not airlines:
             for seg in flights:
                 fn = seg.get("flight_number", "")
@@ -217,6 +241,8 @@ class SerpApiSource:
                     if prefix and prefix not in seen:
                         seen.add(prefix)
                         airlines.append(prefix)
+
+        total_duration = it.get("total_duration")  # minuty (celá cesta vč. čekání)
 
         return FlightResult(
             price=price,
@@ -235,6 +261,8 @@ class SerpApiSource:
                 ret_destination if return_date else "",
             ),
             route_name=route_name,
+            segments_out=segments_out,
+            duration_out_min=total_duration,
         )
 
     @staticmethod

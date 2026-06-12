@@ -29,7 +29,7 @@ from typing import Any, Optional
 
 from .config import CZECH_WEEKDAYS, airport_name
 from .history import META_KEY, PriceHistory
-from .sources import FlightResult
+from .sources import FlightResult, Segment
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,18 @@ def _write_json(path: Path, obj: Any) -> None:
 
 def _round(value: Optional[float], digits: int = 1) -> Optional[float]:
     return None if value is None else round(value, digits)
+
+
+def _seg_to_dict(s: Segment) -> dict:
+    return {
+        "from": s.origin,
+        "to": s.destination,
+        "airline": s.airline or None,
+        "durationMin": s.duration_min,
+        "departAt": s.depart_at,
+        "arriveAt": s.arrive_at,
+        "layoverMin": s.layover_min,
+    }
 
 
 def _record_key(rec: dict) -> tuple:
@@ -238,6 +250,13 @@ class Exporter:
                 "airlines": list(f.airlines),
                 "dealUrl": f.deep_link or None,
                 "observedDate": today.isoformat(),
+                "segments": {
+                    "out": [_seg_to_dict(s) for s in f.segments_out],
+                    "in": [_seg_to_dict(s) for s in f.segments_in],
+                },
+                "durationOutMin": f.duration_out_min,
+                "durationInMin": f.duration_in_min,
+                "scannedPrice": _round(f.scanned_price),
                 "flags": {
                     "isNewLow": prev_min is None or f.price < prev_min,
                     "priceDeltaEur": _round(delta),

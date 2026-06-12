@@ -28,6 +28,17 @@ export interface LatestOfferFlags {
   isBigDrop: boolean;
 }
 
+export interface FlightSegment {
+  from: string;
+  to: string;
+  airline: string | null;
+  durationMin: number | null;
+  departAt: string | null;
+  arriveAt: string | null;
+  /** čekání na tomto letišti před tímto úsekem (min) */
+  layoverMin: number | null;
+}
+
 export interface LatestOffer {
   routeKey: RouteKey;
   type: RouteType;
@@ -49,6 +60,13 @@ export interface LatestOffer {
   /** den pozorování (dnešek běhu) */
   observedDate: string;
   flags: LatestOfferFlags;
+  segments?: { out: FlightSegment[]; in: FlightSegment[] };
+  /** celková doba cesty tam vč. přestupů (min); null pokud neznáme */
+  durationOutMin?: number | null;
+  /** celková doba cesty zpět vč. přestupů (min); null pokud neznáme */
+  durationInMin?: number | null;
+  /** původní nascanovaná cena před korekcí z URL; null = cena nebyla opravena */
+  scannedPrice?: number | null;
 }
 
 export type LatestFile = LatestOffer[];

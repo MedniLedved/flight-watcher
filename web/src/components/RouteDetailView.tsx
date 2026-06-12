@@ -8,8 +8,9 @@ import { CalendarHeatmap } from "./CalendarHeatmap";
 import { PriceHistoryChart } from "./PriceHistoryChart";
 import { StatsCards } from "./StatsCards";
 import { useRouteDetail } from "@/hooks/useRouteDetail";
-import type { LatestOffer, RouteStats } from "@/types/data";
-import { airlineNames } from "@/lib/airlines";
+import type { FlightSegment, LatestOffer, RouteStats } from "@/types/data";
+import { airlineNames, airlineName } from "@/lib/airlines";
+import { fmtDuration } from "@/lib/transport";
 
 function routeLabel(routeKey: string): string {
   const parts = routeKey.split("-");
@@ -18,6 +19,23 @@ function routeLabel(routeKey: string): string {
   if (kind === "openjaw" && parts.length === 4)
     return `${parts[0]} → ${parts[1]} / ${parts[2]} → ${parts[0]}`;
   return routeKey;
+}
+
+function InlineSegments({ segments }: { segments: FlightSegment[] }) {
+  return (
+    <div className="mt-0.5 space-y-px text-xs text-gray-500">
+      {segments.map((s, i) => (
+        <div key={i} className="flex items-center gap-1">
+          {s.layoverMin != null && i > 0 && (
+            <span className="text-amber-500">⏱{fmtDuration(s.layoverMin)}</span>
+          )}
+          <span className="font-mono">{s.from}→{s.to}</span>
+          {s.airline && <span>· {airlineName(s.airline)}</span>}
+          {s.durationMin != null && <span>({fmtDuration(s.durationMin)})</span>}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function fmtDate(iso: string | null | undefined): string {
@@ -110,9 +128,22 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                     <TableCell>{fmtDate(o.returnDate)}</TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
                       {Math.round(o.price)} €
+                      {o.scannedPrice != null && (
+                        <div className="text-xs font-normal text-amber-600" title="Původní cena ze scanu">
+                          scan: {Math.round(o.scannedPrice)} €
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>{o.nights ?? "—"}</TableCell>
-                    <TableCell>{o.airlines.length ? airlineNames(o.airlines) : "—"}</TableCell>
+                    <TableCell>
+                      <div>{o.airlines.length ? airlineNames(o.airlines) : "—"}</div>
+                      {o.durationOutMin != null && (
+                        <div className="text-xs text-muted-foreground">✈ {fmtDuration(o.durationOutMin)}</div>
+                      )}
+                      {(o.segments?.out?.length ?? 0) > 0 && (
+                        <InlineSegments segments={o.segments!.out} />
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{o.source}</TableCell>
                   </TableRow>
                 ))}

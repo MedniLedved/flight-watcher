@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { effectivePrice, getTransport } from "@/lib/transport";
+import { effectivePrice, fmtDuration, getTransport } from "@/lib/transport";
 import type { AgentConfig, LatestOffer } from "@/types/data";
 import { airlineNames } from "@/lib/airlines";
 
@@ -159,7 +159,17 @@ export function OffersTable({
               <TableCell className="tabular-nums">{fmtDate(o.departDate)}</TableCell>
               <TableCell className="tabular-nums">{fmtDate(o.returnDate)}</TableCell>
               <TableCell className="text-right tabular-nums">{o.nights ?? "—"}</TableCell>
-              <TableCell>{o.airlines.length > 0 ? airlineNames(o.airlines) : "—"}</TableCell>
+              <TableCell>
+                <div>{o.airlines.length > 0 ? airlineNames(o.airlines) : "—"}</div>
+                {o.durationOutMin != null && (
+                  <div className="text-xs text-muted-foreground">✈ {fmtDuration(o.durationOutMin)}</div>
+                )}
+                {o.scannedPrice != null && (
+                  <div className="text-xs text-amber-600" title={`Scan: ${Math.round(o.scannedPrice)} €`}>
+                    scan: {Math.round(o.scannedPrice)} €
+                  </div>
+                )}
+              </TableCell>
               <TableCell className="text-muted-foreground">{o.source}</TableCell>
               <TableCell>
                 <Flags o={o} />

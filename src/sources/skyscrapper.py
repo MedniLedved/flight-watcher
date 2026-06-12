@@ -25,10 +25,27 @@ from typing import Optional
 
 import requests
 
-from . import FlightResult
+from . import FlightResult, Segment
 from .google_flights import google_flights_url
 
 logger = logging.getLogger(__name__)
+
+
+def _format_skyscanner_dt(dt: dict | str) -> str | None:
+    """Převede Skyscanner datetime strukturu nebo ISO string na 'HH:MM'."""
+    if isinstance(dt, str):
+        # ISO: "2026-09-06T20:40:00"
+        try:
+            return datetime.fromisoformat(dt).strftime("%H:%M")
+        except ValueError:
+            return None
+    if isinstance(dt, dict):
+        h = dt.get("hour") or dt.get("hours")
+        m = dt.get("minute") or dt.get("minutes")
+        if h is not None and m is not None:
+            return f"{int(h):02d}:{int(m):02d}"
+    return None
+
 
 RAPIDAPI_HOST = "sky-scrapper.p.rapidapi.com"
 SEARCH_AIRPORT_URL = f"https://{RAPIDAPI_HOST}/api/v1/flights/searchAirport"
@@ -239,6 +256,11 @@ class SkyScrapperSource:
         depart_dt = self._leg_date(out_leg)
         return_dt = self._leg_date(in_leg) if in_leg else None
 
+        segments_out = self._extract_segments(out_leg)
+        segments_in = self._extract_segments(in_leg) if in_leg else []
+        duration_out = out_leg.get("durationInMinutes") if out_leg else None
+        duration_in = in_leg.get("durationInMinutes") if in_leg else None
+
         return FlightResult(
             price=price,
             currency="EUR",
@@ -256,7 +278,42 @@ class SkyScrapperSource:
                 o_code, d_code, depart_dt, return_dt, r_o, r_d
             ),
             route_name=route_name,
+            segments_out=segments_out,
+            segments_in=segments_in,
+            duration_out_min=duration_out,
+            duration_in_min=duration_in,
         )
+
+    @staticmethod
+    def _extract_segments(leg: dict) -> list[Segment]:
+        """Extrahuje Segment objekty z leg.segments[] (Skyscanner API).
+        Vrátí prázdný seznam pokud leg nemá sub-segmenty."""
+        raw_segs = leg.get("segments", []) if leg else []
+        if not raw_segs:
+            return []
+        result = []
+        for i, s in enumerate(raw_segs):
+            orig = (s.get("origin") or {}).get("displayCode", "")
+            dest = (s.get("destination") or {}).get("displayCode", "")
+            carrier = (
+                (s.get("marketingCarrier") or {}).get("alternateId", "")
+                or (s.get("operatingCarrier") or {}).get("alternateId", "")
+            )
+            duration = s.get("durationInMinutes")
+            # časy jako ISO datetime (Skyscanner: "2026-09-06T20:40:00")
+            dep_raw = s.get("departureDateTime") or {}
+            arr_raw = s.get("arrivalDateTime") or {}
+            depart_at = _format_skyscanner_dt(dep_raw)
+            arrive_at = _format_skyscanner_dt(arr_raw)
+            result.append(Segment(
+                origin=orig,
+                destination=dest,
+                airline=carrier,
+                duration_min=duration,
+                depart_at=depart_at,
+                arrive_at=arrive_at,
+            ))
+        return result
 
     @staticmethod
     def _leg_iata(leg: dict, key: str, fallback: str) -> str:

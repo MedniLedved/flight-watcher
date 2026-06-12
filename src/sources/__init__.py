@@ -10,6 +10,19 @@ from typing import Optional
 
 
 @dataclass
+class Segment:
+    """Jeden letový úsek v itineráři (např. MXP→BCN nebo BCN→PVG)."""
+
+    origin: str
+    destination: str
+    airline: str = ""               # IATA kód aerolinky
+    duration_min: Optional[int] = None  # doba letu v minutách (bez čekání)
+    depart_at: Optional[str] = None     # čas odletu ("HH:MM" nebo ISO datetime)
+    arrive_at: Optional[str] = None     # čas příletu
+    layover_min: Optional[int] = None   # čekání na TOMTO letišti před tímto úsekem
+
+
+@dataclass
 class FlightResult:
     """Jeden konkrétní nalezený let (vrstva 1 – real-time API)."""
 
@@ -25,6 +38,11 @@ class FlightResult:
     source: str = ""              # duffel / skyscrapper / amadeus / travelpayouts
     deep_link: str = ""           # přímý odkaz na koupi
     route_name: str = ""          # jméno trasy z routes.yaml
+    segments_out: list[Segment] = field(default_factory=list)  # úseky tam
+    segments_in: list[Segment] = field(default_factory=list)   # úseky zpět
+    duration_out_min: Optional[int] = None  # celková doba cesty tam (let + čekání)
+    duration_in_min: Optional[int] = None   # celková doba cesty zpět
+    scanned_price: Optional[float] = None   # původní cena před korekcí z URL
 
     @property
     def nights(self) -> Optional[int]:

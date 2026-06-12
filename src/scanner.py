@@ -33,6 +33,7 @@ from .config import (
     airport_name,
     trim_airports,
 )
+from .enricher import enrich_results
 from .exporter import Exporter
 from .history import PriceHistory
 from .notifier import TelegramNotifier
@@ -811,6 +812,10 @@ class Scanner:
                 all_flights += flights
             except Exception as exc:  # noqa: BLE001
                 logger.error("Trasa %s selhala: %s", route.get("name"), exc)
+
+        # URL enrichment: pro nabídky ≤ dealMaxEur s Aviasales URL přepíše cenu
+        # a doplní segmenty z booking tokenu (autoritativní data).
+        all_flights = enrich_results(all_flights, self.settings.price_threshold_eur)
 
         # Snapshot stavu historie PŘED zápisem dnešních cen – export z něj
         # počítá flagy (isNewLow, priceDeltaEur) vůči stavu před scanem.

@@ -1,13 +1,32 @@
 import { useMemo, useState } from "react";
 import { ExternalLink, Train } from "lucide-react";
-import { airlineNames } from "@/lib/airlines";
-
+import { airlineNames, airlineName } from "@/lib/airlines";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { priceColor } from "@/lib/colors";
 import { effectivePrice, fmtDuration, getTransport } from "@/lib/transport";
 import { cn } from "@/lib/utils";
-import type { AgentConfig, LatestFile, LatestOffer } from "@/types/data";
+import type { AgentConfig, FlightSegment, LatestFile, LatestOffer } from "@/types/data";
+
+function SegmentList({ segments }: { segments: FlightSegment[] }) {
+  return (
+    <div className="space-y-0.5 text-xs">
+      {segments.map((s, i) => (
+        <div key={i} className="flex items-center gap-1 text-gray-700">
+          {s.layoverMin != null && i > 0 && (
+            <span className="mr-1 text-amber-600">⏱ {fmtDuration(s.layoverMin)} přestup</span>
+          )}
+          <span className="font-mono font-semibold">{s.from}</span>
+          <span className="text-gray-400">→</span>
+          <span className="font-mono font-semibold">{s.to}</span>
+          {s.airline && <span className="text-gray-500">· {airlineName(s.airline)}</span>}
+          {s.durationMin != null && <span className="tabular-nums text-gray-400">({fmtDuration(s.durationMin)})</span>}
+          {s.departAt && <span className="tabular-nums text-gray-400">{s.departAt.slice(0, 5)}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const MONTH_NAMES = [
   "Leden", "Únor", "Březen", "Duben", "Květen", "Červen",
@@ -330,8 +349,42 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
             </dd>
             <dt className="text-muted-foreground">Aerolinky</dt>
             <dd>{selected.airlines.length ? airlineNames(selected.airlines) : "—"}</dd>
+            {selected.durationOutMin != null && (
+              <>
+                <dt className="text-muted-foreground">Doba letu tam</dt>
+                <dd className="tabular-nums">{fmtDuration(selected.durationOutMin)}</dd>
+              </>
+            )}
+            {selected.durationInMin != null && (
+              <>
+                <dt className="text-muted-foreground">Doba letu zpět</dt>
+                <dd className="tabular-nums">{fmtDuration(selected.durationInMin)}</dd>
+              </>
+            )}
+            {selected.scannedPrice != null && (
+              <>
+                <dt className="text-muted-foreground">Scan cena</dt>
+                <dd className="tabular-nums text-amber-600">{Math.round(selected.scannedPrice)} € (opraveno z URL)</dd>
+              </>
+            )}
             <dt className="text-muted-foreground">Zdroj</dt>
             <dd>{selected.source}</dd>
+            {(selected.segments?.out?.length ?? 0) > 0 && (
+              <>
+                <dt className="col-span-2 mt-1 text-muted-foreground">Úseky tam</dt>
+                <dd className="col-span-2">
+                  <SegmentList segments={selected.segments!.out} />
+                </dd>
+              </>
+            )}
+            {(selected.segments?.in?.length ?? 0) > 0 && (
+              <>
+                <dt className="col-span-2 mt-1 text-muted-foreground">Úseky zpět</dt>
+                <dd className="col-span-2">
+                  <SegmentList segments={selected.segments!.in} />
+                </dd>
+              </>
+            )}
             {includeTransport && selectedTransport && (
               <>
                 <dt className="text-muted-foreground">Doprava na letiště</dt>
