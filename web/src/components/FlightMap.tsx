@@ -119,7 +119,7 @@ function AirportInsightsTable({
   const enriched = airports.map((ap) => {
     const transport = transportByCode?.[ap.code];
     const effectivePrice =
-      ap.medianEur != null && transport != null ? ap.medianEur + 2 * transport : null;
+      ap.medianEur != null && transport != null ? ap.medianEur + transport : null;
     const configAp = group && agentConfig ? agentConfig[group].find((a) => a.code === ap.code || a.cityCode === ap.code) : null;
     return { ap, effectivePrice, configAp };
   });
@@ -261,7 +261,7 @@ function DowTable({
           const barColor = rate >= 40 ? "#10b981" : rate >= 20 ? "#f59e0b" : "#9ca3af";
           const effectivePrice =
             row.medianEur != null && minTransportCost != null
-              ? row.medianEur + 2 * minTransportCost
+              ? row.medianEur + minTransportCost
               : row.medianEur;
           return (
             <div
@@ -310,15 +310,20 @@ function InsightsPanel({
   agentConfig: AgentConfig | null;
   onToggleAirport?: (code: string, group: "europeAirports" | "japanAirports", enabled: boolean) => void;
 }) {
+  // totalRoundtripTransport: celkové náklady na dopravu tam i zpět
+  // pro letišťa s feeder letem: zpáteční letenka + 2× vlak na hub
+  // pro ostatní: 2× cena jedné cesty
   const transportByCode: Record<string, number> = {};
   if (agentConfig) {
     for (const ap of agentConfig.europeAirports) {
       const t = ap.transport;
       if (t?.costEur != null) {
-        const transfer = t.mode === "let" ? (t.airportTransferCostEur ?? 25) : 0;
-        const cost = t.costEur + transfer;
-        transportByCode[ap.code] = cost;
-        if (ap.cityCode) transportByCode[ap.cityCode] = cost;
+        const total =
+          t.mode === "let"
+            ? (t.costEurRoundtrip ?? t.costEur * 2) + 2 * (t.airportTransferCostEur ?? 0)
+            : 2 * t.costEur;
+        transportByCode[ap.code] = total;
+        if (ap.cityCode) transportByCode[ap.cityCode] = total;
       }
     }
   }
@@ -366,9 +371,9 @@ function InsightsPanel({
 
       {Object.keys(transportByCode).length > 0 && (
         <p className="text-xs text-gray-400">
-          „vč. dopravy" = medián letenky + 2 × cena veřejné dopravy tam i zpět
+          „vč. dopravy" = medián letenky + celková doprava tam i zpět
           (z&nbsp;{agentConfig?.homeLocation}). Dny: přepočteno na nejlevnější dostupné letiště
-          ({Math.min(...Object.values(transportByCode))} € / cesta).
+          ({Math.min(...Object.values(transportByCode))} € celkem).
         </p>
       )}
     </div>
