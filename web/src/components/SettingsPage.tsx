@@ -63,8 +63,7 @@ function buildTransportLink(
     }];
   }
   if (mode === "let") {
-    const from = encodeURIComponent(homeLocation);
-    return [{ href: `https://www.google.com/travel/flights?q=flights+${from}+${airport.code}&hl=cs`, label: "Google Flights" }];
+    return [{ href: `https://www.google.com/travel/flights?q=flights+MUC,NUE+${airport.code}&hl=cs`, label: "Prostředek" }];
   }
   return [];
 }
@@ -183,7 +182,9 @@ function AirportRow({
     ? buildTransportLink(mode, homeLocation, airport)
     : [];
 
-  const transportLink = transportLinks[0] ?? null;
+  const modeLabel: React.ReactNode = transportLinks[0]
+    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Prostředek</a>
+    : "Prostředek";
 
   return (
     <div className="rounded-md border bg-muted/30 px-2 py-2 flex flex-wrap items-end gap-x-2 gap-y-1">
@@ -210,19 +211,13 @@ function AirportRow({
       {withTransport && (
         <>
           <div className="self-stretch w-px bg-border mx-0.5 my-0.5" />
-          <Field label="Prostředek" className="w-28">
-            <div className="flex items-center gap-1">
-              <select value={mode} onChange={(e) => setTransport({ mode: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                <option value="vlak/bus">vlak / bus</option>
-                <option value="auto">auto</option>
-                <option value="let">let</option>
-              </select>
-              {transportLink && (
-                <a href={transportLink.href} target="_blank" rel="noopener noreferrer"
-                  className="text-primary hover:underline text-xs shrink-0">↗</a>
-              )}
-            </div>
+          <Field label={modeLabel} className="w-28">
+            <select value={mode} onChange={(e) => setTransport({ mode: e.target.value })}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              <option value="vlak/bus">vlak / bus</option>
+              <option value="auto">auto</option>
+              <option value="let">let</option>
+            </select>
           </Field>
           <Field label={mode === "let" ? "Let EUR" : "Cena EUR"} className="w-20">
             <NumberInput value={t.costEur} min={0}
