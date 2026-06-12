@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Play, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Download, GripVertical, Play, Plus, Save, Trash2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +38,37 @@ type Status =
   | { kind: "busy"; msg: string }
   | { kind: "ok"; msg: string }
   | { kind: "err"; msg: string };
+
+// ---------------------------------------------------------------------------
+// Transport link helpers
+// ---------------------------------------------------------------------------
+function buildTransportLink(
+  mode: string,
+  homeLocation: string,
+  airport: AgentAirport,
+): { href: string; label: string }[] {
+  const origin = encodeURIComponent(homeLocation);
+  const dest = encodeURIComponent(`${airport.name} airport`);
+  if (mode === "vlak/bus") {
+    return [{
+      href: `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=transit`,
+      label: "Trasa MHD / vlak",
+    }];
+  }
+  if (mode === "auto") {
+    return [{
+      href: `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`,
+      label: "Trasa autem",
+    }];
+  }
+  if (mode === "let") {
+    return [
+      { href: `https://www.google.com/flights?hl=cs#flt=MUC.${airport.code}.`, label: "Google Flights z MUC" },
+      { href: `https://www.google.com/flights?hl=cs#flt=NUE.${airport.code}.`, label: "Google Flights z NUE" },
+    ];
+  }
+  return [];
+}
 
 // ---------------------------------------------------------------------------
 // Drobné stavební prvky
@@ -130,25 +161,49 @@ function Toggle({
 function AirportRow({
   airport,
   withTransport,
+  homeLocation,
   onChange,
   onRemove,
   onSave,
   isBusy,
+  dragHandleProps,
+  isDragTarget,
 }: {
   airport: AgentAirport;
   withTransport: boolean;
+  homeLocation?: string;
   onChange: (patch: Partial<AgentAirport>) => void;
   onRemove: () => void;
   onSave: () => void;
   isBusy: boolean;
+  dragHandleProps: React.HTMLAttributes<HTMLSpanElement>;
+  isDragTarget: boolean;
 }) {
-  const t = airport.transport ?? { costEur: 0, durationMin: 0, mode: "" };
+  const t = airport.transport ?? { costEur: 0, durationMin: 0, mode: "vlak/bus" };
   const setTransport = (patch: Partial<typeof t>) =>
     onChange({ transport: { ...t, ...patch } });
 
+  const mode = t.mode || "vlak/bus";
+  const transportLinks = withTransport && homeLocation && airport.name
+    ? buildTransportLink(mode, homeLocation, airport)
+    : [];
+
   return (
-    <div className="rounded-md border bg-muted/30 p-3">
+    <div
+      className={cn(
+        "rounded-md border bg-muted/30 p-3 transition-all",
+        isDragTarget && "ring-2 ring-primary/50 bg-primary/5",
+      )}
+    >
       <div className="flex flex-wrap items-end gap-3">
+        {/* Drag handle */}
+        <span
+          {...dragHandleProps}
+          className="flex cursor-grab items-center self-center text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
+          title="Přetáhnout pro změnu pořadí"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
         <Field label="IATA" className="w-20">
           <Input
             value={airport.code}
@@ -160,27 +215,9 @@ function AirportRow({
         <Field label="Název" className="min-w-40 flex-1">
           <Input value={airport.name} onChange={(e) => onChange({ name: e.target.value })} />
         </Field>
-        <Field label="Lat" className="w-28">
-          <NumberInput
-            value={airport.lat}
-            step="any"
-            onChange={(n) => onChange({ lat: n })}
-          />
-        </Field>
-        <Field label="Lon" className="w-28">
-          <NumberInput
-            value={airport.lon}
-            step="any"
-            onChange={(n) => onChange({ lon: n })}
-          />
-        </Field>
-        <Field label="Priorita" className="w-24">
-          <NumberInput
-            value={airport.priority}
-            min={1}
-            onChange={(n) => onChange({ priority: n })}
-          />
-        </Field>
+        <div className="flex items-end gap-1 self-end text-xs text-muted-foreground/60">
+          <span>📍 GPS doplní scanner</span>
+        </div>
         <Toggle
           checked={airport.enabled}
           onChange={(v) => onChange({ enabled: v })}
@@ -198,31 +235,76 @@ function AirportRow({
       </div>
 
       {withTransport && (
-        <div className="mt-3 flex flex-wrap items-end gap-3 border-t pt-3">
-          <span className="text-xs font-medium text-muted-foreground">
-            Doprava z domova:
-          </span>
-          <Field label="Cena (EUR)" className="w-28">
-            <NumberInput
-              value={t.costEur}
-              min={0}
-              onChange={(n) => setTransport({ costEur: n })}
-            />
-          </Field>
-          <Field label="Doba (h)" className="w-28">
-            <NumberInput
-              value={t.durationMin / 60}
-              min={0}
-              step={0.5}
-              onChange={(n) => setTransport({ durationMin: n * 60 })}
-            />
-          </Field>
-          <Field label="Prostředek" className="min-w-40 flex-1">
-            <Input value={t.mode} onChange={(e) => setTransport({ mode: e.target.value })} />
-          </Field>
-          <Button size="sm" onClick={onSave} disabled={isBusy} title="Uložit toto letiště na GitHub">
-            <Save className="h-4 w-4" />
-          </Button>
+        <div className="mt-3 rounded-md bg-muted/50 p-3 border-t">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-xs font-medium text-muted-foreground">
+              Doprava z domova:
+            </span>
+            {transportLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary underline-offset-2 hover:underline"
+              >
+                {link.label} ↗
+              </a>
+            ))}
+            {!airport.name && (
+              <span className="text-xs text-muted-foreground/60">(vyplňte název letiště)</span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Prostředek" className="w-36">
+              <select
+                value={mode}
+                onChange={(e) => setTransport({ mode: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="vlak/bus">vlak / bus</option>
+                <option value="auto">auto</option>
+                <option value="let">let</option>
+              </select>
+            </Field>
+            <Field label={mode === "let" ? "Cena letu (EUR)" : "Cena (EUR)"} className="w-28">
+              <NumberInput
+                value={t.costEur}
+                min={0}
+                onChange={(n) => setTransport({ costEur: n })}
+              />
+            </Field>
+            <Field label={mode === "let" ? "Čas letu (h)" : "Doba (h)"} className="w-28">
+              <NumberInput
+                value={t.durationMin / 60}
+                min={0}
+                step={0.5}
+                onChange={(n) => setTransport({ durationMin: n * 60 })}
+              />
+            </Field>
+            {mode === "let" && (
+              <>
+                <Field label="Transfer na letiště (EUR)" className="w-36">
+                  <NumberInput
+                    value={t.airportTransferCostEur ?? 25}
+                    min={0}
+                    onChange={(n) => setTransport({ airportTransferCostEur: n })}
+                  />
+                </Field>
+                <Field label="Transfer čas (h)" className="w-28">
+                  <NumberInput
+                    value={t.airportTransferTimeH ?? 2.5}
+                    min={0}
+                    step={0.5}
+                    onChange={(n) => setTransport({ airportTransferTimeH: n })}
+                  />
+                </Field>
+              </>
+            )}
+            <Button size="sm" onClick={onSave} disabled={isBusy} title="Uložit toto letiště na GitHub">
+              <Save className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -238,8 +320,16 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Inicializuj pracovní kopii z načteného configu (jen jednou, ať se
-  // rozpracované změny nepřepíšou).
+  // D&D state
+  const [dragState, setDragState] = useState<{
+    group: "europeAirports" | "japanAirports";
+    fromIdx: number;
+  } | null>(null);
+  const [dropIdx, setDropIdx] = useState<{
+    group: "europeAirports" | "japanAirports";
+    idx: number;
+  } | null>(null);
+
   useEffect(() => {
     if (agentConfig && !config) setConfig(cloneConfig(agentConfig));
   }, [agentConfig, config]);
@@ -262,7 +352,6 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
     );
   }
 
-  // -- mutace pracovní kopie --------------------------------------------------
   const update = (mut: (draft: AgentConfig) => void) => {
     setConfig((prev) => {
       if (!prev) return prev;
@@ -283,13 +372,38 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
 
   const addAirport = (group: "europeAirports" | "japanAirports") =>
     update((d) => {
-      const nextPriority = d[group].reduce((m, a) => Math.max(m, a.priority), 0) + 1;
+      const nextPriority = d[group].length + 1;
       d[group].push(
         group === "europeAirports"
           ? emptyEuropeAirport(nextPriority)
           : emptyJapanAirport(nextPriority),
       );
     });
+
+  const reorderAirports = (
+    group: "europeAirports" | "japanAirports",
+    fromIdx: number,
+    toIdx: number,
+  ) => {
+    if (fromIdx === toIdx) return;
+    update((d) => {
+      const arr = d[group];
+      const [item] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, item);
+      arr.forEach((a, i) => { a.priority = i + 1; });
+    });
+  };
+
+  const handleDrop = (
+    group: "europeAirports" | "japanAirports",
+    toIdx: number,
+  ) => {
+    if (dragState && dragState.group === group) {
+      reorderAirports(group, dragState.fromIdx, toIdx);
+    }
+    setDragState(null);
+    setDropIdx(null);
+  };
 
   // -- akce -------------------------------------------------------------------
   const handleSaveToken = () => {
@@ -310,18 +424,12 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
     try {
       const serialized = serializeConfig(config);
       const commitMsg = "config: úprava agenta přes dashboard (Nastavení)";
-
-      // 1) main — scanner čte config odsud při každém běhu
       await commitWithRetry(token, "main", serialized, commitMsg);
-
-      // 2) gh-pages — dashboard čte config odsud; okamžitý efekt po reloadu
-      // gh-pages větev nebo soubor nemusí existovat → chybu tiše ignorujeme
       try {
         await commitWithRetry(token, "gh-pages", serialized, commitMsg);
       } catch {
-        /* gh-pages nemusí existovat (první deploy) — projeví se po příštím deployi */
+        /* gh-pages nemusí existovat */
       }
-
       setStatus({
         kind: "ok",
         msg: `Uloženo do ${AGENT_CONFIG_PATH}. Projeví se ihned po reloadu.`,
@@ -342,9 +450,7 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
       await commitWithRetry(token, "main", serialized, "config: update letiště");
       try {
         await commitWithRetry(token, "gh-pages", serialized, "config: update letiště");
-      } catch {
-        /* gh-pages nemusí existovat */
-      }
+      } catch { /* gh-pages nemusí existovat */ }
       setStatus({ kind: "ok", msg: "Letiště uloženo ✓" });
     } catch (e) {
       setStatus({ kind: "err", msg: e instanceof Error ? e.message : String(e) });
@@ -378,7 +484,7 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // umožni načíst stejný soubor znovu
+    e.target.value = "";
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -399,6 +505,39 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
   };
 
   const busy = status.kind === "busy";
+
+  const renderAirportList = (group: "europeAirports" | "japanAirports") => {
+    const withTransport = group === "europeAirports";
+    return (
+      <>
+        {config[group].map((a, i) => (
+          <div
+            key={i}
+            draggable
+            onDragStart={() => setDragState({ group, fromIdx: i })}
+            onDragEnd={() => { setDragState(null); setDropIdx(null); }}
+            onDragOver={(e) => { e.preventDefault(); setDropIdx({ group, idx: i }); }}
+            onDrop={() => handleDrop(group, i)}
+          >
+            <AirportRow
+              airport={a}
+              withTransport={withTransport}
+              homeLocation={config.homeLocation}
+              onChange={(patch) => patchAirport(group, i, patch)}
+              onRemove={() => removeAirport(group, i)}
+              onSave={handleSaveAirport}
+              isBusy={busy}
+              isDragTarget={dropIdx?.group === group && dropIdx.idx === i && dragState?.group === group && dragState.fromIdx !== i}
+              dragHandleProps={{}}
+            />
+          </div>
+        ))}
+        <Button variant="outline" onClick={() => addAirport(group)}>
+          <Plus /> Přidat {withTransport ? "evropské" : "japonské"} letiště
+        </Button>
+      </>
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -450,25 +589,12 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
         <CardHeader>
           <CardTitle>Evropská odletová letiště</CardTitle>
           <CardDescription>
-            Priorita = pořadí preference (1 = nejvyšší). „Doprava" se připočítává 2× při
-            zobrazení „cena vč. dopravy".
+            Přetažením řádku změňte pořadí (prioritu). Souřadnice GPS doplní scanner automaticky.
+            Deaktivovaná letiště zůstávají ve statistikách.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {config.europeAirports.map((a, i) => (
-            <AirportRow
-              key={i}
-              airport={a}
-              withTransport
-              onChange={(patch) => patchAirport("europeAirports", i, patch)}
-              onRemove={() => removeAirport("europeAirports", i)}
-              onSave={handleSaveAirport}
-              isBusy={busy}
-            />
-          ))}
-          <Button variant="outline" onClick={() => addAirport("europeAirports")}>
-            <Plus /> Přidat evropské letiště
-          </Button>
+          {renderAirportList("europeAirports")}
         </CardContent>
       </Card>
 
@@ -476,22 +602,12 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>Japonská cílová letiště</CardTitle>
+          <CardDescription>
+            Přetažením řádku změňte pořadí (prioritu). Souřadnice GPS doplní scanner automaticky.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {config.japanAirports.map((a, i) => (
-            <AirportRow
-              key={i}
-              airport={a}
-              withTransport={false}
-              onChange={(patch) => patchAirport("japanAirports", i, patch)}
-              onRemove={() => removeAirport("japanAirports", i)}
-              onSave={handleSaveAirport}
-              isBusy={busy}
-            />
-          ))}
-          <Button variant="outline" onClick={() => addAirport("japanAirports")}>
-            <Plus /> Přidat japonské letiště
-          </Button>
+          {renderAirportList("japanAirports")}
         </CardContent>
       </Card>
 
@@ -508,14 +624,14 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
               onChange={(n) => update((d) => (d.alertThresholds.dealMaxEur = n))}
             />
           </Field>
-          <Field label="„Velký pokles“ (%)" className="w-44">
+          <Field label={`„Velký pokles“ (%)`} className="w-44">
             <NumberInput
               value={config.alertThresholds.bigDropPct}
               min={0}
               onChange={(n) => update((d) => (d.alertThresholds.bigDropPct = n))}
             />
           </Field>
-          <Field label="Citlivost „nového minima“ (%)" className="w-56">
+          <Field label={`Citlivost „nového minima" (%)`} className="w-56">
             <NumberInput
               value={config.alertThresholds.newLowSensitivityPct}
               min={0}
@@ -532,66 +648,18 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
           <CardTitle>Zdroje dat / API</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Toggle
-            label="Google Flights"
-            checked={config.sources.googleFlights}
-            onChange={(v) => update((d) => (d.sources.googleFlights = v))}
-          />
-          <Toggle
-            label="Duffel"
-            checked={config.sources.duffel}
-            onChange={(v) => update((d) => (d.sources.duffel = v))}
-          />
-          <Toggle
-            label="Sky Scrapper"
-            checked={config.sources.skyScrapper}
-            onChange={(v) => update((d) => (d.sources.skyScrapper = v))}
-          />
-          <Toggle
-            label="SerpAPI"
-            checked={config.sources.serpApi}
-            onChange={(v) => update((d) => (d.sources.serpApi = v))}
-          />
-          <Toggle
-            label="Amadeus"
-            checked={config.sources.amadeus}
-            onChange={(v) => update((d) => (d.sources.amadeus = v))}
-          />
-          <Toggle
-            label="Travelpayouts"
-            checked={config.sources.travelpayouts}
-            onChange={(v) => update((d) => (d.sources.travelpayouts = v))}
-          />
-          <Toggle
-            label="FlightLabs"
-            checked={config.sources.flightLabs}
-            onChange={(v) => update((d) => (d.sources.flightLabs = v))}
-          />
-          <Toggle
-            label="LetsFG"
-            checked={config.sources.letsFG}
-            onChange={(v) => update((d) => (d.sources.letsFG = v))}
-          />
-          <Toggle
-            label="RSS: Secret Flying"
-            checked={config.sources.rss.secretFlying}
-            onChange={(v) => update((d) => (d.sources.rss.secretFlying = v))}
-          />
-          <Toggle
-            label="RSS: Cestujlevně"
-            checked={config.sources.rss.cestujlevne}
-            onChange={(v) => update((d) => (d.sources.rss.cestujlevne = v))}
-          />
-          <Toggle
-            label="RSS: Jack's Flight Club"
-            checked={config.sources.rss.jacks}
-            onChange={(v) => update((d) => (d.sources.rss.jacks = v))}
-          />
-          <Toggle
-            label="RSS: Miles & More"
-            checked={config.sources.rss.milesAndMore}
-            onChange={(v) => update((d) => (d.sources.rss.milesAndMore = v))}
-          />
+          <Toggle label="Google Flights" checked={config.sources.googleFlights} onChange={(v) => update((d) => (d.sources.googleFlights = v))} />
+          <Toggle label="Duffel" checked={config.sources.duffel} onChange={(v) => update((d) => (d.sources.duffel = v))} />
+          <Toggle label="Sky Scrapper" checked={config.sources.skyScrapper} onChange={(v) => update((d) => (d.sources.skyScrapper = v))} />
+          <Toggle label="SerpAPI" checked={config.sources.serpApi} onChange={(v) => update((d) => (d.sources.serpApi = v))} />
+          <Toggle label="Amadeus" checked={config.sources.amadeus} onChange={(v) => update((d) => (d.sources.amadeus = v))} />
+          <Toggle label="Travelpayouts" checked={config.sources.travelpayouts} onChange={(v) => update((d) => (d.sources.travelpayouts = v))} />
+          <Toggle label="FlightLabs" checked={config.sources.flightLabs} onChange={(v) => update((d) => (d.sources.flightLabs = v))} />
+          <Toggle label="LetsFG" checked={config.sources.letsFG} onChange={(v) => update((d) => (d.sources.letsFG = v))} />
+          <Toggle label="RSS: Secret Flying" checked={config.sources.rss.secretFlying} onChange={(v) => update((d) => (d.sources.rss.secretFlying = v))} />
+          <Toggle label="RSS: Cestujlevně" checked={config.sources.rss.cestujlevne} onChange={(v) => update((d) => (d.sources.rss.cestujlevne = v))} />
+          <Toggle label="RSS: Jack's Flight Club" checked={config.sources.rss.jacks} onChange={(v) => update((d) => (d.sources.rss.jacks = v))} />
+          <Toggle label="RSS: Miles & More" checked={config.sources.rss.milesAndMore} onChange={(v) => update((d) => (d.sources.rss.milesAndMore = v))} />
         </CardContent>
       </Card>
 
@@ -604,21 +672,9 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Toggle
-            label="Cenový alert"
-            checked={config.telegramAlerts.priceAlert}
-            onChange={(v) => update((d) => (d.telegramAlerts.priceAlert = v))}
-          />
-          <Toggle
-            label="Deal alert"
-            checked={config.telegramAlerts.dealAlert}
-            onChange={(v) => update((d) => (d.telegramAlerts.dealAlert = v))}
-          />
-          <Toggle
-            label="Denní souhrn"
-            checked={config.telegramAlerts.dailySummary}
-            onChange={(v) => update((d) => (d.telegramAlerts.dailySummary = v))}
-          />
+          <Toggle label="Cenový alert" checked={config.telegramAlerts.priceAlert} onChange={(v) => update((d) => (d.telegramAlerts.priceAlert = v))} />
+          <Toggle label="Deal alert" checked={config.telegramAlerts.dealAlert} onChange={(v) => update((d) => (d.telegramAlerts.dealAlert = v))} />
+          <Toggle label="Denní souhrn" checked={config.telegramAlerts.dailySummary} onChange={(v) => update((d) => (d.telegramAlerts.dailySummary = v))} />
         </CardContent>
       </Card>
 
@@ -627,13 +683,13 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
         <CardHeader>
           <CardTitle>GitHub přístup a akce</CardTitle>
           <CardDescription>
-            <strong>Tlačítko Save u každého letiště</strong> — uloží jen toto letiště (doprava, cena).
+            <strong>Save u letiště</strong> — uloží jen toto letiště.
             <br />
             <strong>Uložit konfiguraci</strong> — commitne celou konfiguraci.
             <br />
             <strong>Spustit scan</strong> — spustí scan hned (místo čekání na cron).
             <br />
-            <strong>Export/Import</strong> — pro ručnu archivaci či přesun bez GitHubu.
+            <strong>Export/Import</strong> — ručná archivace bez GitHubu.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

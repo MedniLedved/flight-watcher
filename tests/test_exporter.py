@@ -99,8 +99,10 @@ def test_parse_route_key_roundtrip_and_openjaw():
 def test_latest_contains_ephemeral_fields_and_flags(exported):
     out, _, _ = exported
     latest = _load(out / "latest.json")
-    assert len(latest) == 2  # dedup na nejlevnější per route_key
-    prg = next(x for x in latest if x["routeKey"] == "PRG-TYO-roundtrip")
+    # dedup per (route_key, depart_date): PRG-TYO má 2 záznamy (487 s datem, 530 bez)
+    assert len(latest) == 3
+    # cheapest PRG-TYO entry (sorted by price ascending)
+    prg = next(x for x in latest if x["routeKey"] == "PRG-TYO-roundtrip" and x["price"] == 487)
     assert prg["airlines"] == ["AY", "JL"]
     assert prg["dealUrl"] == "https://example.com/deal"
     assert prg["price"] == 487 and prg["nights"] == 14

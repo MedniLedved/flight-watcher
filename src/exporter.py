@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import json
 import logging
+import time
+import urllib.parse
+import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -94,6 +97,35 @@ def _record_key(rec: dict) -> tuple:
     """Deduplikační n-tice append-only řady."""
     return (rec.get("date"), rec.get("source"), rec.get("departDate"),
             rec.get("returnDate"), rec.get("price"))
+
+
+def _geocode_airport(code: str, name: str, cache: dict) -> Optional[dict]:
+    """Nominatim geocoding; vrací {lat, lon} nebo None. Cachuje do předaného dict."""
+    if code in cache:
+        return cache[code]
+    query = f"{code} airport"
+    url = (
+        "https://nominatim.openstreetmap.org/search?"
+        + urllib.parse.urlencode({"q": query, "format": "json", "limit": "1"})
+    )
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "flight-watcher/1.0 (github.com/medniledved/flight-watcher)"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+        time.sleep(1.1)  # Nominatim rate limit: 1 req/s
+        if data:
+            result = {
+                "lat": round(float(data[0]["lat"]), 5),
+                "lon": round(float(data[0]["lon"]), 5),
+            }
+            cache[code] = result
+            return result
+    except Exception as exc:
+        logger.warning("Geocoding selhalo pro %s (%s): %s", code, name, exc)
+    return None
 
 
 class Exporter:
@@ -299,6 +331,15 @@ class Exporter:
         jp_codes = {a["code"] for a in self.agent.get("japanAirports", [])}
         jp_codes |= set(self.agent.get("cityAliases", {}))
 
+        # Zahrnout i letiště odstraněná z configu, ale s historickými daty
+        for key, _ in self.history.routes():
+            parts = key.split("-")
+            if len(parts) >= 3:
+                eu_codes.add(parts[0])  # origin = vždy evropské
+                jp_codes.add(parts[1])  # destination = vždy japonské
+                if parts[-1] == "openjaw" and len(parts) == 4:
+                    jp_codes.add(parts[2])  # return_origin u openjaw = japonské
+
         def _airport_rows(codes: set[str]) -> list[dict]:
             rows = []
             for code, s in a_stats.items():
@@ -337,11 +378,32 @@ class Exporter:
 
     # -- routes.json -----------------------------------------------------------
     def _build_coords(self) -> dict[str, dict]:
+        cache_path = self.out_dir / "airport_coords_cache.json"
+        cache: dict[str, dict] = _read_json(cache_path, {})
         coords: dict[str, dict] = {}
-        for a in (self.agent.get("europeAirports", [])
-                  + self.agent.get("japanAirports", [])):
-            if a.get("code") and a.get("lat") is not None:
-                coords[a["code"]] = {"lat": a["lat"], "lon": a["lon"]}
+        cache_dirty = False
+
+        all_airports = (
+            self.agent.get("europeAirports", [])
+            + self.agent.get("japanAirports", [])
+        )
+        for a in all_airports:
+            code = a.get("code")
+            if not code:
+                continue
+            lat = a.get("lat") or 0
+            lon = a.get("lon") or 0
+            if lat and lon:
+                coords[code] = {"lat": lat, "lon": lon}
+            else:
+                result = _geocode_airport(code, a.get("name", ""), cache)
+                if result:
+                    coords[code] = result
+                    cache_dirty = True
+
+        if cache_dirty:
+            _write_json(cache_path, cache)
+
         for code, info in self.agent.get("cityAliases", {}).items():
             if info.get("lat") is not None:
                 coords[code] = {"lat": info["lat"], "lon": info["lon"]}

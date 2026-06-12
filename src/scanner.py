@@ -919,9 +919,15 @@ class Scanner:
         for ap in self.settings.agent_config.get("europeAirports", []):
             if isinstance(ap, dict):
                 t = ap.get("transport") or {}
-                cost = t.get("costEur") if isinstance(t, dict) else None
-                if cost is not None:
-                    transport_by_code[str(ap["code"])] = float(cost)
+                if not isinstance(t, dict):
+                    continue
+                cost = t.get("costEur")
+                if cost is None:
+                    continue
+                total = float(cost)
+                if (t.get("mode") or "").lower() == "let":
+                    total += float(t.get("airportTransferCostEur", 25))
+                transport_by_code[str(ap["code"])] = total
 
         best_key: Optional[str] = None
         best_total: Optional[float] = None

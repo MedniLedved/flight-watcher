@@ -14,16 +14,14 @@ export function emptyEuropeAirport(priority: number): AgentAirport {
   return {
     code: "",
     name: "",
-    lat: 0,
-    lon: 0,
     priority,
     enabled: true,
-    transport: { costEur: 0, durationMin: 0, mode: "" },
+    transport: { costEur: 0, durationMin: 0, mode: "vlak/bus" },
   };
 }
 
 export function emptyJapanAirport(priority: number): AgentAirport {
-  return { code: "", name: "", lat: 0, lon: 0, priority, enabled: true };
+  return { code: "", name: "", priority, enabled: true };
 }
 
 const IATA_RE = /^[A-Z]{3}$/;
@@ -43,12 +41,6 @@ function validateAirport(
     errors.push(`${label}: kód „${a.code || "(prázdný)"}" musí být 3 velká písmena (IATA).`);
   }
   if (!a.name.trim()) errors.push(`${label}: chybí název.`);
-  if (!isFiniteNumber(a.lat) || a.lat < -90 || a.lat > 90) {
-    errors.push(`${label}: zeměpisná šířka musí být −90…90.`);
-  }
-  if (!isFiniteNumber(a.lon) || a.lon < -180 || a.lon > 180) {
-    errors.push(`${label}: zeměpisná délka musí být −180…180.`);
-  }
   if (!Number.isInteger(a.priority) || a.priority < 1) {
     errors.push(`${label}: priorita musí být celé číslo ≥ 1.`);
   }
@@ -64,7 +56,10 @@ function validateAirport(
       if (!isFiniteNumber(t.durationMin) || t.durationMin < 0) {
         errors.push(`${label}: doba dopravy musí být číslo ≥ 0 min.`);
       }
-      if (!t.mode.trim()) errors.push(`${label}: chybí dopravní prostředek.`);
+      const validModes = ["vlak/bus", "auto", "let"];
+      if (!validModes.includes(t.mode)) {
+        errors.push(`${label}: prostředek dopravy musí být vlak/bus, auto nebo let.`);
+      }
     }
   }
 }

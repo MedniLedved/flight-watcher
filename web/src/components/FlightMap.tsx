@@ -253,8 +253,10 @@ function InsightsPanel({
   const transportByCode: Record<string, number> = {};
   if (agentConfig) {
     for (const ap of agentConfig.europeAirports) {
-      if (ap.transport?.costEur != null) {
-        transportByCode[ap.code] = ap.transport.costEur;
+      const t = ap.transport;
+      if (t?.costEur != null) {
+        const transfer = t.mode === "let" ? (t.airportTransferCostEur ?? 25) : 0;
+        transportByCode[ap.code] = t.costEur + transfer;
       }
     }
   }

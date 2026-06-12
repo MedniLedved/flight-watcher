@@ -175,19 +175,25 @@ export interface MetaFile {
 export interface AirportTransport {
   costEur: number;
   durationMin: number;
+  /** "vlak/bus" | "auto" | "let" */
   mode: string;
+  /** Jen pro mode="let": cena transferu centrum→letiště (EUR), výchozí 25 */
+  airportTransferCostEur?: number;
+  /** Jen pro mode="let": čas transferu centrum→letiště (hodiny), výchozí 2.5 */
+  airportTransferTimeH?: number;
 }
 
 export interface AgentAirport {
   code: string;
   name: string;
-  lat: number;
-  lon: number;
+  /** Zeměpisná šířka; pokud chybí/0, scanner doplní automaticky přes Nominatim */
+  lat?: number;
+  /** Zeměpisná délka; pokud chybí/0, scanner doplní automaticky přes Nominatim */
+  lon?: number;
   priority: number;
   enabled: boolean;
-  /** IATA metropolitní/city kód (např. MIL pro MXP) – alternativní kód pro transport lookup */
+  /** IATA metropolitní/city kód (např. MIL pro MXP) */
   cityCode?: string;
-  /** jen evropská letiště (doprava z homeLocation) */
   transport?: AirportTransport;
 }
 
