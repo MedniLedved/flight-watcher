@@ -435,8 +435,9 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
       try {
         await commitWithRetry(token, "gh-pages", serialized, commitMsg);
       } catch (e) {
-        if (!(e instanceof Error && e.message.includes("404"))) throw e;
-        /* gh-pages větev neexistuje – přeskočit */
+        // gh-pages je convenience kopie; 404 = větev neexistuje, 409 = CI race.
+        // Obojí je OK — main save proběhl úspěšně.
+        if (e instanceof Error && !e.message.includes("404") && !e.message.includes("409")) throw e;
       }
       setStatus({
         kind: "ok",
@@ -459,8 +460,7 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
       try {
         await commitWithRetry(token, "gh-pages", serialized, "config: update letiště");
       } catch (e) {
-        if (!(e instanceof Error && e.message.includes("404"))) throw e;
-        /* gh-pages větev neexistuje – přeskočit */
+        if (e instanceof Error && !e.message.includes("404") && !e.message.includes("409")) throw e;
       }
       setStatus({ kind: "ok", msg: "Letiště uloženo ✓" });
     } catch (e) {
