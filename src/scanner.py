@@ -914,19 +914,31 @@ class Scanner:
             )
             lines.append(f"🔎 Prověřené termíny: {terms}")
 
-        # Historicky nejlevnější nabídka včetně dopravy (2× tam i zpět)
+        # Historicky nejlevnější nabídka včetně dopravy.
+        # Pro mode="let": costEurRoundtrip (1×) + 2× transfer; fallback 2× (costEur + transfer).
+        # Pro vlak/bus/auto: 2× costEur.
         transport_by_code: dict[str, float] = {}
         for ap in self.settings.agent_config.get("europeAirports", []):
             if isinstance(ap, dict):
                 t = ap.get("transport") or {}
                 if not isinstance(t, dict):
                     continue
-                cost = t.get("costEur")
-                if cost is None:
-                    continue
-                total = float(cost)
-                if (t.get("mode") or "").lower() == "let":
-                    total += float(t.get("airportTransferCostEur", 25))
+                mode = (t.get("mode") or "").lower()
+                if mode == "let":
+                    cost_one_way = t.get("costEur")
+                    if cost_one_way is None:
+                        continue
+                    transfer = float(t.get("airportTransferCostEur", 25))
+                    roundtrip = t.get("costEurRoundtrip")
+                    if roundtrip is not None:
+                        total = float(roundtrip) + 2 * transfer
+                    else:
+                        total = 2 * (float(cost_one_way) + transfer)
+                else:
+                    cost_one_way = t.get("costEur")
+                    if cost_one_way is None:
+                        continue
+                    total = 2 * float(cost_one_way)
                 transport_by_code[str(ap["code"])] = total
 
         best_key: Optional[str] = None
@@ -939,7 +951,7 @@ class Scanner:
                 continue
             origin = key.split("-")[0]
             transport_cost = transport_by_code.get(origin, 0.0)
-            total = atm + 2 * transport_cost
+            total = atm + transport_cost
             if best_total is None or total < best_total:
                 best_total = total
                 best_key = key
@@ -950,7 +962,7 @@ class Scanner:
             dest = best_key.split("-")[1]
             transport_cost = transport_by_code.get(origin, 0.0)
             if transport_cost:
-                transport_note = f" + {2 * transport_cost:.0f} EUR doprava"
+                transport_note = f" + {transport_cost:.0f} EUR doprava"
             else:
                 transport_note = ""
             lines.append(
