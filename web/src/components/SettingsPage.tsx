@@ -31,6 +31,7 @@ interface Props {
   agentConfig: AgentConfig | null;
   loading: boolean;
   error: string | null;
+  onConfigChange?: (c: AgentConfig) => void;
 }
 
 type Status =
@@ -62,10 +63,8 @@ function buildTransportLink(
     }];
   }
   if (mode === "let") {
-    return [
-      { href: `https://www.google.com/flights?hl=cs#search;f=MUC;t=${airport.code}`, label: "Google Flights z MUC" },
-      { href: `https://www.google.com/flights?hl=cs#search;f=NUE;t=${airport.code}`, label: "Google Flights z NUE" },
-    ];
+    const q = encodeURIComponent(`flights ${homeLocation} ${airport.name}`);
+    return [{ href: `https://www.google.com/search?q=${q}&hl=cs`, label: "Hledat lety" }];
   }
   return [];
 }
@@ -184,19 +183,9 @@ function AirportRow({
     ? buildTransportLink(mode, homeLocation, airport)
     : [];
 
-  const modeLabel: React.ReactNode = mode === "let"
-    ? (
-      <span className="flex items-center gap-1">
-        Prostředek
-        {transportLinks.map((l) => (
-          <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
-            title={l.label} className="text-primary hover:underline leading-none">↗</a>
-        ))}
-      </span>
-    )
-    : transportLinks[0]
-      ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Prostředek ↗</a>
-      : "Prostředek";
+  const modeLabel: React.ReactNode = transportLinks[0]
+    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Prostředek ↗</a>
+    : "Prostředek";
 
   return (
     <div className="rounded-md border bg-muted/30 px-2 py-2 flex flex-wrap items-end gap-x-2 gap-y-1">
@@ -271,11 +260,13 @@ function AirportRow({
 // ---------------------------------------------------------------------------
 // Hlavní stránka
 // ---------------------------------------------------------------------------
-export function SettingsPage({ agentConfig, loading, error }: Props) {
+export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Props) {
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [token, setToken] = useState<string>(() => loadToken());
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Prevents echo: when we reset from an incoming prop update, don't fire onConfigChange back
+  const syncingFromProp = useRef(false);
 
   // D&D state — dropInsert is the index to insert before (0..n)
   const [dragState, setDragState] = useState<{
@@ -288,8 +279,16 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
   } | null>(null);
 
   useEffect(() => {
-    if (agentConfig && !config) setConfig(cloneConfig(agentConfig));
-  }, [agentConfig, config]);
+    if (!agentConfig) return;
+    if (config && serializeConfig(agentConfig) === serializeConfig(config)) return;
+    syncingFromProp.current = true;
+    setConfig(cloneConfig(agentConfig));
+  }, [agentConfig]);
+
+  useEffect(() => {
+    if (config && !syncingFromProp.current) onConfigChange?.(config);
+    syncingFromProp.current = false;
+  }, [config]);
 
   const validationErrors = useMemo(
     () => (config ? validateAgentConfig(config) : []),
@@ -561,7 +560,7 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-[30px]">
             {renderAirportList("europeAirports")}
           </div>
         </CardContent>
@@ -576,7 +575,7 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-[30px]">
             {renderAirportList("japanAirports")}
           </div>
         </CardContent>

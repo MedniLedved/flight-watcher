@@ -139,7 +139,12 @@ export default function App() {
       )}
 
       {view === "settings" && (
-        <SettingsPage agentConfig={agentConfig} loading={loading} error={error} />
+        <SettingsPage
+          agentConfig={localConfig ?? agentConfig}
+          loading={loading}
+          error={error}
+          onConfigChange={setLocalConfig}
+        />
       )}
     </div>
   );
