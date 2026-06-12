@@ -103,9 +103,8 @@ function AirportInsightsTable({
   onToggleAirport?: (code: string, group: "europeAirports" | "japanAirports", enabled: boolean) => void;
 }) {
   const hasTransport = !!transportByCode && Object.keys(transportByCode).length > 0;
-  const defaultCol: AirportSortCol = hasTransport ? "effective" : "dealRate";
   const [sort, setSort] = useState<{ col: AirportSortCol; dir: SortDir }>({
-    col: defaultCol,
+    col: "dealRate",
     dir: "desc",
   });
 
