@@ -336,8 +336,14 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                 <dt className="text-muted-foreground">Doprava na letiště</dt>
                 <dd>
                   {selectedReturnTransport
-                    ? `${selectedTransport.costEur} € (${selected.origin}) + ${selectedReturnTransport.costEur} € (${selected.returnDestination}) · ${selectedTransport.mode}`
-                    : `2× ${selectedTransport.costEur} € · ${fmtDuration(selectedTransport.durationMin)} (${selectedTransport.mode})`}
+                    ? (() => {
+                        const tr1 = selectedTransport.airportTransferCostEur ?? 25;
+                        const tr2 = selectedReturnTransport.airportTransferCostEur ?? 25;
+                        return `${selectedTransport.costEur + tr1} € (${selected.origin}) + ${selectedReturnTransport.costEur + tr2} € (${selected.returnDestination})`;
+                      })()
+                    : selectedTransport.mode === "let"
+                      ? `${(selectedTransport.costEurRoundtrip ?? selectedTransport.costEur * 2) + 2 * (selectedTransport.airportTransferCostEur ?? 25)} € zpáteční · ${fmtDuration(selectedTransport.durationMin)} (${selectedTransport.mode})`
+                      : `2× ${selectedTransport.costEur} € · ${fmtDuration(selectedTransport.durationMin)} (${selectedTransport.mode})`}
                 </dd>
               </>
             )}

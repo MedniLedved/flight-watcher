@@ -13,9 +13,9 @@ export function getTransport(
 }
 
 /** Effective price: base + transport cost (if toggle on).
- *  Různá evropská letiště (open-jaw): costEur(origin) + costEur(returnDestination).
- *  Stejné evropské letiště (roundtrip nebo open-jaw na japonské straně):
- *    mode="let" → costEurRoundtrip (1×); jinak 2× costEur. */
+ *  Open-jaw, různá EU letiště: costEur(origin) + costEur(returnDest) + airportTransfer obou stran.
+ *  Roundtrip / open-jaw na japonské straně:
+ *    mode="let" → costEurRoundtrip + 2× airportTransferCostEur; jinak 2× costEur. */
 export function effectivePrice(
   price: number,
   origin: string,
@@ -27,12 +27,18 @@ export function effectivePrice(
   if (returnDestination && returnDestination !== origin) {
     const t1 = getTransport(origin, agentConfig);
     const t2 = getTransport(returnDestination, agentConfig);
-    return price + (t1?.costEur ?? 0) + (t2?.costEur ?? 0);
+    return (
+      price +
+      (t1?.costEur ?? 0) +
+      (t2?.costEur ?? 0) +
+      (t1?.airportTransferCostEur ?? (t1 ? 25 : 0)) +
+      (t2?.airportTransferCostEur ?? (t2 ? 25 : 0))
+    );
   }
   const t = getTransport(origin, agentConfig);
   if (!t) return price;
-  if (t.mode === "let" && t.costEurRoundtrip != null) {
-    return price + t.costEurRoundtrip;
+  if (t.mode === "let") {
+    return price + (t.costEurRoundtrip ?? t.costEur * 2) + 2 * (t.airportTransferCostEur ?? 25);
   }
   return price + 2 * t.costEur;
 }
