@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { effectivePrice, getTransport } from "@/lib/transport";
 import type { AgentConfig, LatestOffer } from "@/types/data";
+import { airlineNames } from "@/lib/airlines";
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -158,7 +159,7 @@ export function OffersTable({
               <TableCell className="tabular-nums">{fmtDate(o.departDate)}</TableCell>
               <TableCell className="tabular-nums">{fmtDate(o.returnDate)}</TableCell>
               <TableCell className="text-right tabular-nums">{o.nights ?? "—"}</TableCell>
-              <TableCell>{o.airlines.length > 0 ? o.airlines.join(", ") : "—"}</TableCell>
+              <TableCell>{o.airlines.length > 0 ? airlineNames(o.airlines) : "—"}</TableCell>
               <TableCell className="text-muted-foreground">{o.source}</TableCell>
               <TableCell>
                 <Flags o={o} />

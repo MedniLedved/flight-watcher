@@ -13,6 +13,7 @@ import type {
   StatsFile,
 } from "@/types/data";
 import { cn } from "@/lib/utils";
+import { airlineNames } from "@/lib/airlines";
 
 // ---- Great-circle arc (SLERP) -----------------------------------------------
 function greatCirclePoints(
@@ -434,7 +435,7 @@ function RoutePopup({
           {offer.nights != null && (
             <div style={{ fontSize: "0.82em", color: "#555", marginBottom: 2 }}>
               {offer.nights} nocí
-              {offer.airlines.length > 0 ? ` · ${offer.airlines.join(", ")}` : ` · ${offer.source}`}
+              {offer.airlines.length > 0 ? ` · ${airlineNames(offer.airlines)}` : ` · ${offer.source}`}
             </div>
           )}
           {(offer.flags.isNewLow || offer.flags.isBigDrop) && (

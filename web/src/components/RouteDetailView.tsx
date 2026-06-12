@@ -9,6 +9,7 @@ import { PriceHistoryChart } from "./PriceHistoryChart";
 import { StatsCards } from "./StatsCards";
 import { useRouteDetail } from "@/hooks/useRouteDetail";
 import type { LatestOffer, RouteStats } from "@/types/data";
+import { airlineNames } from "@/lib/airlines";
 
 function routeLabel(routeKey: string): string {
   const parts = routeKey.split("-");
@@ -111,7 +112,7 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                       {Math.round(o.price)} €
                     </TableCell>
                     <TableCell>{o.nights ?? "—"}</TableCell>
-                    <TableCell>{o.airlines.join(", ") || "—"}</TableCell>
+                    <TableCell>{o.airlines.length ? airlineNames(o.airlines) : "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{o.source}</TableCell>
                   </TableRow>
                 ))}

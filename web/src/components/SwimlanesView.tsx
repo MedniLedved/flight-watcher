@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ExternalLink, Train } from "lucide-react";
+import { airlineNames } from "@/lib/airlines";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -328,7 +329,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               {selectedEffPrice != null ? Math.round(selectedEffPrice) : "—"} €
             </dd>
             <dt className="text-muted-foreground">Aerolinky</dt>
-            <dd>{selected.airlines.length ? selected.airlines.join(", ") : "—"}</dd>
+            <dd>{selected.airlines.length ? airlineNames(selected.airlines) : "—"}</dd>
             <dt className="text-muted-foreground">Zdroj</dt>
             <dd>{selected.source}</dd>
             {includeTransport && selectedTransport && (
