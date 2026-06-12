@@ -39,6 +39,11 @@ echo "==> [4/4] Deploying to gh-pages via worktree..."
 NEW_JS=$(grep -o 'assets/index-[^"]*\.js' dist/index.html)
 NEW_CSS=$(grep -o 'assets/index-[^"]*\.css' dist/index.html)
 
+# Sync local gh-pages ref with remote before creating worktree, otherwise
+# --force-with-lease rejects the push when Settings (GitHub API) committed
+# directly to gh-pages and the local ref is stale.
+git -C "$REPO_ROOT" fetch origin gh-pages:gh-pages 2>/dev/null || git -C "$REPO_ROOT" fetch origin gh-pages
+
 git -C "$REPO_ROOT" worktree add "$WORKTREE_DIR" gh-pages
 
 # Vyčisti jen build artefakty. data/ a config/ ZÁMĚRNĚ NEMAŽEME – jsou
