@@ -77,3 +77,29 @@ export function buildGoogleFlightsUrl(offer: LatestOffer): string {
     .replace(/\//g, "_");
   return `https://www.google.com/travel/flights?tfs=${b64}&hl=cs`;
 }
+
+// ---------------------------------------------------------------------------
+// Kayak — spolehlivý deep-link s přednastavenou trasou a daty
+// Formát: /flights/{ORIGIN}-{DEST}/{DEPART}/{RETURN} (roundtrip)
+//         /flights/{ORIGIN}-{DEST}/{DEPART}          (one-way)
+// ---------------------------------------------------------------------------
+export function buildKayakUrl(offer: LatestOffer): string {
+  const from = offer.origin;
+  const to = offer.destination;
+  const depart = offer.departDate ?? "";
+  const ret = offer.returnDate;
+
+  if (!depart) return "https://www.kayak.com/flights";
+
+  const legs = ret
+    ? `${from}-${to}/${depart}/${ret}`
+    : `${from}-${to}/${depart}`;
+  return `https://www.kayak.com/flights/${legs}`;
+}
+
+// ---------------------------------------------------------------------------
+// ITA Matrix — nemá URL deep-link; otevíráme homepage pro manuální ověření.
+// Zachováváme jako referenci: Google Flights (buildGoogleFlightsUrl) je
+// technický nástupce stejného enginu a podporuje pre-fill.
+// ---------------------------------------------------------------------------
+export const ITA_MATRIX_URL = "https://matrix.itasoftware.com/";
