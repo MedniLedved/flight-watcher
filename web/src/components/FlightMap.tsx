@@ -120,7 +120,7 @@ function AirportInsightsTable({
     const transport = transportByCode?.[ap.code];
     const effectivePrice =
       ap.medianEur != null && transport != null ? ap.medianEur + 2 * transport : null;
-    const configAp = group && agentConfig ? agentConfig[group].find((a) => a.code === ap.code) : null;
+    const configAp = group && agentConfig ? agentConfig[group].find((a) => a.code === ap.code || a.cityCode === ap.code) : null;
     return { ap, effectivePrice, configAp };
   });
 
@@ -316,7 +316,9 @@ function InsightsPanel({
       const t = ap.transport;
       if (t?.costEur != null) {
         const transfer = t.mode === "let" ? (t.airportTransferCostEur ?? 25) : 0;
-        transportByCode[ap.code] = t.costEur + transfer;
+        const cost = t.costEur + transfer;
+        transportByCode[ap.code] = cost;
+        if (ap.cityCode) transportByCode[ap.cityCode] = cost;
       }
     }
   }
