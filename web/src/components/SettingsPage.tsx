@@ -271,6 +271,12 @@ function AirportRow({
               <option value="let">let</option>
             </select>
           </Field>
+          {mode === "let" && (
+            <Field label="Zpáteční EUR" className="w-24">
+              <NumberInput value={t.costEurRoundtrip ?? 0} min={0}
+                onChange={(n) => setTransport({ costEurRoundtrip: n })} />
+            </Field>
+          )}
           <Field label={mode === "let" ? "Open-jaw EUR" : "Cena EUR"} className="w-24">
             <NumberInput value={t.costEur} min={0}
               onChange={(n) => setTransport({ costEur: n })} />
@@ -281,10 +287,6 @@ function AirportRow({
           </Field>
           {mode === "let" && (
             <>
-              <Field label="Zpáteční EUR" className="w-24">
-                <NumberInput value={t.costEurRoundtrip ?? 0} min={0}
-                  onChange={(n) => setTransport({ costEurRoundtrip: n })} />
-              </Field>
               <Field label="Transfer EUR" className="w-24">
                 <NumberInput value={t.airportTransferCostEur ?? 25} min={0}
                   onChange={(n) => setTransport({ airportTransferCostEur: n })} />
