@@ -39,7 +39,7 @@ vracího jako bug během testování.
    - `web/public/data/*.json` (latest, stats, routes, meta, insights)
    - `web/public/data/calendar/{route_key}.json` pro každou trasu, která je v `latest.json`
    - `web/public/data/history/{route_key}.json` (pokud je třeba)
-4. **Mock data jsou konzistentní:** `latest.json` obsahuje routeKey, který existuje v `calendar/` i `history/`
+4. **Data jsou konzistentní:** `latest.json` obsahuje routeKey, který existuje v `calendar/` i `history/`
 5. **Spusť dev server:** `npm run dev` v `web/`, ručně otestuj zlatý path (klik na trasu, zobraz detail, filtruj)
 6. **Build bez warningů:** `npm run build` → zkontroluj výstup na "error" nebo "warning"
 7. **Spusť validační skript:** `bash scripts/validate.sh` — ověří bundle, data, JSON syntax
