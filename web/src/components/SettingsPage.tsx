@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Download, GripVertical, Play, Plus, Save, Trash2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -78,13 +78,13 @@ function Field({
   children,
   className,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("space-y-1", className)}>
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
       {children}
     </div>
   );
@@ -156,7 +156,7 @@ function Toggle({
 }
 
 // ---------------------------------------------------------------------------
-// Editor řádku letiště
+// Editor řádku letiště — kompaktní jednořádkový layout
 // ---------------------------------------------------------------------------
 function AirportRow({
   airport,
@@ -184,113 +184,82 @@ function AirportRow({
     ? buildTransportLink(mode, homeLocation, airport)
     : [];
 
+  const modeLabel = (
+    <span className="flex items-center gap-1">
+      {mode === "let" ? "Let" : "Prostředek"}
+      {transportLinks.map((l) => (
+        <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
+          title={l.label} className="text-primary hover:underline leading-none">↗</a>
+      ))}
+    </span>
+  );
+
   return (
-    <div className="rounded-md border bg-muted/30 p-3">
-      <div className="flex flex-wrap items-end gap-2">
-        {/* Drag handle — visual only, whole card is draggable */}
-        <span className="flex cursor-grab items-center self-center text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing">
-          <GripVertical className="h-4 w-4" />
-        </span>
-        <Field label="IATA" className="w-16">
-          <Input
-            value={airport.code}
-            maxLength={3}
-            className="uppercase"
-            onChange={(e) => onChange({ code: e.target.value.toUpperCase() })}
-          />
-        </Field>
-        <Field label="Název" className="w-48">
-          <Input value={airport.name} onChange={(e) => onChange({ name: e.target.value })} />
-        </Field>
-        <Toggle
-          checked={airport.enabled}
-          onChange={(v) => onChange({ enabled: v })}
-          label={airport.enabled ? "aktivní" : "vypnuté"}
-        />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onRemove}
-          title="Odebrat letiště"
-          className="self-end text-destructive hover:bg-destructive/10"
-        >
-          <Trash2 />
-        </Button>
+    <div className="rounded-md border bg-muted/30 px-2 py-2 flex flex-wrap items-end gap-x-2 gap-y-1">
+      {/* Drag handle */}
+      <span className="flex cursor-grab items-center pb-[9px] text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing">
+        <GripVertical className="h-4 w-4" />
+      </span>
+
+      {/* Identita letiště */}
+      <Field label="IATA" className="w-14">
+        <Input value={airport.code} maxLength={3} className="uppercase h-9"
+          onChange={(e) => onChange({ code: e.target.value.toUpperCase() })} />
+      </Field>
+      <Field label="Název" className="w-44">
+        <Input value={airport.name} className="h-9"
+          onChange={(e) => onChange({ name: e.target.value })} />
+      </Field>
+      <div className="self-end pb-[2px]">
+        <Toggle checked={airport.enabled} onChange={(v) => onChange({ enabled: v })}
+          label={airport.enabled ? "aktivní" : "vyp."} />
       </div>
 
+      {/* Doprava — oddělena svislou čarou */}
       {withTransport && (
-        <div className="mt-3 rounded-md border bg-muted/50 p-3">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="text-xs font-medium text-muted-foreground">
-              Doprava z domova:
-            </span>
-            {transportLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary underline-offset-2 hover:underline"
-              >
-                {link.label} ↗
-              </a>
-            ))}
-            {!airport.name && (
-              <span className="text-xs text-muted-foreground/60">(vyplňte název letiště)</span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label="Prostředek" className="w-32">
-              <select
-                value={mode}
-                onChange={(e) => setTransport({ mode: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="vlak/bus">vlak / bus</option>
-                <option value="auto">auto</option>
-                <option value="let">let</option>
-              </select>
-            </Field>
-            <Field label={mode === "let" ? "Cena letu (EUR)" : "Cena (EUR)"} className="w-24">
-              <NumberInput
-                value={t.costEur}
-                min={0}
-                onChange={(n) => setTransport({ costEur: n })}
-              />
-            </Field>
-            <Field label={mode === "let" ? "Čas letu (h)" : "Doba (h)"} className="w-24">
-              <NumberInput
-                value={t.durationMin / 60}
-                min={0}
-                step={0.5}
-                onChange={(n) => setTransport({ durationMin: n * 60 })}
-              />
-            </Field>
-            {mode === "let" && (
-              <>
-                <Field label="Transfer (EUR)" className="w-28">
-                  <NumberInput
-                    value={t.airportTransferCostEur ?? 25}
-                    min={0}
-                    onChange={(n) => setTransport({ airportTransferCostEur: n })}
-                  />
-                </Field>
-                <Field label="Transfer (h)" className="w-24">
-                  <NumberInput
-                    value={t.airportTransferTimeH ?? 2.5}
-                    min={0}
-                    step={0.5}
-                    onChange={(n) => setTransport({ airportTransferTimeH: n })}
-                  />
-                </Field>
-              </>
-            )}
-            <Button size="sm" onClick={onSave} disabled={isBusy} title="Uložit toto letiště na GitHub">
-              <Save className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <>
+          <div className="self-stretch w-px bg-border mx-0.5 my-0.5" />
+          <Field label={modeLabel} className="w-28">
+            <select value={mode} onChange={(e) => setTransport({ mode: e.target.value })}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              <option value="vlak/bus">vlak / bus</option>
+              <option value="auto">auto</option>
+              <option value="let">let</option>
+            </select>
+          </Field>
+          <Field label={mode === "let" ? "Let EUR" : "Cena EUR"} className="w-20">
+            <NumberInput value={t.costEur} min={0}
+              onChange={(n) => setTransport({ costEur: n })} />
+          </Field>
+          <Field label={mode === "let" ? "Let h" : "Doba h"} className="w-20">
+            <NumberInput value={t.durationMin / 60} min={0} step={0.5}
+              onChange={(n) => setTransport({ durationMin: n * 60 })} />
+          </Field>
+          {mode === "let" && (
+            <>
+              <Field label="Transfer EUR" className="w-24">
+                <NumberInput value={t.airportTransferCostEur ?? 25} min={0}
+                  onChange={(n) => setTransport({ airportTransferCostEur: n })} />
+              </Field>
+              <Field label="Transfer h" className="w-20">
+                <NumberInput value={t.airportTransferTimeH ?? 2.5} min={0} step={0.5}
+                  onChange={(n) => setTransport({ airportTransferTimeH: n })} />
+              </Field>
+            </>
+          )}
+          <Button size="sm" onClick={onSave} disabled={isBusy}
+            title="Uložit na GitHub" className="self-end mb-[1px]">
+            <Save className="h-4 w-4" />
+          </Button>
+        </>
       )}
+
+      {/* Smazat */}
+      <Button variant="ghost" size="icon" onClick={onRemove}
+        title="Odebrat letiště"
+        className="self-end text-destructive hover:bg-destructive/10">
+        <Trash2 />
+      </Button>
     </div>
   );
 }
@@ -490,42 +459,42 @@ export function SettingsPage({ agentConfig, loading, error }: Props) {
 
   const busy = status.kind === "busy";
 
-  const DropLine = ({ group, idx }: { group: "europeAirports" | "japanAirports"; idx: number }) =>
-    dragState?.group === group && dropInsert?.group === group && dropInsert.idx === idx ? (
-      <div className="h-0.5 rounded-full bg-primary mx-1 my-0.5" />
-    ) : null;
-
   const renderAirportList = (group: "europeAirports" | "japanAirports") => {
     const withTransport = group === "europeAirports";
+    const showLine = (idx: number) =>
+      dragState?.group === group &&
+      dropInsert?.group === group &&
+      dropInsert.idx === idx;
+
     return (
       <>
-        <DropLine group={group} idx={0} />
+        {showLine(0) && <div className="h-0.5 rounded-full bg-primary" />}
         {config[group].map((a, i) => (
-          <div
-            key={i}
-            draggable
-            onDragStart={(e) => { e.stopPropagation(); setDragState({ group, fromIdx: i }); }}
-            onDragEnd={() => { setDragState(null); setDropInsert(null); }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              const rect = e.currentTarget.getBoundingClientRect();
-              const insertIdx = e.clientY < rect.top + rect.height / 2 ? i : i + 1;
-              setDropInsert({ group, idx: insertIdx });
-            }}
-            onDrop={(e) => { e.preventDefault(); handleDrop(group); }}
-            className={cn(dragState?.group === group && dragState.fromIdx === i && "opacity-40")}
-          >
-            <AirportRow
-              airport={a}
-              withTransport={withTransport}
-              homeLocation={config.homeLocation}
-              onChange={(patch) => patchAirport(group, i, patch)}
-              onRemove={() => removeAirport(group, i)}
-              onSave={handleSaveAirport}
-              isBusy={busy}
-            />
-            <DropLine group={group} idx={i + 1} />
-          </div>
+          <Fragment key={i}>
+            <div
+              draggable
+              onDragStart={(e) => { e.stopPropagation(); setDragState({ group, fromIdx: i }); }}
+              onDragEnd={() => { setDragState(null); setDropInsert(null); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDropInsert({ group, idx: e.clientY < rect.top + rect.height / 2 ? i : i + 1 });
+              }}
+              onDrop={(e) => { e.preventDefault(); handleDrop(group); }}
+              className={cn(dragState?.group === group && dragState.fromIdx === i && "opacity-40")}
+            >
+              <AirportRow
+                airport={a}
+                withTransport={withTransport}
+                homeLocation={config.homeLocation}
+                onChange={(patch) => patchAirport(group, i, patch)}
+                onRemove={() => removeAirport(group, i)}
+                onSave={handleSaveAirport}
+                isBusy={busy}
+              />
+            </div>
+            {showLine(i + 1) && <div className="h-0.5 rounded-full bg-primary" />}
+          </Fragment>
         ))}
         <Button variant="outline" onClick={() => addAirport(group)}>
           <Plus /> Přidat {withTransport ? "evropské" : "japonské"} letiště
