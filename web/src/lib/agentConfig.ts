@@ -6,8 +6,21 @@
 
 import type { AgentAirport, AgentConfig } from "@/types/data";
 
+const VALID_MODES = ["vlak/bus", "auto", "let"] as const;
+
+/** Normalizuje transport.mode: vlak* → "vlak/bus", neznámé → "vlak/bus". */
+function normalizeMode(mode: string): string {
+  if ((VALID_MODES as readonly string[]).includes(mode)) return mode;
+  if (mode.toLowerCase().startsWith("vlak") || mode.toLowerCase() === "bus") return "vlak/bus";
+  return mode; // ponecháme; validace pak ukáže chybu
+}
+
 export function cloneConfig(config: AgentConfig): AgentConfig {
-  return structuredClone(config);
+  const clone = structuredClone(config);
+  for (const a of clone.europeAirports ?? []) {
+    if (a.transport) a.transport.mode = normalizeMode(a.transport.mode);
+  }
+  return clone;
 }
 
 export function emptyEuropeAirport(priority: number): AgentAirport {
