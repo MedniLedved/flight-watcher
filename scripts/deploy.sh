@@ -70,7 +70,7 @@ cd "$WORKTREE_DIR"
 git add -A
 COMMIT_MSG=$(git -C "$REPO_ROOT" log "$DEV_BRANCH" -1 --pretty=format:'%s')
 git commit -m "Deploy: $COMMIT_MSG" || echo "(nothing new to commit)"
-git push origin gh-pages
+git push --force-with-lease origin gh-pages
 
 echo ""
 echo "✓ Deployment successful: https://medniledved.github.io/flight-watcher/"
