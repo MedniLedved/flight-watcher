@@ -1,6 +1,6 @@
-import { ArrowDownRight, ArrowUpRight, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Sparkles } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { DealButton } from "@/components/DealButton";
 import {
   Table,
   TableBody,
@@ -175,13 +175,7 @@ export function OffersTable({
                 <Flags o={o} />
               </TableCell>
               <TableCell>
-                {o.dealUrl ? (
-                  <Button asChild variant="ghost" size="sm">
-                    <a href={o.dealUrl} target="_blank" rel="noreferrer">
-                      Deal <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </Button>
-                ) : null}
+                <DealButton offer={o} compact />
               </TableCell>
             </TableRow>
           );

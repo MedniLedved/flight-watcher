@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { ExternalLink, Train } from "lucide-react";
+import { Train } from "lucide-react";
 import { airlineNames, airlineName } from "@/lib/airlines";
 import { Button } from "@/components/ui/button";
+import { DealButton } from "@/components/DealButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { priceColor } from "@/lib/colors";
 import { effectivePrice, fmtDuration, getTransport } from "@/lib/transport";
@@ -317,14 +318,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               )}
             </p>
             <div className="flex gap-2">
-              {selected.dealUrl && (
-                <Button asChild size="sm" variant="outline">
-                  <a href={selected.dealUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                    Otevřít deal
-                  </a>
-                </Button>
-              )}
+              <DealButton offer={selected} />
               <Button size="sm" onClick={() => onSelectRoute(selected.routeKey)}>
                 Detail trasy
               </Button>
