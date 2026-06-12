@@ -26,8 +26,8 @@ from .sources import FlightResult, Segment
 logger = logging.getLogger(__name__)
 
 _AVIASALES_RE = re.compile(r"aviasales\.com", re.IGNORECASE)
-# carrier(2) + depart_unix(10) + arrive_unix(10) + duration(8) + airports(3+)
-_TOKEN_PART_RE = re.compile(r"^([A-Z]{2})(\d{10})(\d{10})(\d{8})([A-Z]{6,})$")
+# carrier(2) + depart_unix(10) + arrive_unix(10) + duration_min(6) + airports(3n)
+_TOKEN_PART_RE = re.compile(r"^([A-Z]{2})(\d{10})(\d{10})(\d{6})([A-Z]{6,})$")
 
 
 def parse_aviasales_url(url: str) -> dict | None:
