@@ -72,6 +72,19 @@ for check in "${CHECKS[@]}"; do
 done
 if [ $FAILED -eq 1 ]; then exit 1; fi
 
+# 4b. Google Flights "Prostředek" (mode=let) deep-link must use the tfs protobuf
+#     param — the natural-language q= param does NOT fill the destination
+#     (regression: cíl "Kam?" zůstal prázdný u dotazu s více odletovými letišti).
+if ! grep -q "travel/flights?tfs=" "dist/$JS_REF"; then
+  echo "  ❌ Missing: Google Flights tfs deep-link (mode=let)"
+  exit 1
+fi
+if grep -q "q=flights+MUC,NUE" "dist/$JS_REF"; then
+  echo "  ❌ Broken Google Flights q= link present (musí být tfs=, ne q=flights+...)"
+  exit 1
+fi
+echo "  ✓ Google Flights tfs deep-link"
+
 # 5. Data files exist and are valid JSON (checked only if they're loaded)
 echo ""
 echo "[5/7] Data files integrity..."

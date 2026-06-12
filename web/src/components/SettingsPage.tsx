@@ -43,10 +43,60 @@ type Status =
 // ---------------------------------------------------------------------------
 // Transport link helpers
 // ---------------------------------------------------------------------------
+
+// Letiště, ze kterých letíme do vzdálenějšího evropského odletového letiště
+// (positioning flight z domova). Per zadání vždy MUC + NUE.
+const GF_HOME_AIRPORTS = ["MUC", "NUE"];
+
+// Google Flights deep-link přes `tfs` (URL-safe base64 protobuf). Textový `q=`
+// parametr neumí spolehlivě vyplnit cíl u dotazu s více odletovými letišti
+// (viz bug: cíl zůstal prázdný), proto skládáme přímo protobuf, který GF generuje.
+function gfVarint(n: number): number[] {
+  const out: number[] = [];
+  for (;;) {
+    const b = n & 0x7f;
+    n >>>= 7;
+    if (n) out.push(b | 0x80);
+    else { out.push(b); break; }
+  }
+  return out;
+}
+function gfField(field: number, data: number[]): number[] {
+  // length-delimited (wire type 2)
+  return [...gfVarint((field << 3) | 2), ...gfVarint(data.length), ...data];
+}
+function gfVarintField(field: number, value: number): number[] {
+  // varint (wire type 0)
+  return [...gfVarint((field << 3) | 0), ...gfVarint(value)];
+}
+function gfAirport(code: string): number[] {
+  // Airport { name = 2 }
+  return gfField(2, [...new TextEncoder().encode(code)]);
+}
+function googleFlightsTfsLink(origins: string[], dest: string, date?: string): string {
+  // FlightData { date = 2; from = 13 (repeated); to = 14 (repeated) }
+  const flightData: number[] = [];
+  if (date) flightData.push(...gfField(2, [...new TextEncoder().encode(date)]));
+  for (const o of origins) flightData.push(...gfField(13, gfAirport(o)));
+  flightData.push(...gfField(14, gfAirport(dest)));
+  // Info { data = 3; passengers = 8; seat = 9; trip = 19 }
+  const info: number[] = [
+    ...gfField(3, flightData),
+    ...gfField(8, [0x01]),     // 1 dospělý
+    ...gfVarintField(9, 1),    // economy
+    ...gfVarintField(19, 2),   // one-way
+  ];
+  const b64 = btoa(String.fromCharCode(...info))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+  return `https://www.google.com/travel/flights?tfs=${b64}&hl=cs`;
+}
+
 function buildTransportLink(
   mode: string,
   homeLocation: string,
   airport: AgentAirport,
+  travelStart?: string,
 ): { href: string; label: string }[] {
   const origin = encodeURIComponent(homeLocation);
   const dest = encodeURIComponent(`${airport.name} airport`);
@@ -62,8 +112,8 @@ function buildTransportLink(
       label: "Trasa autem",
     }];
   }
-  if (mode === "let") {
-    return [{ href: `https://www.google.com/travel/flights?q=flights+MUC,NUE+${airport.code}&hl=cs`, label: "Prostředek" }];
+  if (mode === "let" && airport.code) {
+    return [{ href: googleFlightsTfsLink(GF_HOME_AIRPORTS, airport.code, travelStart), label: "Prostředek" }];
   }
   return [];
 }
@@ -160,6 +210,7 @@ function AirportRow({
   airport,
   withTransport,
   homeLocation,
+  travelStart,
   onChange,
   onRemove,
   onSave,
@@ -168,6 +219,7 @@ function AirportRow({
   airport: AgentAirport;
   withTransport: boolean;
   homeLocation?: string;
+  travelStart?: string;
   onChange: (patch: Partial<AgentAirport>) => void;
   onRemove: () => void;
   onSave: () => void;
@@ -179,7 +231,7 @@ function AirportRow({
 
   const mode = t.mode || "vlak/bus";
   const transportLinks = withTransport && homeLocation && airport.name
-    ? buildTransportLink(mode, homeLocation, airport)
+    ? buildTransportLink(mode, homeLocation, airport, travelStart)
     : [];
 
   const modeLabel: React.ReactNode = transportLinks[0]
@@ -489,6 +541,7 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
                 airport={a}
                 withTransport={withTransport}
                 homeLocation={config.homeLocation}
+                travelStart={config.travelWindow.from}
                 onChange={(patch) => patchAirport(group, i, patch)}
                 onRemove={() => removeAirport(group, i)}
                 onSave={handleSaveAirport}
