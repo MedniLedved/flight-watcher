@@ -251,3 +251,16 @@ class TelegramNotifier:
             lines.append(e(stat))
 
         return self._send("\n".join(lines))
+
+    # -- 4. Zkrácený denní souhrn (scan + historické minimum) ---------------
+    def send_daily_summary_short(self, lines: list[str]) -> bool:
+        e = html.escape
+        now = datetime.now()
+        month_gen = CZECH_MONTHS_GEN[now.month]
+        msg = "\n".join([
+            "📊 <b>Denní souhrn – Japan Flight Tracker</b>",
+            f"📅 {now.day}. {month_gen} {now.year}, {now.strftime('%H:%M')}",
+            "",
+            *[e(line) for line in lines],
+        ])
+        return self._send(msg)

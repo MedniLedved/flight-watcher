@@ -1074,29 +1074,23 @@ def test_scanner_allows_live_duffel_and_production_amadeus():
     assert sc.amadeus_test_env is False
 
 
-def test_scanner_summary_warns_about_synthetic_sources(tmp_path):
-    """Denní souhrn musí varovat, že (a proč) je zdroj vypnutý kvůli
-    syntetickým datům – uživatel jinak netuší, proč nechodí nabídky."""
+def test_scanner_summary_short_sends_scan_count(tmp_path):
+    """Zkrácený denní souhrn posílá počet scanů a prověřené termíny."""
     from src.history import PriceHistory
     from src.scanner import Scanner
-    s = _scanner_settings(
-        duffel_token="duffel_test_abc",
-        amadeus_client_id="id", amadeus_client_secret="secret",
-        amadeus_env="test",
-    )
+    s = _scanner_settings()
     sc = Scanner(settings=s)
     sc.history = PriceHistory(tmp_path / "h.json")
     captured: dict = {}
 
-    def fake_summary(summary_lines, source_status, stats, **kwargs):
-        captured["stats"] = stats
+    def fake_short(lines):
+        captured["lines"] = lines
         return True
 
-    sc.notifier.send_daily_summary = fake_summary
-    sc._send_summary([], {}, route_count=1)
-    joined = " ".join(captured["stats"].values())
-    assert "Duffel" in joined and "duffel_live_" in joined
-    assert "Amadeus" in joined and "AMADEUS_ENV=production" in joined
+    sc.notifier.send_daily_summary_short = fake_short
+    sc._send_summary(route_count=3)
+    joined = " ".join(captured.get("lines", []))
+    assert "scanů" in joined and "3" in joined
 
 
 # -- Google Flights zdroj (scraping přes fast-flights) ------------------------

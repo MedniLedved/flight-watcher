@@ -2,6 +2,10 @@ import "leaflet/dist/leaflet.css";
 import { useState } from "react";
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from "react-leaflet";
 import type {
+  AgentConfig,
+  AirportInsight,
+  DowInsight,
+  InsightsFile,
   LatestFile,
   LatestOffer,
   RouteInfo,
@@ -50,6 +54,173 @@ function qualityLabel(pct: number | null): string {
   if (pct <= -5) return "dobrá";
   if (pct <= 5) return "průměrná";
   return "nad průměrem";
+}
+
+// ---- Deal rate bar ----------------------------------------------------------
+function DealRateBar({ pct }: { pct: number | null }) {
+  const val = pct ?? 0;
+  const color = val >= 40 ? "#10b981" : val >= 20 ? "#f59e0b" : "#ef4444";
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200">
+        <div style={{ width: `${Math.min(val, 100)}%`, background: color }} className="h-full rounded-full" />
+      </div>
+      <span className="text-xs tabular-nums">{val.toFixed(0)}%</span>
+    </div>
+  );
+}
+
+// ---- Airport insights table -------------------------------------------------
+function AirportInsightsTable({
+  title,
+  airports,
+  transportByCode,
+  color,
+}: {
+  title: string;
+  airports: AirportInsight[];
+  transportByCode?: Record<string, number>;
+  color: string;
+}) {
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold text-gray-700">{title}</h3>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b text-left text-gray-500">
+            <th className="pb-1 pr-3 font-medium">Letiště</th>
+            <th className="pb-1 pr-3 font-medium">Podíl dealů</th>
+            <th className="pb-1 pr-3 font-medium text-right">Medián</th>
+            {transportByCode && <th className="pb-1 pr-3 font-medium text-right">+ doprava</th>}
+            <th className="pb-1 font-medium text-right">Pozorování</th>
+          </tr>
+        </thead>
+        <tbody>
+          {airports.map((ap, i) => {
+            const transport = transportByCode?.[ap.code];
+            const effectivePrice =
+              ap.medianEur != null && transport != null
+                ? ap.medianEur + 2 * transport
+                : null;
+            const isBest = i === 0;
+            return (
+              <tr key={ap.code} className={`border-b border-gray-100 ${isBest ? "font-semibold" : ""}`}>
+                <td className="py-1 pr-3">
+                  <span style={{ color }} className="mr-1 font-bold">{ap.code}</span>
+                  {isBest && <span className="text-green-600">★</span>}
+                </td>
+                <td className="py-1 pr-3">
+                  <DealRateBar pct={ap.dealRatePct} />
+                </td>
+                <td className="py-1 pr-3 text-right tabular-nums">
+                  {ap.medianEur != null ? `${ap.medianEur.toFixed(0)} €` : "—"}
+                </td>
+                {transportByCode && (
+                  <td className="py-1 pr-3 text-right tabular-nums text-gray-500">
+                    {effectivePrice != null ? `${effectivePrice.toFixed(0)} €` : "—"}
+                  </td>
+                )}
+                <td className="py-1 text-right tabular-nums text-gray-400">{ap.observations}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---- Day-of-week table ------------------------------------------------------
+function DowTable({ title, rows }: { title: string; rows: DowInsight[] }) {
+  const bestDealRate = Math.max(...rows.map((r) => r.dealRatePct ?? 0));
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold text-gray-700">{title}</h3>
+      <div className="flex flex-wrap gap-2">
+        {rows.map((row) => {
+          const isTopDay = (row.dealRatePct ?? 0) === bestDealRate && bestDealRate > 0;
+          const rate = row.dealRatePct ?? 0;
+          const barColor = rate >= 40 ? "#10b981" : rate >= 20 ? "#f59e0b" : "#9ca3af";
+          return (
+            <div
+              key={row.dow}
+              className={`flex min-w-[72px] flex-col items-center rounded-lg border px-2 py-2 text-center ${isTopDay ? "border-green-400 bg-green-50" : "border-gray-200 bg-gray-50"}`}
+            >
+              <span className="text-sm font-bold text-gray-800">
+                {row.dow}
+                {isTopDay && <span className="ml-0.5 text-green-600">★</span>}
+              </span>
+              <div className="my-1 h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
+                <div style={{ width: `${Math.min(rate, 100)}%`, background: barColor }} className="h-full rounded-full" />
+              </div>
+              <span className="text-xs tabular-nums text-gray-500">{rate.toFixed(0)}% dealů</span>
+              {row.medianEur != null && (
+                <span className="text-xs tabular-nums text-gray-600">{row.medianEur.toFixed(0)} €</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---- Insights panel ---------------------------------------------------------
+function InsightsPanel({
+  insights,
+  agentConfig,
+}: {
+  insights: InsightsFile;
+  agentConfig: AgentConfig | null;
+}) {
+  const transportByCode: Record<string, number> = {};
+  if (agentConfig) {
+    for (const ap of agentConfig.europeAirports) {
+      if (ap.transport?.costEur != null) {
+        transportByCode[ap.code] = ap.transport.costEur;
+      }
+    }
+  }
+
+  return (
+    <div className="mt-4 space-y-6 rounded-lg border bg-white p-4 shadow-sm">
+      <h2 className="text-base font-semibold text-gray-800">
+        Statistiky letišť a termínů
+      </h2>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <AirportInsightsTable
+          title="Evropská odletová letiště — podíl dealů"
+          airports={insights.airportPriority.europe}
+          transportByCode={Object.keys(transportByCode).length ? transportByCode : undefined}
+          color="#1d4ed8"
+        />
+        <AirportInsightsTable
+          title="Japonská cílová letiště — podíl dealů"
+          airports={insights.airportPriority.japan}
+          color="#b45309"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <DowTable
+          title="Nejlevnější dny odletu"
+          rows={insights.cheapestDepartureDow}
+        />
+        <DowTable
+          title="Nejlevnější dny návratu"
+          rows={insights.cheapestArrivalDow}
+        />
+      </div>
+
+      {Object.keys(transportByCode).length > 0 && (
+        <p className="text-xs text-gray-400">
+          Sloupec „+ doprava" = medián + 2 × cena veřejné dopravy tam i zpět
+          (z&nbsp;{agentConfig?.homeLocation}).
+        </p>
+      )}
+    </div>
+  );
 }
 
 // ---- Types ------------------------------------------------------------------
@@ -139,10 +310,12 @@ interface Props {
   routes: RoutesFile | null;
   latest: LatestFile | null;
   stats: StatsFile | null;
+  insights: InsightsFile | null;
+  agentConfig: AgentConfig | null;
   onSelectRoute: (routeKey: string) => void;
 }
 
-export function FlightMap({ routes, latest, stats, onSelectRoute }: Props) {
+export function FlightMap({ routes, latest, stats, insights, agentConfig, onSelectRoute }: Props) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   if (!routes || routes.length === 0) {
@@ -184,136 +357,142 @@ export function FlightMap({ routes, latest, stats, onSelectRoute }: Props) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-lg border shadow-sm">
-      <MapContainer
-        center={[45, 72]}
-        zoom={3}
-        style={{ height: 540, width: "100%" }}
-        scrollWheelZoom
-        minZoom={2}
-        maxZoom={9}
-      >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>'
-        />
+    <div className="space-y-4">
+      <div className="relative overflow-hidden rounded-lg border shadow-sm">
+        <MapContainer
+          center={[45, 72]}
+          zoom={3}
+          style={{ height: 540, width: "100%" }}
+          scrollWheelZoom
+          minZoom={2}
+          maxZoom={9}
+        >
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>'
+          />
 
-        {/* Outbound arcs */}
-        {routesWithData.map((rd) => {
-          const { route, color, weight } = rd;
-          const orig = route.coords.origin;
-          const dest = route.coords.destination;
-          if (!orig || !dest) return null;
-          const isSelected = selectedKey === route.routeKey;
-          return (
-            <Polyline
-              key={route.routeKey}
-              positions={greatCirclePoints(orig.lat, orig.lon, dest.lat, dest.lon)}
-              pathOptions={{
-                color,
-                weight,
-                opacity: isSelected ? 1 : 0.78,
-                dashArray: route.type === "openjaw" ? "8 5" : undefined,
-              }}
-              eventHandlers={{
-                click: () => setSelectedKey(isSelected ? null : route.routeKey),
-              }}
+          {/* Outbound arcs */}
+          {routesWithData.map((rd) => {
+            const { route, color, weight } = rd;
+            const orig = route.coords.origin;
+            const dest = route.coords.destination;
+            if (!orig || !dest) return null;
+            const isSelected = selectedKey === route.routeKey;
+            return (
+              <Polyline
+                key={route.routeKey}
+                positions={greatCirclePoints(orig.lat, orig.lon, dest.lat, dest.lon)}
+                pathOptions={{
+                  color,
+                  weight,
+                  opacity: isSelected ? 1 : 0.78,
+                  dashArray: route.type === "openjaw" ? "8 5" : undefined,
+                }}
+                eventHandlers={{
+                  click: () => setSelectedKey(isSelected ? null : route.routeKey),
+                }}
+              >
+                <Popup minWidth={220}>
+                  <RoutePopup rd={rd} onSelect={() => onSelectRoute(route.routeKey)} />
+                </Popup>
+              </Polyline>
+            );
+          })}
+
+          {/* Return leg of open-jaw (dashed, lighter) */}
+          {routesWithData.map(({ route, color }) => {
+            if (route.type !== "openjaw") return null;
+            const retOrig = route.coords.returnOrigin;
+            const orig = route.coords.origin;
+            if (!retOrig || !orig) return null;
+            return (
+              <Polyline
+                key={`${route.routeKey}-ret`}
+                positions={greatCirclePoints(retOrig.lat, retOrig.lon, orig.lat, orig.lon)}
+                pathOptions={{ color, weight: 1.5, opacity: 0.4, dashArray: "4 7" }}
+                interactive={false}
+              />
+            );
+          })}
+
+          {/* European airport markers */}
+          {Array.from(europeMap.values()).map((ap) => (
+            <CircleMarker
+              key={`eu-${ap.code}`}
+              center={[ap.lat, ap.lon]}
+              radius={7}
+              pathOptions={{ color: "#1d4ed8", fillColor: "#3b82f6", fillOpacity: 0.9, weight: 1.5 }}
             >
-              <Popup minWidth={220}>
-                <RoutePopup rd={rd} onSelect={() => onSelectRoute(route.routeKey)} />
+              <Popup>
+                <strong>{ap.code}</strong>
+                <br />
+                <span style={{ fontSize: "0.85em", color: "#555" }}>{ap.name}</span>
               </Popup>
-            </Polyline>
-          );
-        })}
+            </CircleMarker>
+          ))}
 
-        {/* Return leg of open-jaw (dashed, lighter) */}
-        {routesWithData.map(({ route, color }) => {
-          if (route.type !== "openjaw") return null;
-          const retOrig = route.coords.returnOrigin;
-          const orig = route.coords.origin;
-          if (!retOrig || !orig) return null;
-          return (
-            <Polyline
-              key={`${route.routeKey}-ret`}
-              positions={greatCirclePoints(retOrig.lat, retOrig.lon, orig.lat, orig.lon)}
-              pathOptions={{ color, weight: 1.5, opacity: 0.4, dashArray: "4 7" }}
-              interactive={false}
-            />
-          );
-        })}
+          {/* Japanese airport markers */}
+          {Array.from(japanMap.values()).map((ap) => (
+            <CircleMarker
+              key={`jp-${ap.code}`}
+              center={[ap.lat, ap.lon]}
+              radius={7}
+              pathOptions={{ color: "#b45309", fillColor: "#f97316", fillOpacity: 0.9, weight: 1.5 }}
+            >
+              <Popup>
+                <strong>{ap.code}</strong>
+                <br />
+                <span style={{ fontSize: "0.85em", color: "#555" }}>{ap.name}</span>
+              </Popup>
+            </CircleMarker>
+          ))}
+        </MapContainer>
 
-        {/* European airport markers */}
-        {Array.from(europeMap.values()).map((ap) => (
-          <CircleMarker
-            key={`eu-${ap.code}`}
-            center={[ap.lat, ap.lon]}
-            radius={7}
-            pathOptions={{ color: "#1d4ed8", fillColor: "#3b82f6", fillOpacity: 0.9, weight: 1.5 }}
-          >
-            <Popup>
-              <strong>{ap.code}</strong>
-              <br />
-              <span style={{ fontSize: "0.85em", color: "#555" }}>{ap.name}</span>
-            </Popup>
-          </CircleMarker>
-        ))}
-
-        {/* Japanese airport markers */}
-        {Array.from(japanMap.values()).map((ap) => (
-          <CircleMarker
-            key={`jp-${ap.code}`}
-            center={[ap.lat, ap.lon]}
-            radius={7}
-            pathOptions={{ color: "#b45309", fillColor: "#f97316", fillOpacity: 0.9, weight: 1.5 }}
-          >
-            <Popup>
-              <strong>{ap.code}</strong>
-              <br />
-              <span style={{ fontSize: "0.85em", color: "#555" }}>{ap.name}</span>
-            </Popup>
-          </CircleMarker>
-        ))}
-      </MapContainer>
-
-      {/* Floating legend */}
-      <div
-        className="absolute bottom-6 left-4 z-[1000] rounded-lg bg-white/95 px-3 py-2.5 text-xs shadow-md backdrop-blur-sm"
-        style={{ pointerEvents: "none" }}
-      >
-        <div className="mb-1.5 font-semibold text-gray-700">Cena vs. průměr 90 dní</div>
-        {[
-          { color: "#10b981", label: "≤ −12 % — výborná" },
-          { color: "#84cc16", label: "−12 % až −5 % — dobrá" },
-          { color: "#f59e0b", label: "±5 % — průměrná" },
-          { color: "#ef4444", label: "> +5 % — drahá" },
-          { color: "#9ca3af", label: "bez dat" },
-        ].map(({ color, label }) => (
-          <div key={label} className="flex items-center gap-1.5 py-px">
-            <span style={{ display: "inline-block", width: 18, height: 3, background: color, borderRadius: 2, flexShrink: 0 }} />
-            <span className="text-gray-600">{label}</span>
+        {/* Floating legend */}
+        <div
+          className="absolute bottom-6 left-4 z-[1000] rounded-lg bg-white/95 px-3 py-2.5 text-xs shadow-md backdrop-blur-sm"
+          style={{ pointerEvents: "none" }}
+        >
+          <div className="mb-1.5 font-semibold text-gray-700">Cena vs. průměr 90 dní</div>
+          {[
+            { color: "#10b981", label: "≤ −12 % — výborná" },
+            { color: "#84cc16", label: "−12 % až −5 % — dobrá" },
+            { color: "#f59e0b", label: "±5 % — průměrná" },
+            { color: "#ef4444", label: "> +5 % — drahá" },
+            { color: "#9ca3af", label: "bez dat" },
+          ].map(({ color, label }) => (
+            <div key={label} className="flex items-center gap-1.5 py-px">
+              <span style={{ display: "inline-block", width: 18, height: 3, background: color, borderRadius: 2, flexShrink: 0 }} />
+              <span className="text-gray-600">{label}</span>
+            </div>
+          ))}
+          <div className="mt-2 space-y-0.5 border-t pt-1.5 text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span style={{ display: "inline-block", width: 18, height: 2, borderTop: "2px solid #6b7280", borderRadius: 0 }} />
+              <span>zpáteční let</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span style={{ display: "inline-block", width: 18, height: 2, borderTop: "2px dashed #6b7280" }} />
+              <span>open-jaw</span>
+            </div>
           </div>
-        ))}
-        <div className="mt-2 space-y-0.5 border-t pt-1.5 text-gray-500">
-          <div className="flex items-center gap-1.5">
-            <span style={{ display: "inline-block", width: 18, height: 2, borderTop: "2px solid #6b7280", borderRadius: 0 }} />
-            <span>zpáteční let</span>
+          <div className="mt-1.5 flex gap-3 text-gray-500">
+            <span className="flex items-center gap-1">
+              <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#3b82f6" }} />
+              <span>EU letiště</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#f97316" }} />
+              <span>JP letiště</span>
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span style={{ display: "inline-block", width: 18, height: 2, borderTop: "2px dashed #6b7280" }} />
-            <span>open-jaw</span>
-          </div>
-        </div>
-        <div className="mt-1.5 flex gap-3 text-gray-500">
-          <span className="flex items-center gap-1">
-            <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#3b82f6" }} />
-            <span>EU letiště</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: "#f97316" }} />
-            <span>JP letiště</span>
-          </span>
         </div>
       </div>
+
+      {insights && (
+        <InsightsPanel insights={insights} agentConfig={agentConfig} />
+      )}
     </div>
   );
 }

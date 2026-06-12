@@ -18,7 +18,7 @@ const TAB_LABELS: Record<AppView, string> = {
 export default function App() {
   const [view, setView] = useState<AppView>("offers");
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
-  const { latest, stats, agentConfig, routes, loading, error } = useDataLoader();
+  const { latest, stats, agentConfig, routes, insights, loading, error } = useDataLoader();
 
   if (selectedRoute) {
     const relatedOffers = (latest ?? []).filter((o) => o.routeKey === selectedRoute);
@@ -91,6 +91,8 @@ export default function App() {
           routes={routes}
           latest={latest}
           stats={stats}
+          insights={insights}
+          agentConfig={agentConfig}
           onSelectRoute={setSelectedRoute}
         />
       )}

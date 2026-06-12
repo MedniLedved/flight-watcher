@@ -25,8 +25,6 @@ from typing import Any, Optional
 
 from .airport_stats import (
     deal_sort_key,
-    format_airport_stats,
-    format_weekday_stats,
     priority_order,
 )
 from .config import (
@@ -855,7 +853,7 @@ class Scanner:
 
         # Denní souhrn.
         if self.settings.telegram_alert_enabled("dailySummary"):
-            self._send_summary(all_flights, source_status, len(routes))
+            self._send_summary(len(routes))
         else:
             logger.info("Denní souhrn vypnut v config/agent.json – neposílám.")
 
@@ -903,140 +901,58 @@ class Scanner:
         for deal in deals:
             self.notifier.send_deal_alert(deal)
 
-    def _send_summary(self, flights: list[FlightResult],
-                      source_status: dict[str, bool], route_count: int) -> None:
-        threshold = self.settings.price_threshold_eur
-        # Sestav nejlepší ceny na route_key – jen pod prahem, dražší nezajímají.
-        best: dict[str, FlightResult] = {}
-        cheapest_over: Optional[FlightResult] = None
-        for f in flights:
-            if f.price >= threshold:
-                if cheapest_over is None or f.price < cheapest_over.price:
-                    cheapest_over = f
-                continue
-            key = f.route_key()
-            if key not in best or f.price < best[key].price:
-                best[key] = f
-
-        summary_lines: list[str] = []
-        for key, f in sorted(best.items(), key=lambda kv: kv[1].price)[:10]:
-            nights_part = f", {f.nights} nocí" if f.nights is not None else ""
-            label = {
-                "googleflights": "Google Flights", "duffel": "Duffel",
-                "skyscrapper": "Sky Scrapper", "amadeus": "Amadeus",
-                "travelpayouts": "Travelpayouts",
-            }.get(f.source, f.source)
-            delta = self.history.price_delta(key, f.price)
-            trend = ""
-            if delta is not None and delta < 0:
-                trend = f" ⬇️ {delta:.0f} EUR"
-            elif delta is not None and delta > 0:
-                trend = f" ⬆️ +{delta:.0f} EUR"
-            route_disp = self._route_display(f)
-            summary_lines.append(
-                f"{route_disp}: {f.price:.0f} EUR{nights_part} ({label}){trend}"
-            )
-        if not summary_lines and cheapest_over is not None:
-            summary_lines.append(
-                f"Žádná cena pod prahem {threshold:.0f} EUR (nejlevnější "
-                f"nalezená: {self._route_display(cheapest_over)} za "
-                f"{cheapest_over.price:.0f} EUR)"
-            )
-
+    def _send_summary(self, route_count: int) -> None:
         total_requests = route_count * max(self.api_count, 1)
-        stats: dict[str, str] = {}
-        # Varování na syntetické režimy PŘED statistikami – uživatel musí
-        # vědět, že (a proč) zdroj nedodává reálné ceny.
-        if self.duffel_test_token:
-            stats["duffel_warn"] = (
-                "⚠️ Duffel: TESTOVACÍ token (duffel_test_…) – syntetické ceny, "
-                "zdroj vypnut. Nastav produkční duffel_live_… token."
-            )
-        elif self.duffel and self.duffel.live_mode is False:
-            stats["duffel_warn"] = (
-                "⚠️ Duffel: API odpovídá v TEST režimu – syntetické nabídky "
-                "zahozeny. Zkontroluj DUFFEL_TOKEN (musí být duffel_live_…)."
-            )
-        if self.amadeus_test_env:
-            stats["amadeus_warn"] = (
-                "⚠️ Amadeus: testovací prostředí – syntetické ceny, zdroj "
-                "vypnut. Nastav AMADEUS_ENV=production."
-            )
-        stats["scans"] = (
-            f"Celkem scanů dnes: {route_count} tras × "
-            f"{self.api_count} API = ~{total_requests} requestů"
-        )
+        lines: list[str] = [
+            f"📊 Celkem scanů: {route_count} tras × "
+            f"{self.api_count} API = ~{total_requests} requestů",
+        ]
         if self.scanned_date_pairs:
             terms = ", ".join(
                 f"{d.strftime('%d.%m.')}–{r.strftime('%d.%m.')}"
                 for d, r in self.scanned_date_pairs
             )
-            stats["dates"] = f"🔎 Dnes prověřené termíny: {terms}"
-        # Počítadla kvót jen u skutečně zapojených zdrojů.
-        if self.amadeus:
-            stats["amadeus"] = (
-                f"Amadeus využití: {self.history.amadeus_usage()}/"
-                f"{AMADEUS_MONTHLY_LIMIT} requestů tento měsíc"
-            )
-        if self.skyscrapper:
-            if self.history.is_source_disabled("skyscrapper"):
-                until = self.history.disabled_until("skyscrapper") or "?"
-                stats["skyscrapper"] = (
-                    f"Sky Scrapper: ⏸ vypnuto (vyčerpaná kvóta) do {until[:16]}"
-                )
+            lines.append(f"🔎 Prověřené termíny: {terms}")
+
+        # Historicky nejlevnější nabídka včetně dopravy (2× tam i zpět)
+        transport_by_code: dict[str, float] = {}
+        for ap in self.settings.agent_config.get("europeAirports", []):
+            if isinstance(ap, dict):
+                t = ap.get("transport") or {}
+                cost = t.get("costEur") if isinstance(t, dict) else None
+                if cost is not None:
+                    transport_by_code[str(ap["code"])] = float(cost)
+
+        best_key: Optional[str] = None
+        best_total: Optional[float] = None
+        for key in self.history.data:
+            if key == "_meta":
+                continue
+            atm = self.history.all_time_min(key)
+            if atm is None:
+                continue
+            origin = key.split("-")[0]
+            transport_cost = transport_by_code.get(origin, 0.0)
+            total = atm + 2 * transport_cost
+            if best_total is None or total < best_total:
+                best_total = total
+                best_key = key
+
+        if best_key is not None and best_total is not None:
+            atm = self.history.all_time_min(best_key) or 0.0
+            origin = best_key.split("-")[0]
+            dest = best_key.split("-")[1]
+            transport_cost = transport_by_code.get(origin, 0.0)
+            if transport_cost:
+                transport_note = f" + {2 * transport_cost:.0f} EUR doprava"
             else:
-                quota = self.history.get_quota("skyscrapper")
-                rem = quota.get("remaining")
-                if rem is not None:
-                    stats["skyscrapper"] = f"Sky Scrapper: zbývá {rem} requestů (dle API)"
-                else:
-                    stats["skyscrapper"] = (
-                        f"Sky Scrapper využití: {self.history.skyscrapper_usage()}/"
-                        f"{SKYSCRAPPER_MONTHLY_LIMIT} requestů tento měsíc"
-                    )
-        # Mini-tabulka efektivity zdrojů (akumulovaná, sdílí _meta s historií).
-        eff = self.history.source_efficiency()
-        if eff:
-            _src_label = {
-                "googleflights": "Google Flights", "travelpayouts": "Travelpayouts",
-                "skyscrapper": "SkyScrapper", "serpapi": "SerpAPI",
-                "amadeus": "Amadeus",
-                "duffel": "Duffel", "flightlabs": "FlightLabs", "letsfg": "LetsFG",
-            }
-            eff_rows = []
-            for src, e in sorted(eff.items(),
-                                  key=lambda kv: -(kv[1].get("total_deals", 0)
-                                                    / max(kv[1].get("total_requests", 1), 1))):
-                reqs = e.get("total_requests", 0)
-                deals = e.get("total_deals", 0)
-                results = e.get("total_results", 0)
-                runs = e.get("runs", 0)
-                label = _src_label.get(src, src)
-                dpr = f"{deals/reqs:.2f}" if reqs else "?"
-                rpr = f"{results/runs:.1f}" if runs else "?"
-                eff_rows.append(
-                    f"  {label}: {dpr} d/req "
-                    f"({deals} dealů / {reqs} req, {rpr} výsl/run)"
-                )
-            stats["efficiency"] = "📊 Efektivita zdrojů (historicky):\n" + "\n".join(eff_rows)
+                transport_note = ""
+            lines.append(
+                f"🏆 Historicky nejlevnější: {origin}→{dest} za {atm:.0f} EUR"
+                f"{transport_note} = celkem {best_total:.0f} EUR"
+            )
 
-        # Statistika letišť dle podílu dealů (vč. dnešních záznamů) – seřazeno
-        # od nejakčnějšího. Reflektuje dynamicky upravenou prioritu.
-        airport_stats = self.history.airport_stats(threshold=threshold)
-        eu_lines = format_airport_stats(
-            self.settings.european_airports, airport_stats
-        )
-        jp_lines = format_airport_stats(
-            self.settings.japanese_airports, airport_stats
-        )
-        weekday_stats = self.history.weekday_stats(threshold=threshold)
-        wd_lines = format_weekday_stats(weekday_stats)
-
-        sent = self.notifier.send_daily_summary(
-            summary_lines, source_status, stats,
-            eu_airport_stats=eu_lines, jp_airport_stats=jp_lines,
-            weekday_stats_lines=wd_lines,
-        )
+        sent = self.notifier.send_daily_summary_short(lines)
         if self.notifier.enabled and not sent:
             logger.warning(
                 "Denní souhrn se NEPODAŘILO odeslat na Telegram – viz chyba výše "
