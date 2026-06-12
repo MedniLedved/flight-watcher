@@ -12,8 +12,16 @@ export function getTransport(
   );
 }
 
+/** Cena dopravy pro jeden konec open-jaw (jeden směr). */
+function oneWayCost(t: AirportTransport | null): number {
+  if (!t) return 0;
+  if (t.mode === "let") return t.costEur + (t.airportTransferCostEur ?? 25);
+  return t.costEur;
+}
+
 /** Effective price: base + transport cost (if toggle on).
- *  Open-jaw, různá EU letiště: costEur(origin) + costEur(returnDest) + airportTransfer obou stran.
+ *  Open-jaw, různá EU letiště: každé letiště zvlášť —
+ *    vlak/bus/auto → 1× costEur; let → 1× costEur (open-jaw) + 1× airportTransferCostEur.
  *  Roundtrip / open-jaw na japonské straně:
  *    mode="let" → costEurRoundtrip + 2× airportTransferCostEur; jinak 2× costEur. */
 export function effectivePrice(
@@ -27,13 +35,7 @@ export function effectivePrice(
   if (returnDestination && returnDestination !== origin) {
     const t1 = getTransport(origin, agentConfig);
     const t2 = getTransport(returnDestination, agentConfig);
-    return (
-      price +
-      (t1?.costEur ?? 0) +
-      (t2?.costEur ?? 0) +
-      (t1?.airportTransferCostEur ?? (t1 ? 25 : 0)) +
-      (t2?.airportTransferCostEur ?? (t2 ? 25 : 0))
-    );
+    return price + oneWayCost(t1) + oneWayCost(t2);
   }
   const t = getTransport(origin, agentConfig);
   if (!t) return price;
