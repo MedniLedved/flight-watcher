@@ -183,7 +183,7 @@ function AirportRow({
     : [];
 
   const modeLabel: React.ReactNode = transportLinks[0]
-    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Prostředek</a>
+    ? <a href={transportLinks[0].href} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-muted-foreground hover:underline">Prostředek</a>
     : "Prostředek";
 
   return (
