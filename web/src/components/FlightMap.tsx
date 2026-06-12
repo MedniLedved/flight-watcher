@@ -112,7 +112,7 @@ function AirportInsightsTable({
     setSort((prev) =>
       prev.col === col
         ? { col, dir: prev.dir === "desc" ? "asc" : "desc" }
-        : { col, dir: col === "code" ? "asc" : "desc" },
+        : { col, dir: col === "code" || col === "median" || col === "effective" ? "asc" : "desc" },
     );
   }
 
