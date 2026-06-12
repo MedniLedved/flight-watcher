@@ -13,8 +13,8 @@ export function getTransport(
 }
 
 /** Effective price: base + transport cost (if toggle on).
- *  Roundtrip: +2× transport(origin).
- *  Open-jaw s různým returnDestination: +transport(origin) + transport(returnDestination). */
+ *  Roundtrip: pro mode="let" použije costEurRoundtrip (zpáteční letenka); jinak 2× costEur.
+ *  Open-jaw s různým returnDestination: +costEur(origin) + costEur(returnDestination). */
 export function effectivePrice(
   price: number,
   origin: string,
@@ -29,7 +29,11 @@ export function effectivePrice(
     return price + (t1?.costEur ?? 0) + (t2?.costEur ?? 0);
   }
   const t = getTransport(origin, agentConfig);
-  return price + (t ? 2 * t.costEur : 0);
+  if (!t) return price;
+  if (t.mode === "let" && t.costEurRoundtrip != null) {
+    return price + t.costEurRoundtrip;
+  }
+  return price + 2 * t.costEur;
 }
 
 export function fmtDuration(minutes: number): string {

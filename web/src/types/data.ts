@@ -177,6 +177,8 @@ export interface AirportTransport {
   durationMin: number;
   /** "vlak/bus" | "auto" | "let" */
   mode: string;
+  /** Jen pro mode="let": cena zpáteční letenky (EUR); použije se u round-trip nabídek */
+  costEurRoundtrip?: number;
   /** Jen pro mode="let": cena transferu centrum→letiště (EUR), výchozí 25 */
   airportTransferCostEur?: number;
   /** Jen pro mode="let": čas transferu centrum→letiště (hodiny), výchozí 2.5 */
