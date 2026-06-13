@@ -190,3 +190,49 @@ def test_settings_toggles_default_true():
     assert not s.rss_enabled("jacks")
     assert not s.telegram_alert_enabled("dailySummary")
     assert s.source_enabled("amadeus")  # neuvedený zdroj zůstává zapnutý
+
+
+# -- Stale merge (latest.json doplňuje historické zálohy) --------------------
+
+def test_latest_stale_fill_for_missing_routes(tmp_path):
+    """Sparsy scan (jen jedna trasa nalezena) doplní ostatní z historie."""
+    history = _history(tmp_path)
+    out = tmp_path / "data"
+    prev = {"PRG-TYO-roundtrip": {"all_time_min": 512, "last_price": 512},
+            "MUC-KIX-OSA-openjaw": {"all_time_min": None, "last_price": None}}
+    # Scan vrátil jen MUC (PRG chybí).
+    live = [FlightResult(price=640, origin="MUC", destination="KIX",
+                         return_origin="OSA", return_destination="MUC",
+                         depart_date=date(2026, 10, 2),
+                         return_date=date(2026, 10, 16),
+                         source="amadeus")]
+    Exporter(history, _settings(), out_dir=out).run(live, prev_state=prev, now=NOW)
+    latest = _load(out / "latest.json")
+    routes = {x["routeKey"] for x in latest}
+    # Obě trasy musí být přítomny – MUC živě, PRG jako záloha z historie.
+    assert "MUC-KIX-OSA-openjaw" in routes
+    assert "PRG-TYO-roundtrip" in routes
+    # Živá nabídka má staleDays=None, záloha má staleDays≥0.
+    muc = next(x for x in latest if x["routeKey"] == "MUC-KIX-OSA-openjaw")
+    prg = next(x for x in latest if x["routeKey"] == "PRG-TYO-roundtrip")
+    assert muc["flags"]["staleDays"] is None
+    assert prg["flags"]["staleDays"] is not None
+    # Záloha nemá efemérní pole.
+    assert prg["airlines"] == []
+    assert prg["dealUrl"] is None
+
+
+def test_latest_live_routes_not_in_stale(tmp_path):
+    """Trasy s živým výsledkem se nezdvojí jako záloha."""
+    history = _history(tmp_path)
+    out = tmp_path / "data"
+    prev: dict = {}
+    Exporter(history, _settings(), out_dir=out).run(_flights(), prev_state=prev, now=NOW)
+    latest = _load(out / "latest.json")
+    # Každý routeKey může mít více záznamů (různé depart daty), ale nesmí být
+    # zároveň živý I stale.
+    for rk in {x["routeKey"] for x in latest}:
+        entries = [x for x in latest if x["routeKey"] == rk]
+        live_e = [e for e in entries if e["flags"]["staleDays"] is None]
+        stale_e = [e for e in entries if e["flags"]["staleDays"] is not None]
+        assert not (live_e and stale_e), f"{rk}: má živou i stale nabídku zároveň"

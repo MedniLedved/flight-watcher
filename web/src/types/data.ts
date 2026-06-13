@@ -26,6 +26,8 @@ export interface LatestOfferFlags {
   /** změna vs. nejlepší cena před ≥7 dny; null dokud není 7 dní dat */
   pctChange7d: number | null;
   isBigDrop: boolean;
+  /** null = živá nabídka z posledního scanu; číslo = počet dní od posledního pozorování */
+  staleDays: number | null;
 }
 
 export interface FlightSegment {

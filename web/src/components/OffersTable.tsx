@@ -28,9 +28,14 @@ function routeLabel(o: LatestOffer): string {
 }
 
 function Flags({ o }: { o: LatestOffer }) {
-  const { isNewLow, isBigDrop, priceDeltaEur, pctChange7d } = o.flags;
+  const { isNewLow, isBigDrop, priceDeltaEur, pctChange7d, staleDays } = o.flags;
   return (
     <div className="flex flex-wrap items-center gap-1">
+      {staleDays != null && staleDays > 0 && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+          archiv {staleDays} d
+        </span>
+      )}
       {isNewLow && (
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
           <Sparkles className="h-3 w-3" /> nové minimum
@@ -122,7 +127,10 @@ export function OffersTable({
             o.returnDestination,
           );
           return (
-            <TableRow key={`${o.routeKey}--${o.source}--${o.departDate ?? ""}--${o.price}`}>
+            <TableRow
+              key={`${o.routeKey}--${o.source}--${o.departDate ?? ""}--${o.price}`}
+              className={o.flags.staleDays != null && o.flags.staleDays > 0 ? "opacity-60" : undefined}
+            >
               <TableCell className="font-medium">
                 {onSelectRoute ? (
                   <button

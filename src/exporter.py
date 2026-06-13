@@ -111,6 +111,24 @@ def _record_key(rec: dict) -> tuple:
             rec.get("returnDate"), rec.get("price"))
 
 
+def _best_historical_offer(records: list[dict]) -> Optional[dict]:
+    """Nejlepší (nejlevnější) záznam z nejnovějšího dne pozorování v řadě.
+    Vrátí None, pokud řada neobsahuje žádný použitelný záznam.
+
+    Používá se jako záloha pro trasy, které v aktuálním scanu neposkytly
+    žádný živý výsledek, aby nezmizely z latest.json po sparsy scanu.
+    """
+    if not records:
+        return None
+    last_date = max((r.get("date") or "") for r in records)
+    if not last_date:
+        return None
+    day_records = [r for r in records if r.get("date") == last_date
+                   and r.get("price") is not None]
+    if not day_records:
+        return None
+    return min(day_records, key=lambda r: r["price"])
+
 def _geocode_airport(code: str, name: str, cache: dict) -> Optional[dict]:
     """Nominatim geocoding; vrací {lat, lon} nebo None. Cachuje do předaného dict."""
     if code in cache:
@@ -220,6 +238,56 @@ class Exporter:
             if offer_key not in best or f.price < best[offer_key].price:
                 best[offer_key] = f
 
+        # Doplň historické zálohy pro trasy bez živého výsledku, aby sparsy scan
+        # nezpůsobil zmizení tras z dashboardu. Záloha nemá efemérní pole
+        # (airlines, dealUrl) a nese flag staleDays = počet dní od posledního
+        # pozorování. Frontend může tato data zobrazit odlišně (šedě, s popiskem).
+        live_routes = {rk for (rk, _) in best}
+        stale_items: list[dict] = []
+        for route_key, records in series.items():
+            if route_key in live_routes:
+                continue
+            hist_rec = _best_historical_offer(records)
+            if hist_rec is None:
+                continue
+            parsed = parse_route_key(route_key)
+            obs_date = hist_rec.get("date") or ""
+            stale_days = (today - date.fromisoformat(obs_date)).days if obs_date else None
+            prev = prev_state.get(route_key, {})
+            prev_min = prev.get("all_time_min")
+            stale_items.append({
+                "routeKey": route_key,
+                "type": parsed["type"],
+                "origin": parsed["origin"],
+                "destination": parsed["destination"],
+                "returnOrigin": parsed.get("returnOrigin"),
+                "returnDestination": parsed.get("returnDestination"),
+                "price": hist_rec["price"],
+                "source": hist_rec.get("source", ""),
+                "departDate": hist_rec.get("departDate"),
+                "returnDate": hist_rec.get("returnDate"),
+                "nights": (
+                    (date.fromisoformat(hist_rec["returnDate"])
+                     - date.fromisoformat(hist_rec["departDate"])).days
+                    if hist_rec.get("departDate") and hist_rec.get("returnDate")
+                    else None
+                ),
+                "airlines": [],
+                "dealUrl": None,
+                "observedDate": obs_date,
+                "segments": {"out": [], "in": []},
+                "durationOutMin": None,
+                "durationInMin": None,
+                "scannedPrice": None,
+                "flags": {
+                    "isNewLow": prev_min is not None and hist_rec["price"] < prev_min,
+                    "priceDeltaEur": None,
+                    "pctChange7d": self._pct_change_7d(records, hist_rec["price"], today),
+                    "isBigDrop": False,
+                    "staleDays": stale_days,
+                },
+            })
+
         items: list[dict] = []
         for (route_key, _depart), f in sorted(best.items(), key=lambda kv: kv[1].price):
             key = route_key
@@ -264,8 +332,12 @@ class Exporter:
                         series.get(key, []), f.price, today
                     ),
                     "isBigDrop": is_big_drop,
+                    "staleDays": None,
                 },
             })
+        # Přidej historické zálohy seřazené podle ceny, za živými nabídkami.
+        stale_items.sort(key=lambda x: x["price"])
+        items.extend(stale_items)
         _write_json(self.out_dir / "latest.json", items)
 
     @staticmethod
