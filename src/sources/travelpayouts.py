@@ -39,7 +39,17 @@ class TravelpayoutsSource:
         return_at: Optional[str] = None,
         limit: int = 10,
         route_name: str = "",
+        min_nights: Optional[int] = None,
+        max_nights: Optional[int] = None,
     ) -> list[FlightResult]:
+        """Vyhledá ZPÁTEČNÍ letenky (origin↔destination) v cache Aviasales.
+
+        Aviasales/Travelpayouts vrací bez ``return_at`` jen JEDNOSMĚRNÉ ceny –
+        ty se NESMÍ ukládat jako zpáteční (jinak levná one-way cena znečistí
+        roundtrip data). Proto se ``return_at`` posílá vždy a výsledky bez
+        návratového data se zahazují v ``_parse_item``. ``min_nights`` /
+        ``max_nights`` ořežou kombinace mimo požadovanou délku pobytu.
+        """
         params = {
             "origin": origin,
             "destination": destination,
@@ -69,12 +79,33 @@ class TravelpayoutsSource:
         payload = resp.json()
         results: list[FlightResult] = []
         for item in payload.get("data", []):
-            results.append(self._parse_item(item, origin, destination, route_name))
+            parsed = self._parse_item(
+                item, origin, destination, route_name,
+                min_nights=min_nights, max_nights=max_nights,
+            )
+            if parsed is not None:
+                results.append(parsed)
         results.sort(key=lambda r: r.price)
         return results
 
     def _parse_item(self, item: dict, origin: str, destination: str,
-                    route_name: str) -> FlightResult:
+                    route_name: str,
+                    min_nights: Optional[int] = None,
+                    max_nights: Optional[int] = None) -> Optional[FlightResult]:
+        depart_date = self._parse_date(item.get("departure_at"))
+        return_date = self._parse_date(item.get("return_at"))
+        # Bez návratového data je to JEDNOSMĚRNÁ letenka – zahodit, jinak by
+        # se uložila jako zpáteční (route_key → '...-roundtrip') s podhodnocenou
+        # cenou. Aviasales občas vrátí one-way i při dotazu na return_at.
+        if return_date is None or depart_date is None:
+            return None
+        nights = (return_date - depart_date).days
+        if nights <= 0:
+            return None
+        if min_nights is not None and nights < min_nights:
+            return None
+        if max_nights is not None and nights > max_nights:
+            return None
         link = item.get("link", "")
         if link and link.startswith("/"):
             link = f"https://www.aviasales.com{link}"
@@ -85,8 +116,8 @@ class TravelpayoutsSource:
             destination=item.get("destination", destination),
             return_origin=item.get("destination", destination),
             return_destination=item.get("origin", origin),
-            depart_date=self._parse_date(item.get("departure_at")),
-            return_date=self._parse_date(item.get("return_at")),
+            depart_date=depart_date,
+            return_date=return_date,
             airlines=[item["airline"]] if item.get("airline") else [],
             source=self.name,
             deep_link=link,

@@ -358,9 +358,60 @@ def test_travelpayouts_parse_item():
         "return_at": "2026-09-24T00:00:00Z", "link": "/deal/1",
     }
     r = src._parse_item(item, "FRA", "NRT", "Test")
+    assert r is not None
     assert r.price == 510.0
     assert r.depart_date == date(2026, 9, 10)
+    assert r.return_date == date(2026, 9, 24)
     assert r.deep_link.startswith("https://")
+    # Roundtrip → nesmí být open-jaw a MUSÍ mít návratové datum.
+    assert r.route_key().endswith("-roundtrip")
+
+
+def test_travelpayouts_drops_one_way_item():
+    """One-way nabídka (bez return_at) se NESMÍ uložit jako roundtrip."""
+    src = TravelpayoutsSource(token="dummy")
+    item = {
+        "price": 414, "origin": "AMS", "destination": "NRT",
+        "departure_at": "2026-09-06T00:00:00Z", "link": "/deal/2",
+        # return_at chybí → jednosměrná
+    }
+    assert src._parse_item(item, "AMS", "NRT", "Test") is None
+
+
+def test_travelpayouts_filters_nights_out_of_range():
+    """Kombinace mimo min/max nocí se zahodí."""
+    src = TravelpayoutsSource(token="dummy")
+    item = {
+        "price": 400, "origin": "FRA", "destination": "NRT",
+        "departure_at": "2026-09-10T00:00:00Z",
+        "return_at": "2026-09-13T00:00:00Z",  # jen 3 noci
+    }
+    assert src._parse_item(item, "FRA", "NRT", "Test",
+                           min_nights=12, max_nights=25) is None
+    # Uvnitř rozsahu projde.
+    item["return_at"] = "2026-09-24T00:00:00Z"  # 14 nocí
+    assert src._parse_item(item, "FRA", "NRT", "Test",
+                           min_nights=12, max_nights=25) is not None
+
+
+def test_travelpayouts_search_requests_roundtrip(monkeypatch):
+    """search() vždy posílá return_at a one_way=false (ne jednosměrný dotaz)."""
+    src = TravelpayoutsSource(token="dummy")
+    captured = {}
+
+    class _Resp:
+        def raise_for_status(self): pass
+        def json(self): return {"data": []}
+
+    def _fake_get(url, params=None, headers=None, timeout=None):
+        captured.update(params)
+        return _Resp()
+
+    monkeypatch.setattr(src.session, "get", _fake_get)
+    src.search("FRA", "NRT", departure_at="2026-09", return_at="2026-09",
+               min_nights=12, max_nights=25)
+    assert captured["one_way"] == "false"
+    assert captured["return_at"] == "2026-09"
 
 
 # -- Dynamická priorita letišť dle podílu dealů ----------------------------

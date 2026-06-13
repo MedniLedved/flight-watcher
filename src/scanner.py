@@ -378,20 +378,27 @@ class Scanner:
                 budget_check=self._flightlabs_has_budget,
             )
 
-        # --- Travelpayouts (záloha/trend) ---
+        # --- Travelpayouts (záloha/trend) – jen ZPÁTEČNÍ ---
+        # Aviasales cache vrací bez return_at jednosměrné letenky; ty se dříve
+        # ukládaly chybně jako roundtrip. Posíláme proto návratový měsíc
+        # (dle naplánovaného páru, který respektuje stayLength) a filtrujeme
+        # na min/max nocí. Zdroj sám zahodí výsledky bez návratového data.
         if self.travelpayouts:
             try:
                 to, td = trim_airports(
                     legs["out_origins"], legs["out_dests"],
                     RATE_LIMIT_COMBINATIONS["travelpayouts"],
                 )
-                dep_month = f"{window['year']:04d}-{min(window['months']):02d}"
+                dep_month = depart.strftime("%Y-%m")
+                ret_month = ret.strftime("%Y-%m")
                 for o in to[:5]:  # rozumné omezení
                     for d in td[:3]:
                         try:
                             results += self.travelpayouts.search(
                                 origin=o, destination=d,
-                                departure_at=dep_month, return_at=None,
+                                departure_at=dep_month, return_at=ret_month,
+                                min_nights=stay.get("min_nights"),
+                                max_nights=stay.get("max_nights"),
                                 route_name=name,
                             )
                         except Exception as exc:  # noqa: BLE001
