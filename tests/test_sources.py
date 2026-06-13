@@ -748,6 +748,52 @@ def test_coverage_weights_splits_origin_and_dest_roles():
     assert cov["airport"]["MUC"] > 0 and cov["airport"]["KIX"] > 0
 
 
+# -- Měsíční pokrytí a plánování -----------------------------------------------
+def test_coverage_weights_tracks_months():
+    """coverage_weights vrací depart_month a return_month."""
+    import tempfile, os
+    f = tempfile.NamedTemporaryFile(suffix=".json", delete=False); f.close(); os.unlink(f.name)
+    h = PriceHistory(f.name)
+    h.record("MUC-NRT-roundtrip", 500, "duffel",
+             depart_date=date(2026, 9, 7), return_date=date(2026, 9, 21))
+    cov = h.coverage_weights(today=date(2026, 6, 9))
+    assert "depart_month" in cov
+    assert "return_month" in cov
+    assert cov["depart_month"][9] > 0   # září je pokryté
+    assert cov["depart_month"][10] == 0.0  # říjen ne
+    assert cov["return_month"][9] > 0
+
+
+def test_plan_scan_dates_prefers_uncovered_month():
+    """Po nasycení září musí algoritmus preferovat říjen/listopad, ne září."""
+    from src.scanner import Scanner
+    stay = {"min_nights": 12, "max_nights": 25}
+    # Nasytíme weekday pokrytí (aby cold-start nehrál roli) a měsíce září a
+    # prosinci přidáme vysokou váhu; říjen a listopad zůstanou na 0.
+    full_wd = {i: 10.0 for i in range(7)}
+    month_cov = {m: 0.0 for m in range(1, 13)}
+    month_cov[9] = 10.0   # září prozkoumáno
+    month_cov[12] = 10.0  # prosinec prozkoumáno
+    coverage = {
+        "depart_wd": dict(full_wd),
+        "return_wd": dict(full_wd),
+        "depart_month": dict(month_cov),
+        "return_month": dict(month_cov),
+    }
+    # Opakuj na různé dny → alespoň jednou musí padnout na říjen nebo listopad.
+    hit_uncovered = False
+    for d in range(14):
+        today = date(2026, 6, 9) + timedelta(days=d)
+        pairs = Scanner._plan_scan_dates(
+            date(2026, 9, 1), date(2026, 12, 31), stay,
+            coverage=coverage, samples=2, today=today,
+        )
+        if any(dep.month in (10, 11) for dep, _ in pairs):
+            hit_uncovered = True
+            break
+    assert hit_uncovered, "Algoritmus nepřešel na neprozkoumané měsíce (říjen/listopad)"
+
+
 # -- Duffel 429 retry --------------------------------------------------------
 def test_duffel_retries_on_429_then_succeeds(monkeypatch):
     """Duffel po HTTP 429 počká a zkusí znovu (bez reálného čekání)."""

@@ -619,6 +619,8 @@ class Scanner:
         coverage = coverage or {}
         dep_cov = dict(coverage.get("depart_wd", {}))
         ret_cov = dict(coverage.get("return_wd", {}))
+        dep_month_cov = dict(coverage.get("depart_month", {}))
+        ret_month_cov = dict(coverage.get("return_month", {}))
         min_n = stay.get("min_nights", 12)
         max_n = stay.get("max_nights", min_n)
         start = max(date_from, today + timedelta(days=1))
@@ -666,6 +668,9 @@ class Scanner:
                             score += 2.0
                         # mezi shodnými dny ber méně pokryté (čerstvost)
                         score -= 0.01 * (dep_cov.get(dwd, 0.0) + ret_cov.get(rwd, 0.0))
+                    # měsíční deficit – v obou módech, aby neprozkoumané měsíce
+                    # dostaly výrazný bonus nezávisle na weekday exploitaci
+                    score += _deficit(dep_month_cov, depart.month) + _deficit(ret_month_cov, ret.month)
                     # rozprostři vzorky po okně – odměň vzdálenost od už vybraných
                     if picked:
                         nearest = min(abs((depart - p).days) for p in picked)
@@ -680,6 +685,8 @@ class Scanner:
             # Promítni výběr do pokrytí, ať druhý vzorek necílí stejnou buňku.
             dep_cov[depart.weekday()] = dep_cov.get(depart.weekday(), 0.0) + 1.0
             ret_cov[ret.weekday()] = ret_cov.get(ret.weekday(), 0.0) + 1.0
+            dep_month_cov[depart.month] = dep_month_cov.get(depart.month, 0.0) + 1.0
+            ret_month_cov[ret.month] = ret_month_cov.get(ret.month, 0.0) + 1.0
 
         if not pairs:
             # Úzké okno (žádná platná dvojice v rozsahu nocí) → fallback, aby

@@ -429,6 +429,8 @@ class PriceHistory:
         cov: dict[str, dict] = {
             "depart_wd": {i: 0.0 for i in range(7)},
             "return_wd": {i: 0.0 for i in range(7)},
+            "depart_month": {i: 0.0 for i in range(1, 13)},
+            "return_month": {i: 0.0 for i in range(1, 13)},
             "origin": {},
             "dest": {},
             "airport": {},
@@ -444,12 +446,18 @@ class PriceHistory:
                     decay_cache[raw_obs] = w
                 if w <= 0:
                     continue
-                for field, covkey in (("depart_date", "depart_wd"),
-                                      ("return_date", "return_wd")):
-                    wd = _parse_weekday(h.get(field))
+                for field, wd_key, mo_key in (
+                    ("depart_date", "depart_wd", "depart_month"),
+                    ("return_date", "return_wd", "return_month"),
+                ):
+                    raw_field = h.get(field)
+                    wd = _parse_weekday(raw_field)
                     if wd is None:
                         continue
-                    cov[covkey][wd] += w
+                    cov[wd_key][wd] += w
+                    mo = _parse_month(raw_field)
+                    if mo is not None:
+                        cov[mo_key][mo] += w
                 for idx, a in enumerate(airports):
                     role = "origin" if idx == 0 else "dest"
                     cov[role][a] = cov[role].get(a, 0.0) + w
@@ -532,6 +540,12 @@ def _parse_weekday(raw: Optional[str]) -> Optional[int]:
     """Den v týdnu (0=po … 6=ne) z ISO data; None při chybě."""
     d = _parse_iso(raw)
     return d.weekday() if d is not None else None
+
+
+def _parse_month(raw: Optional[str]) -> Optional[int]:
+    """Číslo měsíce (1–12) z ISO data; None při chybě."""
+    d = _parse_iso(raw)
+    return d.month if d is not None else None
 
 
 def _decay_weight(raw_date: Optional[str], today: date,
