@@ -301,6 +301,41 @@ class Settings:
         value = alerts.get(kind)
         return True if value is None else bool(value)
 
+    def transport_costs_by_origin(self) -> dict[str, float]:
+        """Roundtrip transport cost (EUR) per EU airport code.
+        Logika: mode='let' → costEurRoundtrip + 2×transfer (fallback 2×(costEur+transfer));
+        jinak → 2×costEur. Letiště bez transport configu nejsou ve výsledku."""
+        result: dict[str, float] = {}
+        for ap in self.agent_config.get("europeAirports", []):
+            if not isinstance(ap, dict) or not ap.get("code"):
+                continue
+            t = ap.get("transport") or {}
+            if not isinstance(t, dict):
+                continue
+            mode = (t.get("mode") or "").lower()
+            if mode == "let":
+                cost_one_way = t.get("costEur")
+                if cost_one_way is None:
+                    continue
+                transfer = float(t.get("airportTransferCostEur", 25))
+                roundtrip = t.get("costEurRoundtrip")
+                total = (float(roundtrip) + 2 * transfer if roundtrip is not None
+                         else 2 * (float(cost_one_way) + transfer))
+            else:
+                cost_one_way = t.get("costEur")
+                if cost_one_way is None:
+                    continue
+                total = 2 * float(cost_one_way)
+            result[str(ap["code"])] = total
+        return result
+
+    def deal_thresholds_by_origin(self) -> dict[str, float]:
+        """Efektivní deal práh per EU letiště: dealMaxEur − roundtrip doprava.
+        Letiště bez transport configu nejsou ve výsledku → fallback na price_threshold_eur."""
+        base = self.price_threshold_eur
+        return {code: base - cost
+                for code, cost in self.transport_costs_by_origin().items()}
+
     # -- pomocné gettery z routes.yaml ------------------------------------
     @property
     def european_airports(self) -> list[str]:

@@ -98,13 +98,20 @@ def _segments_from_part(fp: dict) -> list[Segment]:
     ]
 
 
-def enrich_results(results: list[FlightResult], deal_max_eur: float) -> list[FlightResult]:
+def enrich_results(
+    results: list[FlightResult],
+    deal_max_eur: float,
+    per_origin_thresholds: dict[str, float] | None = None,
+) -> list[FlightResult]:
     """Pro výsledky s cenou ≤ deal_max_eur a Aviasales URL v deep_link:
     parsuje token a aplikuje data jako autoritativní (přepíše cenu, airlines,
     doplní segmenty a celkovou dobu cesty).
+    ``per_origin_thresholds``: per-EU-letiště efektivní prahy; přepíše deal_max_eur
+    pro letiště, která mají transport config (dealMaxEur − doprava).
     """
     for f in results:
-        if f.price > deal_max_eur:
+        eff_max = (per_origin_thresholds or {}).get(f.origin or "", deal_max_eur)
+        if f.price > eff_max:
             continue
         if not f.deep_link or not _AVIASALES_RE.search(f.deep_link):
             continue

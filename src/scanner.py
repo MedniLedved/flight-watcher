@@ -273,7 +273,8 @@ class Scanner:
             return
         self.coverage = self.history.coverage_weights()
         wd_stats = self.history.weekday_stats(
-            threshold=self.settings.price_threshold_eur
+            threshold=self.settings.price_threshold_eur,
+            per_origin_thresholds=self.settings.deal_thresholds_by_origin(),
         )
         self.best_depart_wd = _best_weekday(wd_stats.get("depart", {}))
         self.best_return_wd = _best_weekday(wd_stats.get("return", {}))
@@ -522,12 +523,13 @@ class Scanner:
 
         Vrací {source_name: {"results": int, "deals": int, "requests": int}}.
         """
-        threshold = self.settings.price_threshold_eur
+        per_origin = self.settings.deal_thresholds_by_origin()
+        base = self.settings.price_threshold_eur
         stats: dict[str, dict] = {}
         for f in flights:
             s = stats.setdefault(f.source, {"results": 0, "deals": 0, "requests": 0})
             s["results"] += 1
-            if f.price < threshold:
+            if f.price < per_origin.get(f.origin or "", base):
                 s["deals"] += 1
         def _req_count(attr: str) -> int:
             src = getattr(self, attr, None)
@@ -758,7 +760,8 @@ class Scanner:
         """Přeřadí primární letiště podle historických cen (levná dopředu).
         Vrací spočítanou statistiku (pro zobrazení v souhrnu)."""
         stats = self.history.airport_stats(
-            threshold=self.settings.price_threshold_eur
+            threshold=self.settings.price_threshold_eur,
+            per_origin_thresholds=self.settings.deal_thresholds_by_origin(),
         )
         # EU letiště jsou odletová (role "origin"), JP příletová ("dest") –
         # pokrytí se počítá zvlášť podle role, ať se statistiky nemíchají.
@@ -813,9 +816,13 @@ class Scanner:
             except Exception as exc:  # noqa: BLE001
                 logger.error("Trasa %s selhala: %s", route.get("name"), exc)
 
-        # URL enrichment: pro nabídky ≤ dealMaxEur s Aviasales URL přepíše cenu
-        # a doplní segmenty z booking tokenu (autoritativní data).
-        all_flights = enrich_results(all_flights, self.settings.price_threshold_eur)
+        # URL enrichment: pro nabídky ≤ efektivnímu prahu (dealMaxEur − doprava)
+        # s Aviasales URL přepíše cenu a doplní segmenty z booking tokenu.
+        all_flights = enrich_results(
+            all_flights,
+            self.settings.price_threshold_eur,
+            per_origin_thresholds=self.settings.deal_thresholds_by_origin(),
+        )
 
         # Snapshot stavu historie PŘED zápisem dnešních cen – export z něj
         # počítá flagy (isNewLow, priceDeltaEur) vůči stavu před scanem.
@@ -877,9 +884,11 @@ class Scanner:
         logger.info("=== Scan dokončen ===")
 
     def _process_flights(self, flights: list[FlightResult]) -> None:
-        threshold = self.settings.price_threshold_eur
+        per_origin = self.settings.deal_thresholds_by_origin()
+        base = self.settings.price_threshold_eur
         for f in flights:
             key = f.route_key()
+            threshold = per_origin.get(f.origin or "", base)
             # Alert jen pod prahem – dražší výsledky se pouze zaznamenají
             # do historie (pro statistiky letišť a trendy).
             below_threshold = f.price < threshold
@@ -920,31 +929,7 @@ class Scanner:
             lines.append(f"🔎 Prověřené termíny: {terms}")
 
         # Historicky nejlevnější nabídka včetně dopravy.
-        # Pro mode="let": costEurRoundtrip (1×) + 2× transfer; fallback 2× (costEur + transfer).
-        # Pro vlak/bus/auto: 2× costEur.
-        transport_by_code: dict[str, float] = {}
-        for ap in self.settings.agent_config.get("europeAirports", []):
-            if isinstance(ap, dict):
-                t = ap.get("transport") or {}
-                if not isinstance(t, dict):
-                    continue
-                mode = (t.get("mode") or "").lower()
-                if mode == "let":
-                    cost_one_way = t.get("costEur")
-                    if cost_one_way is None:
-                        continue
-                    transfer = float(t.get("airportTransferCostEur", 25))
-                    roundtrip = t.get("costEurRoundtrip")
-                    if roundtrip is not None:
-                        total = float(roundtrip) + 2 * transfer
-                    else:
-                        total = 2 * (float(cost_one_way) + transfer)
-                else:
-                    cost_one_way = t.get("costEur")
-                    if cost_one_way is None:
-                        continue
-                    total = 2 * float(cost_one_way)
-                transport_by_code[str(ap["code"])] = total
+        transport_by_code = self.settings.transport_costs_by_origin()
 
         best_key: Optional[str] = None
         best_total: Optional[float] = None

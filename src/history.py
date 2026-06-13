@@ -349,7 +349,8 @@ class PriceHistory:
 
     # -- statistika dne v týdnu ------------------------------------------
     def weekday_stats(
-        self, threshold: float
+        self, threshold: float,
+        per_origin_thresholds: Optional[dict[str, float]] = None,
     ) -> dict[str, dict[int, dict]]:
         """Statistika deal-frequency per den v týdnu (0=po … 6=ne).
 
@@ -362,11 +363,16 @@ class PriceHistory:
             "all_median": float,    # medián všech cen (pro EUR-rozdíl)
           }
 
+        ``per_origin_thresholds``: per-EU-letiště efektivní prahy (dealMaxEur − doprava);
+        pro trasy, jejichž origin v dict není, se použije základní ``threshold``.
         Jen záznamy, kde je uloženo depart_date resp. return_date.
         """
-        dep_acc: dict[int, list[float]] = {i: [] for i in range(7)}
-        ret_acc: dict[int, list[float]] = {i: [] for i in range(7)}
-        for _, entry in self.routes():
+        # Každý bucket obsahuje (price, eff_threshold) dvojice.
+        dep_acc: dict[int, list[tuple[float, float]]] = {i: [] for i in range(7)}
+        ret_acc: dict[int, list[tuple[float, float]]] = {i: [] for i in range(7)}
+        for key, entry in self.routes():
+            origin = key.split("-")[0] if "-" in key else ""
+            eff_thresh = (per_origin_thresholds or {}).get(origin, threshold)
             for h in entry.get("history", []):
                 price = h.get("price")
                 if price is None:
@@ -376,22 +382,22 @@ class PriceHistory:
                     wd = _parse_weekday(h.get(field))
                     if wd is None:
                         continue
-                    acc[wd].append(price)
+                    acc[wd].append((price, eff_thresh))
 
         result: dict[str, dict[int, dict]] = {"depart": {}, "return": {}}
         for label, acc in (("depart", dep_acc), ("return", ret_acc)):
-            for wd, prices in acc.items():
-                if not prices:
+            for wd, pairs in acc.items():
+                if not pairs:
                     continue
-                ordered = sorted(prices)
-                n = len(ordered)
-                deals = [p for p in ordered if p < threshold]
+                prices = sorted(p for p, _ in pairs)
+                n = len(prices)
+                deals = sorted(p for p, t in pairs if p < t)
                 result[label][wd] = {
                     "count": n,
                     "deals": len(deals),
                     "deal_rate": len(deals) / n if n else 0.0,
-                    "deal_median": _median(sorted(deals)) if deals else None,
-                    "all_median": _median(ordered),
+                    "deal_median": _median(deals) if deals else None,
+                    "all_median": _median(prices),
                 }
         return result
 
@@ -465,7 +471,8 @@ class PriceHistory:
         return [p for p in parts if p]
 
     def airport_stats(
-        self, threshold: Optional[float] = None
+        self, threshold: Optional[float] = None,
+        per_origin_thresholds: Optional[dict[str, float]] = None,
     ) -> dict[str, dict[str, float]]:
         """Spočítá statistiku pozorovaných cen pro každé letiště napříč všemi
         trasami v historii. Vrací {kód: {count, avg, min, median, ...}}.
@@ -477,8 +484,9 @@ class PriceHistory:
         - ``deals``       – počet pozorování pod prahem,
         - ``deal_rate``   – podíl pozorování pod prahem (0–1),
         - ``deal_median`` – medián cen pod prahem (None, pokud žádné nejsou).
-        Tato metrika lépe modeluje cíl aplikace (najít dealy) než průměr –
-        letiště s mnoha akčními letenkami se prosadí i přes vysoký průměr.
+        ``per_origin_thresholds``: per-EU-letiště efektivní prahy (dealMaxEur − doprava);
+        EU letiště v dict dostanou svůj specifický práh, ostatní (JP, city kódy) použijí
+        základní ``threshold``.
         """
         acc: dict[str, list[float]] = {}
         for key, entry in self.routes():
@@ -501,7 +509,8 @@ class PriceHistory:
                 "median": _median(ordered),
             }
             if threshold is not None:
-                deals = [p for p in ordered if p < threshold]
+                t = (per_origin_thresholds or {}).get(a, threshold)
+                deals = [p for p in ordered if p < t]
                 stats[a]["deals"] = len(deals)
                 stats[a]["deal_rate"] = len(deals) / n
                 stats[a]["deal_median"] = _median(deals) if deals else None

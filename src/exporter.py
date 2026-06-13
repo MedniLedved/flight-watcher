@@ -343,8 +343,13 @@ class Exporter:
         denní Telegram souhrn (`airport_stats` / `weekday_stats`), aby se
         čísla v Telegramu a na dashboardu nerozešla."""
         threshold = self.settings.price_threshold_eur
-        a_stats = self.history.airport_stats(threshold=threshold)
-        wd_stats = self.history.weekday_stats(threshold=threshold)
+        per_origin = self.settings.deal_thresholds_by_origin()
+        a_stats = self.history.airport_stats(
+            threshold=threshold, per_origin_thresholds=per_origin
+        )
+        wd_stats = self.history.weekday_stats(
+            threshold=threshold, per_origin_thresholds=per_origin
+        )
 
         eu_codes = {a["code"] for a in self.agent.get("europeAirports", [])}
         jp_codes = {a["code"] for a in self.agent.get("japanAirports", [])}
