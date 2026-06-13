@@ -79,7 +79,7 @@ interface Props {
 
 export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const [selected, setSelected] = useState<LatestOffer | null>(null);
-  const [includeTransport, setIncludeTransport] = useState(false);
+  const [includeTransport, setIncludeTransport] = useState(true);
 
   const offers = latest ?? [];
   const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? DEAL_THRESHOLD_DEFAULT;

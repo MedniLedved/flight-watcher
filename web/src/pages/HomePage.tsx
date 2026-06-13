@@ -72,7 +72,7 @@ function SummaryBar({
 
 export function HomePage({ latest, stats, agentConfig, loading, error, onSelectRoute }: Props) {
   const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
-  const [includeTransport, setIncludeTransport] = useState(false);
+  const [includeTransport, setIncludeTransport] = useState(true);
 
   const handleToggleTransport = (v: boolean) => {
     setIncludeTransport(v);
