@@ -222,6 +222,45 @@ def test_latest_stale_fill_for_missing_routes(tmp_path):
     assert prg["dealUrl"] is None
 
 
+def test_stale_fill_skips_one_way_pollution(tmp_path):
+    """One-way historický záznam (roundtrip/openjaw bez returnDate, např. starší
+    travelpayouts data) NESMÍ prosáknout do latest.json jako záloha — i když je
+    nejlevnější. Reálný zpáteční záznam má přednost."""
+    h = PriceHistory(tmp_path / "price_history.json")
+    # Levný one-way (bez return_date) + dražší reálný zpáteční, stejný den.
+    h.record("PRG-TYO-roundtrip", 414, "travelpayouts", on_date=TODAY,
+             depart_date=date(2026, 9, 5))  # bez return_date = one-way pollution
+    h.record("PRG-TYO-roundtrip", 567, "duffel", on_date=TODAY,
+             depart_date=date(2026, 9, 5), return_date=date(2026, 9, 19))
+    out = tmp_path / "data"
+    prev = {"PRG-TYO-roundtrip": {"all_time_min": 567, "last_price": 567}}
+    # Žádný živý výsledek pro PRG → musí se doplnit z historie.
+    Exporter(h, _settings(), out_dir=out).run([], prev_state=prev, now=NOW)
+    latest = _load(out / "latest.json")
+    prg = [x for x in latest if x["routeKey"] == "PRG-TYO-roundtrip"]
+    assert len(prg) == 1
+    # Vybrat se MUSÍ reálná zpáteční nabídka (567 s returnDate), ne one-way 414.
+    assert prg[0]["price"] == 567
+    assert prg[0]["returnDate"] == "2026-09-19"
+    assert prg[0]["source"] == "duffel"
+    # Žádná roundtrip/openjaw nabídka v latest.json bez returnDate.
+    for x in latest:
+        if x["type"] in ("roundtrip", "openjaw"):
+            assert x["returnDate"] is not None, f"{x['routeKey']}: one-way pollution"
+
+
+def test_stale_fill_all_one_way_dropped(tmp_path):
+    """Pokud má trasa POUZE one-way záznamy, nezobjeví se v latest.json vůbec
+    (radši žádná nabídka než podhodnocená one-way)."""
+    h = PriceHistory(tmp_path / "price_history.json")
+    h.record("PRG-TYO-roundtrip", 414, "travelpayouts", on_date=TODAY,
+             depart_date=date(2026, 9, 5))  # jediný záznam, bez return_date
+    out = tmp_path / "data"
+    Exporter(h, _settings(), out_dir=out).run([], prev_state={}, now=NOW)
+    latest = _load(out / "latest.json")
+    assert not any(x["routeKey"] == "PRG-TYO-roundtrip" for x in latest)
+
+
 def test_latest_live_routes_not_in_stale(tmp_path):
     """Trasy s živým výsledkem se nezdvojí jako záloha."""
     history = _history(tmp_path)

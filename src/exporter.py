@@ -111,19 +111,27 @@ def _record_key(rec: dict) -> tuple:
             rec.get("returnDate"), rec.get("price"))
 
 
-def _best_historical_offer(records: list[dict]) -> Optional[dict]:
+def _best_historical_offer(records: list[dict],
+                           require_return: bool = False) -> Optional[dict]:
     """Nejlepší (nejlevnější) záznam z nejnovějšího dne pozorování v řadě.
     Vrátí None, pokud řada neobsahuje žádný použitelný záznam.
 
     Používá se jako záloha pro trasy, které v aktuálním scanu neposkytly
     žádný živý výsledek, aby nezmizely z latest.json po sparsy scanu.
+
+    ``require_return``: pro zpáteční/open-jaw trasy vynech záznamy bez
+    ``returnDate`` (one-way pollution, např. starší travelpayouts data) — ty
+    nesmí prosáknout do latest.json jako podhodnocená „zpáteční" nabídka.
     """
     if not records:
         return None
-    last_date = max((r.get("date") or "") for r in records)
+    usable = [r for r in records if r.get("returnDate")] if require_return else records
+    if not usable:
+        return None
+    last_date = max((r.get("date") or "") for r in usable)
     if not last_date:
         return None
-    day_records = [r for r in records if r.get("date") == last_date
+    day_records = [r for r in usable if r.get("date") == last_date
                    and r.get("price") is not None]
     if not day_records:
         return None
@@ -247,10 +255,11 @@ class Exporter:
         for route_key, records in series.items():
             if route_key in live_routes:
                 continue
-            hist_rec = _best_historical_offer(records)
+            parsed = parse_route_key(route_key)
+            require_return = parsed["type"] in ("roundtrip", "openjaw")
+            hist_rec = _best_historical_offer(records, require_return=require_return)
             if hist_rec is None:
                 continue
-            parsed = parse_route_key(route_key)
             obs_date = hist_rec.get("date") or ""
             stale_days = (today - date.fromisoformat(obs_date)).days if obs_date else None
             prev = prev_state.get(route_key, {})
