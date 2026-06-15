@@ -76,7 +76,6 @@ export function HomePage({ latest, stats, agentConfig, loading, error, onSelectR
 
   const handleToggleTransport = (v: boolean) => {
     setIncludeTransport(v);
-    setFilters((prev) => ({ ...prev, priceMax: v ? "650" : "550" }));
   };
 
   const offers = useMemo(() => latest ?? [], [latest]);
