@@ -216,6 +216,72 @@
     }
   },
   {
+    "routeKey": "FCO-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "FCO",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Řím",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 41.8003,
+        "lon": 12.2389
+      },
+      "destination": {
+        "lat": 35.5494,
+        "lon": 139.7798
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "FCO-KIX-roundtrip",
+    "type": "roundtrip",
+    "origin": "FCO",
+    "destination": "KIX",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Řím",
+    "destinationName": "Osaka",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 41.8003,
+        "lon": 12.2389
+      },
+      "destination": {
+        "lat": 34.4347,
+        "lon": 135.2441
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "FCO-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "FCO",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Řím",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 41.8003,
+        "lon": 12.2389
+      },
+      "destination": {
+        "lat": 35.7647,
+        "lon": 140.3863
+      },
+      "returnOrigin": null
+    }
+  },
+  {
     "routeKey": "FMM-TYO-roundtrip",
     "type": "roundtrip",
     "origin": "FMM",
@@ -233,6 +299,50 @@
       "destination": {
         "lat": 35.6812,
         "lon": 139.7671
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "FRA-NGO-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "NGO",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Frankfurt",
+    "destinationName": "Nagoja",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 50.0379,
+        "lon": 8.5622
+      },
+      "destination": {
+        "lat": 34.8584,
+        "lon": 136.8049
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "FRA-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Frankfurt",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 50.0379,
+        "lon": 8.5622
+      },
+      "destination": {
+        "lat": 35.7647,
+        "lon": 140.3863
       },
       "returnOrigin": null
     }
@@ -293,6 +403,28 @@
       "destination": {
         "lat": 35.6812,
         "lon": 139.7671
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "MUC-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Mnichov",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 48.3538,
+        "lon": 11.7861
+      },
+      "destination": {
+        "lat": 35.5494,
+        "lon": 139.7798
       },
       "returnOrigin": null
     }
@@ -837,6 +969,50 @@
     }
   },
   {
+    "routeKey": "VIE-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "VIE",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Vídeň",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 48.1103,
+        "lon": 16.5697
+      },
+      "destination": {
+        "lat": 35.5494,
+        "lon": 139.7798
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "VIE-KIX-roundtrip",
+    "type": "roundtrip",
+    "origin": "VIE",
+    "destination": "KIX",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Vídeň",
+    "destinationName": "Osaka",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 48.1103,
+        "lon": 16.5697
+      },
+      "destination": {
+        "lat": 34.4347,
+        "lon": 135.2441
+      },
+      "returnOrigin": null
+    }
+  },
+  {
     "routeKey": "VIE-NGO-KIX-openjaw",
     "type": "openjaw",
     "origin": "VIE",
@@ -859,6 +1035,28 @@
         "lat": 34.4347,
         "lon": 135.2441
       }
+    }
+  },
+  {
+    "routeKey": "VIE-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "VIE",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Vídeň",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 48.1103,
+        "lon": 16.5697
+      },
+      "destination": {
+        "lat": 35.7647,
+        "lon": 140.3863
+      },
+      "returnOrigin": null
     }
   },
   {
