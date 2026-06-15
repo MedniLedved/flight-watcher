@@ -101,6 +101,15 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
   (Opraveno v `deploy.sh` step [1] — nikdy tento krok nevynechávej ani nemazej.)
 - **Kód opraven na main, ale uživatel stále vidí starou verzi:** gh-pages se neaktualizuje
   automaticky při push na main — vždy spustit `bash scripts/deploy.sh` po kódovém commitu.
+- **CI scan export obcházel validaci:** `scan.yml` commitoval `data/*.json` na main bez
+  `validate.sh` (scan job nemá Node/dist build), takže one-way pollution se vracela do
+  `latest.json` přes historickou zálohu exporteru. Opraveno: lehký `scripts/validate-data.sh`
+  běží v `scan.yml` PŘED commitem (při exit 1 se nepushne); `validate.sh [5b]` sdílí stejný
+  guard. Při změně logiky pollution-guardu uprav jen `validate-data.sh` (jeden zdroj pravdy).
+- **Stale-fill exporteru resurektoval one-way pollution:** `_best_historical_offer` brala
+  nejlevnější historický záznam pro trasy bez živého výsledku — one-way záznamy (bez
+  `returnDate`) přebily reálné zpáteční. Opraveno: `require_return=True` pro roundtrip/openjaw.
+  Test: `tests/test_exporter.py::test_stale_fill_skips_one_way_pollution`.
 
 **Settings / GitHub API:**
 - **Settings save pouze na main, ne na gh-pages:** změna se neprojevila do příštího deploye.

@@ -122,19 +122,12 @@ for file in "${OPTIONAL_FILES[@]}"; do
   fi
 done
 
-# 5b. One-way pollution guard: roundtrip/openjaw nabídka MUSÍ mít returnDate.
-#     Regrese: travelpayouts/aviasales vracel bez return_at JEDNOSMĚRNÉ letenky,
-#     které se ukládaly jako roundtrip s prázdným returnDate (podhodnocená cena
-#     znečistila zpáteční data). Zdroj teď one-way zahazuje; tato kontrola hlídá,
-#     aby se podhodnocené one-way nabídky nikdy znovu nedostaly do latest.json.
+# 5b. One-way pollution guard (sdílený se scripts/validate-data.sh — jeden zdroj
+#     pravdy). Stejná kontrola běží i v CI scan jobu PŘED commitem exportu, aby
+#     se znečištěná data nikdy nedostala na main. Detaily viz validate-data.sh.
 echo ""
 echo "[5b] One-way pollution guard..."
-BAD_RT=$(jq '[.[] | select((.type == "roundtrip" or .type == "openjaw") and (.returnDate == null))] | length' public/data/latest.json)
-if [ "$BAD_RT" -gt 0 ]; then
-  echo "  ❌ $BAD_RT roundtrip/openjaw nabídek bez returnDate (one-way pollution)"
-  jq -r '.[] | select((.type == "roundtrip" or .type == "openjaw") and (.returnDate == null)) | "    \(.routeKey) (\(.source))"' public/data/latest.json
-  exit 1
-fi
+bash "$REPO_ROOT/scripts/validate-data.sh" "$REPO_ROOT/web/public/data" >/dev/null
 echo "  ✓ Žádná roundtrip/openjaw nabídka bez returnDate"
 
 # 6. Calendar data for routes in latest.json

@@ -78,6 +78,11 @@ jobs:
           if git diff --cached --quiet; then
             echo "Žádné změny v exportu – nic necommituji."
           else
+            # Pojistka: znečištěná data (one-way pollution apod.) se nikdy nesmí
+            # dostat na main. CI scan nemá Node/dist build, takže neběží plné
+            # validate.sh — spustíme lehký datový validátor. Při exit 1 (bash -e)
+            # se commit ani push neprovede.
+            bash scripts/validate-data.sh data
             git commit -m "data: denní export pro dashboard"
             git pull --rebase origin "${GITHUB_REF_NAME}" || true
             git push
