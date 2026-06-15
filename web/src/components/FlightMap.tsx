@@ -497,20 +497,26 @@ export function FlightMap({ routes, latest, stats, insights, agentConfig, onSele
     );
   }
 
-  // Enrich each route with offer + color
-  const routesWithData: RouteWithData[] = routes.map((route) => {
-    const offer = (latest ?? []).find((o) => o.routeKey === route.routeKey);
-    const pct = stats?.[route.routeKey]?.currentVsAvgPct ?? null;
-    const isHighlight = !!(offer?.flags.isNewLow || offer?.flags.isBigDrop);
-    return {
-      route,
-      offer,
-      color: qualityColor(pct),
-      qualityText: qualityLabel(pct),
-      weight: selectedKey === route.routeKey ? 5 : isHighlight ? 3.5 : 2.5,
-      isHighlight,
-    };
-  });
+  // Enrich each route with offer + color.
+  // Only keep routes that have a matching offer in `latest` (= filtered offers
+  // from the table above), so the map stays in sync with the offers table and
+  // doesn't draw stale routes that are no longer in the data.
+  const offerByKey = new Map((latest ?? []).map((o) => [o.routeKey, o]));
+  const routesWithData: RouteWithData[] = routes
+    .filter((route) => offerByKey.has(route.routeKey))
+    .map((route) => {
+      const offer = offerByKey.get(route.routeKey);
+      const pct = stats?.[route.routeKey]?.currentVsAvgPct ?? null;
+      const isHighlight = !!(offer?.flags.isNewLow || offer?.flags.isBigDrop);
+      return {
+        route,
+        offer,
+        color: qualityColor(pct),
+        qualityText: qualityLabel(pct),
+        weight: selectedKey === route.routeKey ? 5 : isHighlight ? 3.5 : 2.5,
+        isHighlight,
+      };
+    });
 
   // Unique airports
   const europeMap = new Map<string, AirportMarker>();
