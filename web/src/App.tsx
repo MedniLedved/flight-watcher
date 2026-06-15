@@ -7,7 +7,7 @@ import { useDataLoader } from "@/hooks/useDataLoader";
 import { cloneConfig, serializeConfig } from "@/lib/agentConfig";
 import { commitWithRetry, loadToken } from "@/lib/github";
 import { HomePage } from "@/pages/HomePage";
-import type { AgentConfig } from "@/types/data";
+import type { AgentConfig, LatestFile } from "@/types/data";
 
 type AppView = "offers" | "swimlanes" | "map" | "settings";
 
@@ -23,6 +23,7 @@ export default function App() {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const { latest, stats, agentConfig, routes, insights, loading, error } = useDataLoader();
   const [localConfig, setLocalConfig] = useState<AgentConfig | null>(null);
+  const [filteredOffers, setFilteredOffers] = useState<LatestFile | null>(null);
 
   useEffect(() => {
     if (agentConfig && !localConfig) setLocalConfig(cloneConfig(agentConfig));
@@ -104,10 +105,11 @@ export default function App() {
             loading={loading}
             error={error}
             onSelectRoute={setSelectedRoute}
+            onFilteredOffersChange={setFilteredOffers}
           />
           <FlightMap
             routes={routes}
-            latest={latest}
+            latest={filteredOffers ?? latest}
             stats={stats}
             insights={null}
             agentConfig={agentConfig}

@@ -19,8 +19,7 @@ export const ALL = "__all__";
 export interface OfferFilters {
   origin: string; // IATA kód nebo ALL
   destination: string;
-  priceMin: string; // text z inputu; prázdné = bez omezení
-  priceMax: string;
+  priceMax: string; // text z inputu; prázdné = bez omezení
   nightsMin: string;
   nightsMax: string;
 }
@@ -28,7 +27,6 @@ export interface OfferFilters {
 export const EMPTY_FILTERS: OfferFilters = {
   origin: ALL,
   destination: ALL,
-  priceMin: "",
   priceMax: "900",
   nightsMin: "",
   nightsMax: "",
@@ -48,7 +46,6 @@ export function applyFilters(
   agentConfig: AgentConfig | null = null,
   includeTransport = false,
 ): LatestOffer[] {
-  const priceMin = parseNum(f.priceMin);
   const priceMax = parseNum(f.priceMax);
   const nightsMin = parseNum(f.nightsMin);
   const nightsMax = parseNum(f.nightsMax);
@@ -56,7 +53,6 @@ export function applyFilters(
     if (f.origin !== ALL && o.origin !== f.origin) return false;
     if (f.destination !== ALL && o.destination !== f.destination) return false;
     const displayedPrice = effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination);
-    if (priceMin !== null && displayedPrice < priceMin) return false;
     if (priceMax !== null && displayedPrice > priceMax) return false;
     if (nightsMin !== null && (o.nights === null || o.nights < nightsMin)) return false;
     if (nightsMax !== null && (o.nights === null || o.nights > nightsMax)) return false;
@@ -122,66 +118,35 @@ export function FilterBar({
 
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">
-            Cena (EUR){includeTransport ? " vč. dopravy" : ""}
+            Max. cena (EUR){includeTransport ? " vč. dopravy" : ""}
           </label>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-0.5">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-7 px-0 text-base"
-                onClick={() => {
-                  const v = parseNum(filters.priceMin);
-                  if (v != null) set({ priceMin: v <= 50 ? "" : String(v - 50) });
-                }}
-              >−</Button>
-              <Input
-                type="number"
-                inputMode="numeric"
-                placeholder="od"
-                className="w-20"
-                value={filters.priceMin}
-                onChange={(e) => set({ priceMin: e.target.value })}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-7 px-0 text-base"
-                onClick={() => {
-                  const v = parseNum(filters.priceMin) ?? 0;
-                  set({ priceMin: String(v + 50) });
-                }}
-              >+</Button>
-            </div>
-            <span className="text-muted-foreground">–</span>
-            <div className="flex items-center gap-0.5">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-7 px-0 text-base"
-                onClick={() => {
-                  const v = parseNum(filters.priceMax);
-                  if (v != null) set({ priceMax: v <= 50 ? "0" : String(v - 50) });
-                }}
-              >−</Button>
-              <Input
-                type="number"
-                inputMode="numeric"
-                placeholder="do"
-                className="w-20"
-                value={filters.priceMax}
-                onChange={(e) => set({ priceMax: e.target.value })}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-7 px-0 text-base"
-                onClick={() => {
-                  const v = parseNum(filters.priceMax);
-                  if (v != null) set({ priceMax: String(v + 50) });
-                }}
-              >+</Button>
-            </div>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-7 px-0 text-base"
+              onClick={() => {
+                const v = parseNum(filters.priceMax);
+                if (v != null) set({ priceMax: v <= 50 ? "0" : String(v - 50) });
+              }}
+            >−</Button>
+            <Input
+              type="number"
+              inputMode="numeric"
+              placeholder="do"
+              className="w-24"
+              value={filters.priceMax}
+              onChange={(e) => set({ priceMax: e.target.value })}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 w-7 px-0 text-base"
+              onClick={() => {
+                const v = parseNum(filters.priceMax);
+                if (v != null) set({ priceMax: String(v + 50) });
+              }}
+            >+</Button>
           </div>
         </div>
 

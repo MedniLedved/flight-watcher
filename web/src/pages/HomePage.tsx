@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   applyFilters,
@@ -24,6 +24,7 @@ interface Props {
   loading: boolean;
   error: string | null;
   onSelectRoute: (routeKey: string) => void;
+  onFilteredOffersChange?: (offers: LatestFile) => void;
 }
 
 function SummaryBar({
@@ -70,7 +71,7 @@ function SummaryBar({
   );
 }
 
-export function HomePage({ latest, stats, agentConfig, loading, error, onSelectRoute }: Props) {
+export function HomePage({ latest, stats, agentConfig, loading, error, onSelectRoute, onFilteredOffersChange }: Props) {
   const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
   const [includeTransport, setIncludeTransport] = useState(true);
 
@@ -83,6 +84,10 @@ export function HomePage({ latest, stats, agentConfig, loading, error, onSelectR
     () => applyFilters(offers, filters, agentConfig, includeTransport),
     [offers, filters, agentConfig, includeTransport],
   );
+
+  useEffect(() => {
+    onFilteredOffersChange?.(visible);
+  }, [visible, onFilteredOffersChange]);
 
   if (loading) {
     return (
