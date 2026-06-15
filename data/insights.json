@@ -21,15 +21,9 @@
       },
       {
         "code": "MUC",
-        "dealRatePct": 97.0,
+        "dealRatePct": 92.8,
         "medianEur": 560.0,
-        "observations": 66
-      },
-      {
-        "code": "PRG",
-        "dealRatePct": 94.7,
-        "medianEur": 491.0,
-        "observations": 19
+        "observations": 69
       },
       {
         "code": "VIE",
@@ -42,6 +36,12 @@
         "dealRatePct": 83.3,
         "medianEur": 560.0,
         "observations": 12
+      },
+      {
+        "code": "PRG",
+        "dealRatePct": 75.0,
+        "medianEur": 524.0,
+        "observations": 24
       },
       {
         "code": "NUE",
@@ -89,15 +89,9 @@
       },
       {
         "code": "KIX",
-        "dealRatePct": 4.5,
-        "medianEur": 942.0,
-        "observations": 22
-      },
-      {
-        "code": "NRT",
-        "dealRatePct": 0.0,
-        "medianEur": 1001.0,
-        "observations": 11
+        "dealRatePct": 4.0,
+        "medianEur": 982.0,
+        "observations": 25
       },
       {
         "code": "NGO",
@@ -106,10 +100,16 @@
         "observations": 8
       },
       {
+        "code": "NRT",
+        "dealRatePct": 0.0,
+        "medianEur": 1090.0,
+        "observations": 13
+      },
+      {
         "code": "HND",
         "dealRatePct": 0.0,
-        "medianEur": 1151.0,
-        "observations": 18
+        "medianEur": 1169.0,
+        "observations": 21
       },
       {
         "code": "ITM",
@@ -121,14 +121,14 @@
   },
   "cheapestDepartureDow": [
     {
-      "dow": "ČT",
-      "dealRatePct": 85.0,
-      "medianEur": 534.5
-    },
-    {
       "dow": "SO",
       "dealRatePct": 82.8,
       "medianEur": 505.0
+    },
+    {
+      "dow": "ČT",
+      "dealRatePct": 79.1,
+      "medianEur": 535.0
     },
     {
       "dow": "ST",
@@ -152,8 +152,8 @@
     },
     {
       "dow": "NE",
-      "dealRatePct": 40.0,
-      "medianEur": 512.5
+      "dealRatePct": 32.0,
+      "medianEur": 520.0
     }
   ],
   "cheapestArrivalDow": [
@@ -171,6 +171,16 @@
       "dow": "NE",
       "dealRatePct": 0.0,
       "medianEur": 982.0
+    },
+    {
+      "dow": "PÁ",
+      "dealRatePct": 0.0,
+      "medianEur": 1225.0
+    },
+    {
+      "dow": "ÚT",
+      "dealRatePct": 0.0,
+      "medianEur": 1229.0
     },
     {
       "dow": "ST",
