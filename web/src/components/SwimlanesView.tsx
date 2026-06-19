@@ -35,7 +35,7 @@ const MONTH_NAMES = [
 ];
 
 const DAY_MS = 86_400_000;
-const DEAL_THRESHOLD_DEFAULT = 550;
+const SWIMLANE_MAX_EUR = 950;
 /** Pixelů na den — určuje měřítko celé osy. */
 const PX_PER_DAY = 10;
 
@@ -82,7 +82,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const [includeTransport, setIncludeTransport] = useState(true);
 
   const offers = latest ?? [];
-  const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? DEAL_THRESHOLD_DEFAULT;
+  const dealMax = SWIMLANE_MAX_EUR;
   const minNights = agentConfig?.stayLength?.minNights ?? FALLBACK_NIGHTS;
 
   // Filtruj na EFEKTIVNÍ cenu (vč. dopravy, dle toggle) — stejná sémantika jako
