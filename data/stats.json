@@ -136,22 +136,22 @@
   "FRA-NGO-roundtrip": {
     "allTimeMin": 1031.0,
     "min90d": 1031.0,
-    "max90d": 1031.0,
-    "avg90d": 1031.0,
-    "trend30d": null,
+    "max90d": 1194.0,
+    "avg90d": 1112.5,
+    "trend30d": 15.8,
     "biggestDrop": null,
-    "lastPrice": 1031.0,
-    "currentVsAvgPct": 0.0
+    "lastPrice": 1194.0,
+    "currentVsAvgPct": 7.3
   },
   "FRA-NRT-roundtrip": {
     "allTimeMin": 815.0,
     "min90d": 815.0,
-    "max90d": 815.0,
-    "avg90d": 815.0,
-    "trend30d": null,
+    "max90d": 894.0,
+    "avg90d": 854.5,
+    "trend30d": 9.7,
     "biggestDrop": null,
-    "lastPrice": 815.0,
-    "currentVsAvgPct": 0.0
+    "lastPrice": 894.0,
+    "currentVsAvgPct": 4.6
   },
   "FRA-TYO-roundtrip": {
     "allTimeMin": 534.0,
@@ -493,15 +493,15 @@
     "allTimeMin": 974.0,
     "min90d": 974.0,
     "max90d": 1379.0,
-    "avg90d": 1106.5,
-    "trend30d": -10.9,
+    "avg90d": 1125.1,
+    "trend30d": -8.1,
     "biggestDrop": {
       "from": 1093.0,
       "to": 982.0,
       "date": "2026-06-16"
     },
-    "lastPrice": 1151.0,
-    "currentVsAvgPct": 4.0
+    "lastPrice": 1358.0,
+    "currentVsAvgPct": 20.7
   },
   "VIE-KIX-roundtrip": {
     "allTimeMin": 784.0,
@@ -531,15 +531,15 @@
     "allTimeMin": 911.0,
     "min90d": 911.0,
     "max90d": 1423.0,
-    "avg90d": 1113.7,
-    "trend30d": -9.0,
+    "avg90d": 1117.4,
+    "trend30d": -8.8,
     "biggestDrop": {
       "from": 1344.0,
       "to": 911.0,
       "date": "2026-06-18"
     },
-    "lastPrice": 1024.0,
-    "currentVsAvgPct": -8.1
+    "lastPrice": 1344.0,
+    "currentVsAvgPct": 20.3
   },
   "VIE-TYO-roundtrip": {
     "allTimeMin": 419.0,
@@ -554,5 +554,25 @@
     },
     "lastPrice": 566.0,
     "currentVsAvgPct": 12.1
+  },
+  "FRA-HND-roundtrip": {
+    "allTimeMin": 893.0,
+    "min90d": 893.0,
+    "max90d": 1367.0,
+    "avg90d": 1130.0,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 1367.0,
+    "currentVsAvgPct": 21.0
+  },
+  "FRA-KIX-roundtrip": {
+    "allTimeMin": 950.0,
+    "min90d": 950.0,
+    "max90d": 1507.0,
+    "avg90d": 1228.5,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 1507.0,
+    "currentVsAvgPct": 22.7
   }
 }

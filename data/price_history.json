@@ -426,6 +426,50 @@
     "last_price": 535.0,
     "last_seen": "2026-06-12"
   },
+  "FRA-HND-roundtrip": {
+    "alerts": {},
+    "all_time_min": 893.0,
+    "history": [
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-09-03",
+        "price": 893.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-12-19",
+        "price": 1367.0,
+        "return_date": "2026-12-31",
+        "source": "googleflights"
+      }
+    ],
+    "last_price": 1367.0,
+    "last_seen": "2026-06-19"
+  },
+  "FRA-KIX-roundtrip": {
+    "alerts": {},
+    "all_time_min": 950.0,
+    "history": [
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-09-03",
+        "price": 950.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-12-19",
+        "price": 1507.0,
+        "return_date": "2026-12-31",
+        "source": "googleflights"
+      }
+    ],
+    "last_price": 1507.0,
+    "last_seen": "2026-06-19"
+  },
   "FRA-NGO-roundtrip": {
     "alerts": {},
     "all_time_min": 1031.0,
@@ -436,10 +480,17 @@
         "price": 1031.0,
         "return_date": "2026-11-28",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-09-03",
+        "price": 1194.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1031.0,
-    "last_seen": "2026-06-14"
+    "last_price": 1194.0,
+    "last_seen": "2026-06-19"
   },
   "FRA-NRT-roundtrip": {
     "alerts": {},
@@ -451,10 +502,17 @@
         "price": 815.0,
         "return_date": "2026-11-28",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-09-03",
+        "price": 894.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
       }
     ],
-    "last_price": 815.0,
-    "last_seen": "2026-06-14"
+    "last_price": 894.0,
+    "last_seen": "2026-06-19"
   },
   "FRA-TYO-roundtrip": {
     "alerts": {
@@ -1761,10 +1819,24 @@
         "price": 1151.0,
         "return_date": "2026-12-28",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-09-03",
+        "price": 1004.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-12-19",
+        "price": 1358.0,
+        "return_date": "2026-12-31",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1151.0,
-    "last_seen": "2026-06-18"
+    "last_price": 1358.0,
+    "last_seen": "2026-06-19"
   },
   "VIE-KIX-roundtrip": {
     "alerts": {},
@@ -1876,10 +1948,24 @@
         "price": 1024.0,
         "return_date": "2026-12-28",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-09-03",
+        "price": 913.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-19",
+        "depart_date": "2026-12-19",
+        "price": 1344.0,
+        "return_date": "2026-12-31",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1024.0,
-    "last_seen": "2026-06-18"
+    "last_price": 1344.0,
+    "last_seen": "2026-06-19"
   },
   "VIE-TYO-roundtrip": {
     "alerts": {
@@ -2420,47 +2506,47 @@
         "reset_at": "2026-07-09T12:50:50.224190"
       }
     },
-    "scan_count": 7,
+    "scan_count": 8,
     "serpapi_requests": {
-      "2026-06": 210
+      "2026-06": 240
     },
     "skyscrapper_requests": {
       "2026-06": 57
     },
     "source_efficiency": {
       "flightlabs": {
-        "last_run": "2026-06-18",
-        "runs": 7,
+        "last_run": "2026-06-19",
+        "runs": 8,
         "total_deals": 0,
         "total_requests": 50,
         "total_results": 0
       },
       "googleflights": {
-        "last_run": "2026-06-18",
-        "runs": 7,
+        "last_run": "2026-06-19",
+        "runs": 8,
         "total_deals": 0,
-        "total_requests": 168,
-        "total_results": 55
+        "total_requests": 192,
+        "total_results": 65
       },
       "serpapi": {
-        "last_run": "2026-06-18",
-        "runs": 7,
+        "last_run": "2026-06-19",
+        "runs": 8,
         "total_deals": 0,
-        "total_requests": 210,
+        "total_requests": 240,
         "total_results": 22
       },
       "skyscrapper": {
-        "last_run": "2026-06-18",
-        "runs": 7,
+        "last_run": "2026-06-19",
+        "runs": 8,
         "total_deals": 0,
         "total_requests": 0,
         "total_results": 0
       },
       "travelpayouts": {
-        "last_run": "2026-06-18",
-        "runs": 7,
+        "last_run": "2026-06-19",
+        "runs": 8,
         "total_deals": 22,
-        "total_requests": 280,
+        "total_requests": 320,
         "total_results": 26
       }
     }
