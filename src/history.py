@@ -252,14 +252,18 @@ class PriceHistory:
     def add_skyscrapper_usage(self, count: int, month: Optional[str] = None) -> None:
         self._add_usage("skyscrapper_requests", count, month)
 
-    # -- FlightLabs počítadlo (trial: 50 req celkem, ne per-měsíc) --------
-    def flightlabs_usage(self) -> int:
-        """Celkový počet spotřebovaných FlightLabs requestů (trial bez resetu)."""
-        return self.data.get(META_KEY, {}).get("flightlabs_requests_total", 0)
+    # -- FlightLabs počítadlo (4000 req/měsíc, reset 1. den měsíce) --------
+    def flightlabs_usage(self, month: Optional[str] = None) -> int:
+        """Počet spotřebovaných FlightLabs requestů v daném měsíci."""
+        month = month or datetime.now().strftime("%Y-%m")
+        return (
+            self.data.get(META_KEY, {})
+            .get("flightlabs_requests", {})
+            .get(month, 0)
+        )
 
-    def add_flightlabs_usage(self, count: int) -> None:
-        meta = self.data.setdefault(META_KEY, {})
-        meta["flightlabs_requests_total"] = meta.get("flightlabs_requests_total", 0) + count
+    def add_flightlabs_usage(self, count: int, month: Optional[str] = None) -> None:
+        self._add_usage("flightlabs_requests", count, month)
 
     def serpapi_usage(self, month: Optional[str] = None) -> int:
         month = month or datetime.now().strftime("%Y-%m")

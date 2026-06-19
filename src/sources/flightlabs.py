@@ -15,6 +15,7 @@ live booking — vhodné pro statistiky, ne jako primární alert zdroj.
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date
 from typing import Optional
 
@@ -63,6 +64,9 @@ class FlightLabsSource:
         try:
             resp = self.session.get(BASE_URL, params=params, timeout=30)
             self.request_count += 1
+            # Rate limit plánu: 10 req / 10 s → drž ~1 req/s. Sekvenční běh ve
+            # scanneru (budget_check != None) + tato prodleva = bezpečná rezerva.
+            time.sleep(1.1)
             resp.raise_for_status()
         except requests.RequestException as exc:
             logger.error("FlightLabs %s→%s %s: %s", origin, destination, departure_date, exc)
@@ -72,7 +76,8 @@ class FlightLabsSource:
 
         # Různé FlightLabs response shapes – normalizujeme.
         if payload.get("success") is False:
-            logger.error("FlightLabs API: success=false %s→%s", origin, destination)
+            logger.error("FlightLabs API: success=false %s→%s — payload: %.400s",
+                         origin, destination, payload)
             return []
         if "error" in payload:
             logger.error("FlightLabs API chyba %s→%s: %s", origin, destination, payload["error"])
@@ -82,6 +87,17 @@ class FlightLabsSource:
         if isinstance(items, dict):
             # Někdy data = {"cheapest": [...], ...}
             items = items.get("cheapest") or items.get("results") or []
+
+        # Diagnostika: 200 OK, žádný error, ale prázdné výsledky → zaloguj klíče
+        # a ukázku payloadu, ať je vidět, proč parser nic nenašel (jiný tvar
+        # odpovědi vs. skutečně prázdný výsledek). Bez tohoto se chyba "0 výsledků"
+        # nedala diagnostikovat (viz historie scanů: flightlabs 0 results).
+        if not items:
+            logger.warning(
+                "FlightLabs %s→%s: 0 položek (200 OK). payload klíče=%s, ukázka=%.300s",
+                origin, destination, list(payload.keys()), payload,
+            )
+            return []
 
         results: list[FlightResult] = []
         for item in items[:max_results]:

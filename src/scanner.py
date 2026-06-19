@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
 SERPAPI_MONTHLY_LIMIT = 250       # SerpAPI free tier
-FLIGHTLABS_TRIAL_LIMIT = 50      # celkový limit trialu (bez měsíčního resetu)
+FLIGHTLABS_MONTHLY_LIMIT = 4000  # FlightLabs plán: 4000 req/měsíc (reset 1. den)
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
 # (Duffel, Travelpayouts). Paralelizace zkracuje ~100 volání z 15+ min, ale
@@ -69,7 +69,7 @@ SCAN_MAX_WORKERS = max(1, int(os.getenv("SCAN_MAX_WORKERS", "3")))
 # Kolik kombinací (odlet, návrat) prohledat za jeden běh. Termíny denně
 # rotují napříč celým oknem, takže se postupně pokryje celé období i různé
 # délky pobytu, aniž by jeden běh dělal stovky requestů navíc.
-SCAN_DATE_SAMPLES = max(1, int(os.getenv("SCAN_DATE_SAMPLES", "2")))
+SCAN_DATE_SAMPLES = max(1, int(os.getenv("SCAN_DATE_SAMPLES", "3")))
 
 # Plánování vzorkování (coverage-driven greedy + recency decay).
 # Studený start: dokud nemá každý den v týdnu / letiště aspoň tolik vážených
@@ -487,19 +487,29 @@ class Scanner:
                 return False
             return True
         used = self.history.serpapi_usage() + self.serpapi.request_count
-        return used < SERPAPI_MONTHLY_LIMIT
+        remaining = SERPAPI_MONTHLY_LIMIT - used
+        if remaining <= 0:
+            return False
+        # Rozpočítej zbytek měsíční kvóty na zbývající dny → nevyplýtvat vše
+        # první týden (free tier 250/měsíc bez resetu uprostřed měsíce).
+        per_run = _spread_budget(remaining, _first_of_next_month().isoformat())
+        return self.serpapi.request_count < per_run
 
     def _flightlabs_has_budget(self) -> bool:
         if not self.flightlabs:
             return False
         used = self.history.flightlabs_usage() + self.flightlabs.request_count
-        remaining = FLIGHTLABS_TRIAL_LIMIT - used
+        remaining = FLIGHTLABS_MONTHLY_LIMIT - used
         if remaining <= 0:
             logger.warning(
-                "FlightLabs: trial vyčerpán (%d/%d req) – vypni v agent.json",
-                used, FLIGHTLABS_TRIAL_LIMIT,
+                "FlightLabs: měsíční kvóta vyčerpána (%d/%d req)",
+                used, FLIGHTLABS_MONTHLY_LIMIT,
             )
-        return remaining > 0
+            return False
+        # 4000/měsíc je štědré → rozpočítej na dny, ale per-run limit (config)
+        # stejně omezí objem. Spread chrání před nárazovým vyčerpáním.
+        per_run = _spread_budget(remaining, _first_of_next_month().isoformat())
+        return self.flightlabs.request_count < per_run
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
@@ -867,10 +877,10 @@ class Scanner:
         if self.flightlabs and self.flightlabs.request_count:
             self.history.add_flightlabs_usage(self.flightlabs.request_count)
             logger.info(
-                "FlightLabs: %d req tento scan, celkem %d/%d",
+                "FlightLabs: %d req tento scan, tento měsíc %d/%d",
                 self.flightlabs.request_count,
                 self.history.flightlabs_usage(),
-                FLIGHTLABS_TRIAL_LIMIT,
+                FLIGHTLABS_MONTHLY_LIMIT,
             )
 
         # Per-source efektivita (výsledky/run, dealy/run, dealy/request).
