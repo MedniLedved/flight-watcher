@@ -337,6 +337,20 @@ class Scanner:
                     limit=RATE_LIMIT_COMBINATIONS["duffel"],
                 )
 
+        # --- FlightLabs (4000 req/měsíc – využít celou kvótu přes všechny termíny) ---
+        # Štedrá kvóta → iterujeme přes všechny date_pairs (stejně jako free zdroje),
+        # ne jen první. Budget check zastaví smyčku při vyčerpání měsíční kvóty.
+        if self.flightlabs and self._flightlabs_has_budget():
+            for fl_dep, fl_ret in date_pairs:
+                if not self._flightlabs_has_budget():
+                    break
+                results += self._scan_per_combo(
+                    self.flightlabs, "flightlabs", legs, is_openjaw,
+                    fl_dep, fl_ret, name,
+                    limit=RATE_LIMIT_COMBINATIONS["flightlabs"],
+                    budget_check=self._flightlabs_has_budget,
+                )
+
         # Kvótované zdroje šetří requesty → jen první (hlavní) termín.
         if not date_pairs:  # pojistka – plánovač by měl vždy vrátit ≥1 dvojici
             return self._deduplicate(results)
@@ -367,15 +381,6 @@ class Scanner:
                 depart, ret, name,
                 limit=RATE_LIMIT_COMBINATIONS["amadeus"],
                 budget_check=self._amadeus_has_budget,
-            )
-
-        # --- FlightLabs (trial 50 req – bootstrap statistik dní/letišť) ---
-        if self.flightlabs and self._flightlabs_has_budget():
-            results += self._scan_per_combo(
-                self.flightlabs, "flightlabs", legs, is_openjaw,
-                depart, ret, name,
-                limit=RATE_LIMIT_COMBINATIONS["flightlabs"],
-                budget_check=self._flightlabs_has_budget,
             )
 
         # --- Travelpayouts (záloha/trend) – jen ZPÁTEČNÍ ---
@@ -506,10 +511,7 @@ class Scanner:
                 used, FLIGHTLABS_MONTHLY_LIMIT,
             )
             return False
-        # 4000/měsíc je štědré → rozpočítej na dny, ale per-run limit (config)
-        # stejně omezí objem. Spread chrání před nárazovým vyčerpáním.
-        per_run = _spread_budget(remaining, _first_of_next_month().isoformat())
-        return self.flightlabs.request_count < per_run
+        return True
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:

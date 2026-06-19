@@ -72,6 +72,16 @@ class FlightLabsSource:
             logger.error("FlightLabs %s→%s %s: %s", origin, destination, departure_date, exc)
             raise
 
+        # Diagnostika prvních 3 volání v tomto scanu: plný dump request params
+        # a raw response → pomáhá zjistit, proč FlightLabs vrací 0 výsledků.
+        if self.request_count <= 3:
+            safe_params = {k: v for k, v in params.items() if k != "access_key"}
+            logger.info(
+                "FlightLabs DIAG req#%d %s→%s %s: params=%s | HTTP %d | body=%.2000s",
+                self.request_count, origin, destination, departure_date,
+                safe_params, resp.status_code, resp.text,
+            )
+
         payload = resp.json()
 
         # Různé FlightLabs response shapes – normalizujeme.
