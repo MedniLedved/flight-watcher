@@ -1119,6 +1119,111 @@ def test_spread_budget_divides_over_remaining_days():
     assert _spread_budget(5, None, now=now) == 5
 
 
+# -- FlightLabs (goflightlabs Skyscanner API) -------------------------------
+def test_flightlabs_parse_itinerary_shared_with_skyscrapper():
+    """FlightLabs i SkyScrapper musí ze stejného Skyscanner itineráře vrátit
+    identicky naparsovaný FlightResult (sdílený parser)."""
+    from src.sources.skyscanner_common import parse_itinerary
+    it = {
+        "price": {"raw": 498.0, "formatted": "€498"},
+        "legs": [
+            {"origin": {"displayCode": "MUC"}, "destination": {"displayCode": "KIX"},
+             "departure": "2026-09-10T09:00:00",
+             "carriers": {"marketing": [{"name": "Finnair", "alternateId": "AY"}]}},
+            {"origin": {"displayCode": "KIX"}, "destination": {"displayCode": "MUC"},
+             "departure": "2026-09-24T11:00:00",
+             "carriers": {"marketing": [{"name": "Finnair", "alternateId": "AY"}]}},
+        ],
+    }
+    r = parse_itinerary(it, "MUC", "KIX", "Test", "flightlabs")
+    assert r.price == 498.0
+    assert r.source == "flightlabs"
+    assert r.origin == "MUC" and r.destination == "KIX"
+    assert r.depart_date == date(2026, 9, 10)
+    assert r.return_date == date(2026, 9, 24)
+    assert "AY" in r.airlines
+
+
+def test_itineraries_from_payload_handles_both_wrappers():
+    """Sky-scrapper obaluje do data.itineraries, goflightlabs vrací itineraries
+    přímo na top-levelu – obojí musí projít."""
+    from src.sources.skyscanner_common import itineraries_from_payload
+    wrapped = {"data": {"itineraries": [{"price": {"raw": 1}}]}}
+    flat = {"context": {"status": "complete"}, "itineraries": [{"price": {"raw": 2}}]}
+    assert len(itineraries_from_payload(wrapped)) == 1
+    assert len(itineraries_from_payload(flat)) == 1
+    assert itineraries_from_payload({}) == []
+
+
+def test_flightlabs_search_resolves_ids_and_parses(tmp_path):
+    """End-to-end přes mockovanou session: retrieveAirport → skyId/entityId,
+    pak retrieveFlights → itineráře. Ověřuje i správné query parametry."""
+    from src.sources.flightlabs import FlightLabsSource
+
+    class _Resp:
+        def __init__(self, payload):
+            self._payload = payload
+            self.status_code = 200
+            self.text = "{}"
+        def json(self):
+            return self._payload
+        def raise_for_status(self):
+            pass
+
+    calls = []
+
+    class _Session:
+        def get(self, url, params=None, **k):
+            calls.append((url, params))
+            if url.endswith("/retrieveAirport"):
+                q = params["query"]
+                return _Resp({"data": [{"skyId": q, "entityId": f"E{q}"}]})
+            # retrieveFlights
+            assert params["originSkyId"] == "MUC"
+            assert params["destinationEntityId"] == "EKIX"
+            assert params["returnDate"] == "2026-09-24"
+            assert "access_key" in params
+            return _Resp({"itineraries": [{
+                "price": {"raw": 512.0},
+                "legs": [
+                    {"origin": {"displayCode": "MUC"}, "destination": {"displayCode": "KIX"},
+                     "departure": "2026-09-10T09:00:00",
+                     "carriers": {"marketing": [{"alternateId": "AY"}]}},
+                    {"origin": {"displayCode": "KIX"}, "destination": {"displayCode": "MUC"},
+                     "departure": "2026-09-24T11:00:00",
+                     "carriers": {"marketing": [{"alternateId": "AY"}]}},
+                ],
+            }]})
+
+    import src.sources.flightlabs as fl_mod
+    _orig_sleep = fl_mod.time.sleep
+    fl_mod.time.sleep = lambda *a, **k: None
+    try:
+        src = FlightLabsSource(access_key="secret", session=_Session(),
+                               cache_path=tmp_path / "ap.json")
+        out = src.search("MUC", "KIX", date(2026, 9, 10), return_date=date(2026, 9, 24))
+    finally:
+        fl_mod.time.sleep = _orig_sleep
+
+    assert len(out) == 1
+    assert out[0].price == 512.0
+    assert out[0].source == "flightlabs"
+    assert out[0].return_date == date(2026, 9, 24)
+    # access_key se nesmí objevit v DIAG logu (params bez klíče) – pojistka, že
+    # ho do logu neposíláme: search nikdy neloguje params['access_key'].
+
+
+def test_flightlabs_airport_cache_avoids_network(tmp_path):
+    from src.sources.flightlabs import FlightLabsSource
+    cache = tmp_path / "ap.json"
+    src = FlightLabsSource(access_key="x", cache_path=cache)
+    src._airports["MUC"] = {"skyId": "MUC", "entityId": "E1"}
+    src._save_airport_cache()
+    src2 = FlightLabsSource(access_key="x", cache_path=cache)
+    assert src2.resolve_airport("MUC") == {"skyId": "MUC", "entityId": "E1"}
+    assert src2.request_count == 0  # z cache → žádný síťový dotaz
+
+
 # -- Scanner: syntetické režimy zdrojů se nesmí pustit do scanu --------------
 def _scanner_settings(**overrides):
     """Settings pro testy Scanneru – bez Telegramu a bez API klíčů,

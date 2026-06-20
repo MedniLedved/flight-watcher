@@ -1,42 +1,137 @@
-"""FlightLabs (goflightlabs.com) – Flight Prices API (vrstva 1).
+"""FlightLabs (goflightlabs.com) – Skyscanner Flight Prices API (vrstva 1).
 
-Endpoint: GET https://app.goflightlabs.com/retrieve-cheapest-flights
-Docs:     https://www.goflightlabs.com/flight-prices
-Auth:     query param `access_key=FLIGHTLABS_KEY`
+Endpointy (auth query param `access_key=FLIGHTLABS_KEY`):
+* GET https://www.goflightlabs.com/retrieveAirport?query=MUC → skyId + entityId
+* GET https://www.goflightlabs.com/retrieveFlights            → vyhledání letů
 
-Trial:    50 requestů celkem. Zdroj slouží k bootstrap statistik (dny v
-          týdnu, letiště) a po vyčerpání trialu se vypne v agent.json.
-          Kvóta se trackuje v price_history._meta["flightlabs_requests"].
+Pozn.: starší endpoint `/retrieve-cheapest-flights` byl odstaven (vracel 404 na
+každý dotaz – viz git historie). FlightLabs migroval na Skyscanner-based API se
+stejným tvarem odpovědi jako Sky Scrapper, proto se parsování sdílí přes
+`skyscanner_common`. retrieveFlights vyžaduje skyId+entityId (ne IATA), které se
+dohledají přes retrieveAirport a cachují na disk (kvóta se tím šetří).
 
-Pozn.: FlightLabs je re-seller Kiwi/Skyscanner dat a neprovozuje vlastní
-scraping. Response je rychlá (~1–2 s). Ceny jsou indikativní (cache), ne
-live booking — vhodné pro statistiky, ne jako primární alert zdroj.
+Kvóta: 4000 req/měsíc, rate limit 10 req/10 s → sekvenčně s ~1 s prodlevou.
+Kvóta se trackuje v price_history._meta["flightlabs_requests"].
 """
 from __future__ import annotations
 
+import json
 import logging
 import time
 from datetime import date
+from pathlib import Path
 from typing import Optional
 
 import requests
 
 from . import FlightResult
 from .http_utils import make_api_session
+from .skyscanner_common import itineraries_from_payload, parse_itinerary
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://app.goflightlabs.com/retrieve-cheapest-flights"
+BASE_URL = "https://www.goflightlabs.com"
+RETRIEVE_AIRPORT_URL = f"{BASE_URL}/retrieveAirport"
+RETRIEVE_FLIGHTS_URL = f"{BASE_URL}/retrieveFlights"
+_REQUEST_DELAY = 1.1  # 10 req/10 s → drž ~1 req/s
+_AIRPORT_CACHE_PATH = Path("data/flightlabs_airports.json")
 
 
 class FlightLabsSource:
     name = "flightlabs"
 
-    def __init__(self, access_key: str, session: Optional[requests.Session] = None):
+    def __init__(self, access_key: str, session: Optional[requests.Session] = None,
+                 cache_path: Path | str = _AIRPORT_CACHE_PATH):
         self.access_key = access_key
         self.session = session or make_api_session()
+        self.cache_path = Path(cache_path)
         self.request_count = 0
+        self._airports = self._load_airport_cache()
 
+    # -- HTTP -------------------------------------------------------------
+    def _get(self, url: str, params: dict) -> requests.Response:
+        """GET s access_key, počítadlem requestů a rate-limit prodlevou."""
+        params = {**params, "access_key": self.access_key}
+        resp = self.session.get(url, params=params, timeout=40)
+        self.request_count += 1
+        time.sleep(_REQUEST_DELAY)
+        return resp
+
+    # -- cache letišť (skyId/entityId) ------------------------------------
+    def _load_airport_cache(self) -> dict[str, dict]:
+        if self.cache_path.exists():
+            try:
+                with open(self.cache_path, "r", encoding="utf-8") as fh:
+                    return json.load(fh)
+            except (json.JSONDecodeError, OSError):
+                return {}
+        return {}
+
+    def _save_airport_cache(self) -> None:
+        try:
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.cache_path, "w", encoding="utf-8") as fh:
+                json.dump(self._airports, fh, ensure_ascii=False, indent=2)
+        except OSError as exc:
+            logger.warning("FlightLabs: nelze uložit cache letišť: %s", exc)
+
+    def resolve_airport(self, iata: str) -> Optional[dict]:
+        """Vrátí {'skyId': ..., 'entityId': ...} pro IATA kód. Cachuje na disk,
+        ať se měsíční kvóta nepálí opakovaným retrieveAirport voláním."""
+        iata = iata.upper()
+        if iata in self._airports:
+            return self._airports[iata]
+        try:
+            resp = self._get(RETRIEVE_AIRPORT_URL, {"query": iata})
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logger.error("FlightLabs retrieveAirport(%s) chyba: %s", iata, exc)
+            return None
+
+        data = self._airport_items(resp.json())
+        resolved = self._pick_airport(data, iata)
+        if resolved:
+            self._airports[iata] = resolved
+            self._save_airport_cache()
+            return resolved
+        logger.warning("FlightLabs: letiště %s nerozpoznáno (položek=%d)",
+                       iata, len(data))
+        return None
+
+    @staticmethod
+    def _airport_items(payload) -> list[dict]:
+        """retrieveAirport vrací buď {"data": [...]} nebo přímo [...]."""
+        if isinstance(payload, dict):
+            data = payload.get("data")
+            if isinstance(data, list):
+                return data
+        if isinstance(payload, list):
+            return payload
+        return []
+
+    @staticmethod
+    def _airport_ids(item: dict) -> tuple[Optional[str], Optional[str]]:
+        """Vytáhne (skyId, entityId) z položky bez ohledu na tvar (přímo na
+        položce nebo v navigation.relevantFlightParams jako u sky-scrapperu)."""
+        params = (item.get("navigation") or {}).get("relevantFlightParams") or {}
+        sky_id = params.get("skyId") or item.get("skyId")
+        entity_id = params.get("entityId") or item.get("entityId")
+        return sky_id, (str(entity_id) if entity_id is not None else None)
+
+    @classmethod
+    def _pick_airport(cls, items: list[dict], iata: str) -> Optional[dict]:
+        # Preferuj přesnou shodu IATA (skyId) – jinak první platná položka.
+        for item in items:
+            sky_id, entity_id = cls._airport_ids(item)
+            if sky_id and entity_id and sky_id.upper() == iata:
+                return {"skyId": sky_id, "entityId": entity_id}
+        for item in items:
+            sky_id, entity_id = cls._airport_ids(item)
+            if sky_id and entity_id:
+                return {"skyId": sky_id, "entityId": entity_id}
+        return None
+
+    # -- vyhledání --------------------------------------------------------
     def search(
         self,
         origin: str,
@@ -46,188 +141,70 @@ class FlightLabsSource:
         return_origin: Optional[str] = None,
         return_destination: Optional[str] = None,
         adults: int = 1,
-        max_results: int = 5,
+        max_results: int = 10,
         cabin_class: str = "economy",
         route_name: str = "",
     ) -> list[FlightResult]:
-        params: dict = {
-            "access_key": self.access_key,
-            "origin": origin,
-            "destination": destination,
-            "departureDate": str(departure_date),
+        """Vyhledá ZPÁTEČNÍ lety (origin↔destination). retrieveFlights je vždy
+        roundtrip se shodným origin/destination – open-jaw API nepodporuje."""
+        org = self.resolve_airport(origin)
+        dst = self.resolve_airport(destination)
+        if not org or not dst:
+            logger.warning("FlightLabs: chybí ID letiště pro %s/%s",
+                           origin, destination)
+            return []
+
+        params = {
+            "originSkyId": org["skyId"],
+            "destinationSkyId": dst["skyId"],
+            "originEntityId": org["entityId"],
+            "destinationEntityId": dst["entityId"],
+            "date": departure_date.isoformat(),
             "adults": adults,
             "currency": "EUR",
+            "cabinClass": cabin_class,
+            "sortBy": "price_high",
         }
         if return_date:
-            params["returnDate"] = str(return_date)
+            params["returnDate"] = return_date.isoformat()
 
         try:
-            resp = self.session.get(BASE_URL, params=params, timeout=30)
-            self.request_count += 1
-            # Rate limit plánu: 10 req / 10 s → drž ~1 req/s. Sekvenční běh ve
-            # scanneru (budget_check != None) + tato prodleva = bezpečná rezerva.
-            time.sleep(1.1)
+            resp = self._get(RETRIEVE_FLIGHTS_URL, params)
             resp.raise_for_status()
         except requests.RequestException as exc:
-            logger.error("FlightLabs %s→%s %s: %s", origin, destination, departure_date, exc)
+            logger.error("FlightLabs retrieveFlights %s→%s %s: %s",
+                         origin, destination, departure_date, exc)
             raise
 
-        # Diagnostika prvních 3 volání v tomto scanu: plný dump request params
-        # a raw response → pomáhá zjistit, proč FlightLabs vrací 0 výsledků.
+        # Diagnostika prvních 3 volání v scanu: plný request + raw response,
+        # ať je při výpadku zdroje hned vidět příčina (jiný tvar / prázdno).
         if self.request_count <= 3:
-            safe_params = {k: v for k, v in params.items() if k != "access_key"}
             logger.info(
-                "FlightLabs DIAG req#%d %s→%s %s: params=%s | HTTP %d | body=%.2000s",
+                "FlightLabs DIAG req#%d %s→%s %s: params=%s | HTTP %d | body=%.1500s",
                 self.request_count, origin, destination, departure_date,
-                safe_params, resp.status_code, resp.text,
+                {k: v for k, v in params.items()}, resp.status_code, resp.text,
             )
 
         payload = resp.json()
+        if isinstance(payload, dict):
+            if payload.get("success") is False or "error" in payload:
+                logger.error("FlightLabs API chyba %s→%s: %.400s",
+                             origin, destination, payload)
+                return []
 
-        # Různé FlightLabs response shapes – normalizujeme.
-        if payload.get("success") is False:
-            logger.error("FlightLabs API: success=false %s→%s — payload: %.400s",
-                         origin, destination, payload)
-            return []
-        if "error" in payload:
-            logger.error("FlightLabs API chyba %s→%s: %s", origin, destination, payload["error"])
-            return []
-
-        items = payload.get("data") or payload.get("flights") or []
-        if isinstance(items, dict):
-            # Někdy data = {"cheapest": [...], ...}
-            items = items.get("cheapest") or items.get("results") or []
-
-        # Diagnostika: 200 OK, žádný error, ale prázdné výsledky → zaloguj klíče
-        # a ukázku payloadu, ať je vidět, proč parser nic nenašel (jiný tvar
-        # odpovědi vs. skutečně prázdný výsledek). Bez tohoto se chyba "0 výsledků"
-        # nedala diagnostikovat (viz historie scanů: flightlabs 0 results).
-        if not items:
+        itineraries = itineraries_from_payload(payload)
+        if not itineraries:
             logger.warning(
-                "FlightLabs %s→%s: 0 položek (200 OK). payload klíče=%s, ukázka=%.300s",
-                origin, destination, list(payload.keys()), payload,
+                "FlightLabs %s→%s: 0 itinerářů. payload klíče=%s",
+                origin, destination,
+                list(payload.keys()) if isinstance(payload, dict) else type(payload),
             )
             return []
 
-        results: list[FlightResult] = []
-        for item in items[:max_results]:
-            try:
-                fr = self._parse_item(
-                    item, origin, destination,
-                    departure_date, return_date,
-                    destination,  # FlightLabs API je vždy roundtrip, ne open-jaw
-                    origin,
-                    route_name,
-                )
-                if fr is not None:
-                    results.append(fr)
-            except Exception as exc:
-                logger.debug("FlightLabs parse %s→%s: %s", origin, destination, exc)
-
+        results = [
+            parse_itinerary(it, origin, destination, route_name, self.name)
+            for it in itineraries
+        ]
+        results = [r for r in results if r is not None]
         results.sort(key=lambda r: r.price)
-        return results
-
-    # ------------------------------------------------------------------
-    def _parse_item(
-        self, item: dict,
-        origin: str, destination: str,
-        departure_date: date, return_date: Optional[date],
-        return_origin: str, return_destination: str,
-        route_name: str,
-    ) -> Optional[FlightResult]:
-        price = self._extract_price(item)
-        if not price:
-            return None
-
-        airlines = self._extract_airlines(item)
-        link = self._extract_link(item)
-        dep_date = self._extract_date(item, "departureDate", "departure") or departure_date
-        ret_date = self._extract_date(item, "returnDate", "return") or return_date
-
-        return FlightResult(
-            price=price,
-            currency="EUR",
-            origin=origin,
-            destination=destination,
-            return_origin=return_origin,
-            return_destination=return_destination,
-            depart_date=dep_date,
-            return_date=ret_date,
-            airlines=airlines,
-            source=self.name,
-            deep_link=link,
-            route_name=route_name,
-        )
-
-    @staticmethod
-    def _extract_price(item: dict) -> Optional[float]:
-        # Různé FlightLabs / partner API shapes
-        for key in ("price", "total", "amount", "fare", "totalPrice", "total_price"):
-            val = item.get(key)
-            if val is not None:
-                try:
-                    return float(val)
-                except (TypeError, ValueError):
-                    pass
-        # price jako nested dict {"amount": ..., "currency": ...}
-        price_obj = item.get("price") or item.get("priceBreakdown") or {}
-        if isinstance(price_obj, dict):
-            for key in ("amount", "total", "value", "grandTotal"):
-                val = price_obj.get(key)
-                if val is not None:
-                    try:
-                        return float(val)
-                    except (TypeError, ValueError):
-                        pass
-        return None
-
-    @staticmethod
-    def _extract_airlines(item: dict) -> list[str]:
-        # airline jako string IATA nebo nested objekt
-        for key in ("airlines", "carriers"):
-            val = item.get(key)
-            if isinstance(val, list):
-                return [str(a) if not isinstance(a, dict) else (a.get("iataCode") or a.get("iata") or str(a)) for a in val if a]
-        for key in ("airline", "carrier"):
-            val = item.get(key)
-            if isinstance(val, str) and val:
-                return [val]
-            if isinstance(val, dict):
-                code = val.get("iataCode") or val.get("iata") or val.get("code")
-                if code:
-                    return [code]
-        # Z legs
-        legs = item.get("legs") or item.get("segments") or []
-        codes = []
-        for leg in legs:
-            if isinstance(leg, dict):
-                al = leg.get("airline") or leg.get("carrier") or {}
-                code = (al.get("iataCode") if isinstance(al, dict) else al) or leg.get("airlineCode") or leg.get("carrierCode")
-                if code and code not in codes:
-                    codes.append(str(code))
-        return codes
-
-    @staticmethod
-    def _extract_link(item: dict) -> str:
-        for key in ("deepLink", "deep_link", "link", "bookingUrl", "booking_url", "url"):
-            val = item.get(key)
-            if val and isinstance(val, str) and val.startswith("http"):
-                return val
-        return ""
-
-    @staticmethod
-    def _extract_date(item: dict, *keys: str) -> Optional[date]:
-        from datetime import datetime
-        for key in keys:
-            val = item.get(key)
-            if not val:
-                continue
-            if isinstance(val, dict):
-                val = val.get("at") or val.get("time") or val.get("date") or ""
-            if isinstance(val, str) and val:
-                # Parse ISO date or datetime — always extract the date portion (first 10 chars).
-                try:
-                    return datetime.strptime(val[:10], "%Y-%m-%d").date()
-                except ValueError:
-                    pass
-        return None
+        return results[:max_results]

@@ -111,6 +111,18 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
   `returnDate`) přebily reálné zpáteční. Opraveno: `require_return=True` pro roundtrip/openjaw.
   Test: `tests/test_exporter.py::test_stale_fill_skips_one_way_pollution`.
 
+**Datové zdroje (API):**
+- **Mrtvý endpoint maskovaný jako „0 nabídek":** FlightLabs `/retrieve-cheapest-flights`
+  vracel HTTP 404 na KAŽDÝ dotaz; per-source try/except to spolkl do „0 nabídek", takže to
+  vypadalo jako prázdný výsledek, ne jako rozbitý zdroj. Diagnostika přitom logovala jen
+  scénář „200 OK + 0 položek" (až ZA `raise_for_status`), takže nikdy nevyběhla. Lekce:
+  když zdroj dlouhodobě vrací 0, zkontroluj actions log na HTTP chyby (404/4xx/5xx), ne jen
+  parser. Opraveno migrací na goflightlabs Skyscanner API (`/retrieveAirport` + `/retrieveFlights`),
+  parsování sdíleno se SkyScrapperem v `src/sources/skyscanner_common.py`. Při změně tvaru
+  Skyscanner odpovědi uprav JEN ten soubor (oba zdroje ho sdílí). Testy:
+  `tests/test_sources.py::test_flightlabs_search_resolves_ids_and_parses`,
+  `::test_itineraries_from_payload_handles_both_wrappers`.
+
 **Settings / GitHub API:**
 - **Settings save pouze na main, ne na gh-pages:** změna se neprojevila do příštího deploye.
   Opraveno: `commitWithRetry` píše na obě větve. Při změně `SettingsPage.tsx` nebo `github.ts`
