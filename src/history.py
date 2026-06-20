@@ -265,6 +265,18 @@ class PriceHistory:
     def add_flightlabs_usage(self, count: int, month: Optional[str] = None) -> None:
         self._add_usage("flightlabs_requests", count, month)
 
+    # -- FlightLabs async pending joby (2-fázový submit/collect) -----------
+    def flightlabs_pending(self) -> list[dict]:
+        """Seznam odeslaných, ještě nedokončených FlightLabs jobů (parametry
+        hledání + den submitu). Re-dotazují se v dalších bězích, dokud nevrátí
+        výsledky nebo nevyprší."""
+        pend = self.data.get(META_KEY, {}).get("flightlabs_pending", [])
+        return pend if isinstance(pend, list) else []
+
+    def set_flightlabs_pending(self, pending: list[dict]) -> None:
+        meta = self.data.setdefault(META_KEY, {})
+        meta["flightlabs_pending"] = pending
+
     def serpapi_usage(self, month: Optional[str] = None) -> int:
         month = month or datetime.now().strftime("%Y-%m")
         return (

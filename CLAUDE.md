@@ -117,11 +117,23 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
   vypadalo jako prázdný výsledek, ne jako rozbitý zdroj. Diagnostika přitom logovala jen
   scénář „200 OK + 0 položek" (až ZA `raise_for_status`), takže nikdy nevyběhla. Lekce:
   když zdroj dlouhodobě vrací 0, zkontroluj actions log na HTTP chyby (404/4xx/5xx), ne jen
-  parser. Opraveno migrací na goflightlabs Skyscanner API (`/retrieveAirport` + `/retrieveFlights`),
-  parsování sdíleno se SkyScrapperem v `src/sources/skyscanner_common.py`. Při změně tvaru
-  Skyscanner odpovědi uprav JEN ten soubor (oba zdroje ho sdílí). Testy:
-  `tests/test_sources.py::test_flightlabs_search_resolves_ids_and_parses`,
-  `::test_itineraries_from_payload_handles_both_wrappers`.
+  parser. Diagnóza probem (`scripts/probe_flightlabs.py` + ruční workflow
+  `.github/workflows/test-flightlabs.yml`): `/retrieve-cheapest-flights` = 404, `/retrieveAirport`
+  = 410 Gone (nahrazen `airports-by-filters`), ale `/retrieveFlights` ŽIJE.
+- **FlightLabs retrieveFlights je ASYNC job-queue (ne synchronní):** params `originIATACode`/
+  `destinationIATACode`/`date`(+`returnDate`) — IATA přímo, žádný skyId/entityId lookup. První
+  volání vrátí HTTP 202 `{status:processing,jobId}`; výsledky se získají OPAKOVANÝM voláním
+  STEJNÝCH parametrů (200). Tělo 200 = PLOCHÉ pole legů (outbound a return zvlášť, stejná cena =
+  celková zpáteční), NE Skyscanner `itineraries` — `skyscanner_common` se zde NEPOUŽÍVÁ, má vlastní
+  párovací parser `_parse_legs` (nespárovaný leg se zahodí → ochrana proti one-way pollution).
+  Async joby se nestihnou dokončit v jednom scanu → **2-fázový submit/collect**: `submit` odešle job
+  (1–2 req) a nedokončené uloží jako *pending* do `price_history._meta["flightlabs_pending"]`;
+  `_flightlabs_collect_pending` (běží na začátku `run()`) je v dalším běhu re-dotáže (1 req/job),
+  hotové sebere, ‚processing' nechá, starší než `FLIGHTLABS_PENDING_EXPIRY_DAYS` (3) zahodí
+  (zaseknutý job by věčně pálil kvótu a pozdní výsledek by byl zastaralý). Při změně tvaru odpovědi
+  retrieveFlights uprav `flightlabs._parse_legs`. Testy: `test_flightlabs_parse_legs_pairs_roundtrips`,
+  `::test_flightlabs_parse_legs_drops_unpaired_oneway`, `::test_flightlabs_submit_returns_pending_on_202`,
+  `::test_flightlabs_collect_completes_and_keeps`, `::test_scanner_flightlabs_collect_drops_expired_and_collects`.
 
 **Settings / GitHub API:**
 - **Settings save pouze na main, ne na gh-pages:** změna se neprojevila do příštího deploye.

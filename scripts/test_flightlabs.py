@@ -1,9 +1,9 @@
-"""Izolovaný diagnostický běh FlightLabs (goflightlabs Skyscanner API).
+"""Izolovaný diagnostický běh FlightLabs (2-fázový submit/collect).
 
-NEdělá nic destruktivního: nezapisuje price_history, neposílá Telegram,
-necommituje data. Jen vezme FLIGHTLABS_KEY z prostředí, spustí pár dotazů
-přes nový endpoint (retrieveAirport → retrieveFlights) a vypíše výsledek/chyby
-do stdout, ať se z actions logu pozná, jestli zdroj po migraci funguje.
+NEdělá nic destruktivního: nezapisuje historii, neposílá Telegram, necommituje.
+Submitne pár kombinací (retrieveFlights je async → většinou 202), pak několik
+kol re-dotáže pending joby (collect) s prodlevou, ať se v actions logu ukáže,
+jestli a za jak dlouho job dokončí a že parser sedí.
 
 Spuštění: python -m scripts.test_flightlabs
 """
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 from datetime import date
 
 from src.config import Settings
@@ -22,15 +23,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("test_flightlabs")
 
-# Pár reprezentativních tras + jeden termín v cestovním okně (zář–pro 2026).
-# Krátký seznam → pár requestů, nezatíží měsíční kvótu.
-TEST_COMBOS = [
-    ("MUC", "KIX"),
-    ("PRG", "NRT"),
-    ("VIE", "HND"),
-]
+TEST_COMBOS = [("MUC", "KIX"), ("PRG", "NRT"), ("VIE", "HND")]
 DEPART = date(2026, 9, 10)
 RETURN = date(2026, 9, 24)
+COLLECT_ROUNDS = 5
+COLLECT_DELAY_S = 8.0
 
 
 def main() -> int:
@@ -40,39 +37,46 @@ def main() -> int:
         return 1
 
     src = FlightLabsSource(settings.flightlabs_key)
+    all_results = []
+    pending = []
 
-    total = 0
+    # Fáze 1 – submit (krátký poll chytí už nacachované joby).
     for origin, destination in TEST_COMBOS:
-        logger.info("=== TEST %s→%s %s/%s ===", origin, destination, DEPART, RETURN)
-        try:
-            results = src.search(
-                origin=origin, destination=destination,
-                departure_date=DEPART, return_date=RETURN,
-                return_origin=origin, return_destination=destination,
-                route_name="diag",
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.error("%s→%s VÝJIMKA: %s", origin, destination, exc)
-            continue
+        results, pend = src.submit(origin, destination, DEPART, return_date=RETURN,
+                                   route_name="diag")
+        logger.info("SUBMIT %s→%s: %d výsledků, pending=%s",
+                    origin, destination, len(results), pend is not None)
+        all_results += results
+        if pend is not None:
+            pending.append(pend)
 
-        total += len(results)
-        logger.info("%s→%s: %d nabídek", origin, destination, len(results))
-        for r in results[:3]:
-            logger.info(
-                "  %.0f € | %s→%s | %s→%s | %s | %s",
-                r.price, r.origin, r.destination,
-                r.depart_date, r.return_date,
-                ",".join(r.airlines) or "-", r.source,
-            )
+    # Fáze 2 – collect: re-dotáže pending joby v několika kolech s prodlevou.
+    for rnd in range(1, COLLECT_ROUNDS + 1):
+        if not pending:
+            break
+        time.sleep(COLLECT_DELAY_S)
+        still = []
+        for job in pending:
+            results, done = src.collect(job)
+            o, d = job.get("originIATACode"), job.get("destinationIATACode")
+            if results:
+                logger.info("COLLECT[%d] %s→%s: %d výsledků (hotovo)",
+                            rnd, o, d, len(results))
+                all_results += results
+            elif not done:
+                still.append(job)
+            else:
+                logger.info("COLLECT[%d] %s→%s: hotovo bez výsledků/chyba",
+                            rnd, o, d)
+        pending = still
+        logger.info("COLLECT kolo %d: zbývá %d pending", rnd, len(pending))
 
-    logger.info("CELKEM: %d nabídek, %d requestů", total, src.request_count)
-    if total == 0:
-        logger.warning(
-            "FlightLabs vrátil 0 nabídek – viz DIAG logy výše (HTTP status / "
-            "tvar payloadu) pro příčinu."
-        )
-        # Nevrací nenulový exit – 0 nabídek může být legitimní (drahé termíny),
-        # cílem je diagnostika v logu, ne fail CI.
+    logger.info("CELKEM: %d nabídek, %d requestů, %d nedokončených pending",
+                len(all_results), src.request_count, len(pending))
+    for r in sorted(all_results, key=lambda r: r.price)[:5]:
+        logger.info("  %.0f € | %s→%s | %s→%s | %s",
+                    r.price, r.origin, r.destination, r.depart_date, r.return_date,
+                    ",".join(r.airlines) or "-")
     return 0
 
 

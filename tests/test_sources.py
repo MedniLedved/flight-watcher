@@ -1294,6 +1294,138 @@ def test_flightlabs_search_gives_up_on_persistent_202():
     assert sess.n == 4  # submit + 3 polly, pak vzdá
 
 
+def test_flightlabs_submit_returns_pending_on_202():
+    """submit při trvalém 202 vrátí ([], pending) – pending nese query params
+    + den submitu pro pozdější collect."""
+    from src.sources.flightlabs import FlightLabsSource
+
+    class _Resp:
+        status_code = 202
+        text = "{}"
+        def json(self):
+            return {"status": "processing", "jobId": "x"}
+        def raise_for_status(self):
+            pass
+
+    class _Session:
+        def get(self, *a, **k):
+            return _Resp()
+
+    import src.sources.flightlabs as fl_mod
+    _orig = fl_mod.time.sleep
+    fl_mod.time.sleep = lambda *a, **k: None
+    try:
+        src = FlightLabsSource(access_key="x", session=_Session(), max_polls=1)
+        results, pending = src.submit("MUC", "NRT", date(2026, 9, 10),
+                                      return_date=date(2026, 9, 24),
+                                      route_name="R")
+    finally:
+        fl_mod.time.sleep = _orig
+
+    assert results == []
+    assert pending["originIATACode"] == "MUC"
+    assert pending["destinationIATACode"] == "NRT"
+    assert pending["date"] == "2026-09-10"
+    assert pending["returnDate"] == "2026-09-24"
+    assert pending["route_name"] == "R"
+    assert pending["submitted"] == date.today().isoformat()
+
+
+def test_flightlabs_collect_completes_and_keeps():
+    """collect: 200 → (results, done=True); 202 → ([], done=False, ponech)."""
+    from src.sources.flightlabs import FlightLabsSource
+
+    class _Resp:
+        def __init__(self, status, payload):
+            self.status_code = status
+            self._payload = payload
+            self.text = "{}"
+        def json(self):
+            return self._payload
+        def raise_for_status(self):
+            pass
+
+    job = {"originIATACode": "MUC", "destinationIATACode": "NRT",
+           "date": "2026-09-10", "returnDate": "2026-09-24",
+           "adults": 1, "currency": "EUR", "cabinClass": "economy",
+           "route_name": "R", "submitted": "2026-06-20"}
+
+    import src.sources.flightlabs as fl_mod
+    _orig = fl_mod.time.sleep
+    fl_mod.time.sleep = lambda *a, **k: None
+    try:
+        # 200 s výsledky → done
+        src = FlightLabsSource(access_key="x",
+                               session=type("S", (), {"get": lambda self, *a, **k:
+                                   _Resp(200, _FLIGHTLABS_LEGS)})())
+        res, done = src.collect(job)
+        assert done is True
+        assert min(r.price for r in res) == 1057.0
+        # query bez metadat (route_name/submitted se neposílá do API)
+        # 202 → ponech
+        src2 = FlightLabsSource(access_key="x",
+                                session=type("S", (), {"get": lambda self, *a, **k:
+                                    _Resp(202, {"status": "processing"})})())
+        res2, done2 = src2.collect(job)
+        assert res2 == [] and done2 is False
+    finally:
+        fl_mod.time.sleep = _orig
+
+
+def test_history_flightlabs_pending_roundtrip(tmp_path):
+    from src.history import PriceHistory
+    h = PriceHistory(tmp_path / "h.json")
+    assert h.flightlabs_pending() == []
+    jobs = [{"originIATACode": "MUC", "destinationIATACode": "NRT",
+             "submitted": "2026-06-20"}]
+    h.set_flightlabs_pending(jobs)
+    h.save()
+    h2 = PriceHistory(tmp_path / "h.json")
+    assert h2.flightlabs_pending() == jobs
+
+
+def test_scanner_flightlabs_collect_drops_expired_and_collects(tmp_path):
+    """run-fáze collect: hotový job se sebere, příliš starý se zahodí, ‚processing'
+    zůstane v pending pro příští běh."""
+    from datetime import timedelta
+    from src.history import PriceHistory
+    from src.scanner import Scanner, FLIGHTLABS_PENDING_EXPIRY_DAYS
+
+    s = _scanner_settings()
+    sc = Scanner(settings=s)
+    sc.history = PriceHistory(tmp_path / "h.json")
+
+    today = date.today()
+    fresh = today.isoformat()
+    expired = (today - timedelta(days=FLIGHTLABS_PENDING_EXPIRY_DAYS + 1)).isoformat()
+    done_job = {"originIATACode": "MUC", "destinationIATACode": "NRT",
+                "route_name": "R", "submitted": fresh, "tag": "done"}
+    proc_job = {"originIATACode": "PRG", "destinationIATACode": "NRT",
+                "route_name": "R", "submitted": fresh, "tag": "proc"}
+    old_job = {"originIATACode": "VIE", "destinationIATACode": "HND",
+               "route_name": "R", "submitted": expired, "tag": "old"}
+    sc.history.set_flightlabs_pending([done_job, proc_job, old_job])
+
+    fr = FlightResult(price=599, origin="MUC", destination="NRT",
+                      depart_date=date(2026, 9, 10), return_date=date(2026, 9, 24),
+                      source="flightlabs")
+
+    class _FakeFL:
+        request_count = 0
+        def collect(self, job):
+            if job.get("tag") == "done":
+                return [fr], True
+            return [], False  # proc → ponech
+
+    sc.flightlabs = _FakeFL()
+    collected = sc._flightlabs_collect_pending()
+
+    assert collected == [fr]                       # hotový job se sebral
+    survivors = sc._flightlabs_pending_survivors
+    tags = {j["tag"] for j in survivors}
+    assert tags == {"proc"}                         # expired zahozen, done sebrán
+
+
 # -- Scanner: syntetické režimy zdrojů se nesmí pustit do scanu --------------
 def _scanner_settings(**overrides):
     """Settings pro testy Scanneru – bez Telegramu a bez API klíčů,

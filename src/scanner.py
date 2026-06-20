@@ -58,6 +58,15 @@ AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
 SERPAPI_MONTHLY_LIMIT = 250       # SerpAPI free tier
 FLIGHTLABS_MONTHLY_LIMIT = 4000  # FlightLabs plán: 4000 req/měsíc (reset 1. den)
+# Po kolika dnech zahodit nedokončený FlightLabs async job (viz CLAUDE.md /
+# _flightlabs_collect_pending): zaseknutý job by jinak věčně pálil kvótu a
+# případný pozdní výsledek by byl zastaralý (date = den pozorování).
+FLIGHTLABS_PENDING_EXPIRY_DAYS = 3
+
+
+class _BudgetExhausted(Exception):
+    """Interní signál pro přerušení vnořených submit smyček FlightLabs při
+    dosažení per-run kvótového limitu."""
 
 # Počet souběžných vláken pro per-combo volání zdrojů bez kvótového limitu
 # (Duffel, Travelpayouts). Paralelizace zkracuje ~100 volání z 15+ min, ale
@@ -236,6 +245,10 @@ class Scanner:
         self.request_count = 0
         self.api_count = 0  # počet zapojených API zdrojů
         self.scanned_date_pairs: list[tuple[date, date]] = []
+        # FlightLabs async pending joby submitnuté v tomto běhu (naplní
+        # scan_route, persistuje run()); init i zde kvůli přímému volání v testech.
+        self._flightlabs_new_pending: list[dict] = []
+        self._flightlabs_pending_survivors: list[dict] = []
         # Plánovací stav (naplní se v run() / _ensure_plan_state před scanem).
         self.coverage: dict[str, dict] = {}
         self.best_depart_wd: Optional[int] = None
@@ -337,19 +350,31 @@ class Scanner:
                     limit=RATE_LIMIT_COMBINATIONS["duffel"],
                 )
 
-        # --- FlightLabs (4000 req/měsíc – využít celou kvótu přes všechny termíny) ---
-        # Štedrá kvóta → iterujeme přes všechny date_pairs (stejně jako free zdroje),
-        # ne jen první. Budget check zastaví smyčku při vyčerpání měsíční kvóty.
+        # --- FlightLabs (async job-queue, 2-fázový submit/collect) ---
+        # retrieveFlights je async: submit vrátí 202 (job zařazen), výsledky se
+        # seberou v dalším běhu (viz _flightlabs_collect_pending v run()). Tady
+        # jen SUBMITUJEME dnešní kombinace; rychlé/nacachované dají výsledky hned,
+        # zbytek se uloží jako pending. Budget check drží měsíční kvótu.
         if self.flightlabs and self._flightlabs_has_budget():
-            for fl_dep, fl_ret in date_pairs:
-                if not self._flightlabs_has_budget():
-                    break
-                results += self._scan_per_combo(
-                    self.flightlabs, "flightlabs", legs, is_openjaw,
-                    fl_dep, fl_ret, name,
-                    limit=RATE_LIMIT_COMBINATIONS["flightlabs"],
-                    budget_check=self._flightlabs_has_budget,
+            try:
+                fo, fd = trim_airports(
+                    legs["out_origins"], legs["out_dests"],
+                    RATE_LIMIT_COMBINATIONS["flightlabs"],
                 )
+                for fl_dep, fl_ret in date_pairs:
+                    for o in fo:
+                        for d in fd:
+                            if not self._flightlabs_has_budget():
+                                raise _BudgetExhausted
+                            res, pending = self.flightlabs.submit(
+                                o, d, fl_dep, return_date=fl_ret, route_name=name)
+                            results += res
+                            if pending is not None:
+                                self._flightlabs_new_pending.append(pending)
+            except _BudgetExhausted:
+                logger.info("FlightLabs: dosažen per-run limit, submit zkrácen")
+            except Exception as exc:  # noqa: BLE001
+                logger.error("FlightLabs submit selhal pro %s: %s", name, exc)
 
         # Kvótované zdroje šetří requesty → jen první (hlavní) termín.
         if not date_pairs:  # pojistka – plánovač by měl vždy vrátit ≥1 dvojici
@@ -515,6 +540,56 @@ class Scanner:
         # Po potvrzení z actions logu zvýšit nebo odebrat.
         _PER_RUN_CAP = 20
         return self.flightlabs.request_count < _PER_RUN_CAP
+
+    def _flightlabs_collect_pending(self) -> list[FlightResult]:
+        """1. fáze: re-dotáže pending async joby z minulých běhů. Hotové (200)
+        naparsuje a vrátí; ‚processing' nechá v pendingu; starší než
+        FLIGHTLABS_PENDING_EXPIRY_DAYS nebo s tvrdou chybou zahodí. Přeživší
+        pending uloží do self._flightlabs_pending_survivors (persistuje run())."""
+        survivors: list[FlightResult] = []
+        self._flightlabs_pending_survivors = []
+        if not self.flightlabs:
+            # Zachovej pending beze změny – zdroj je vypnutý, nesahej na ně.
+            self._flightlabs_pending_survivors = self.history.flightlabs_pending()
+            return survivors
+
+        pending = self.history.flightlabs_pending()
+        if not pending:
+            return survivors
+
+        today = date.today()
+        keep: list[dict] = []
+        collected = 0
+        for job in pending:
+            submitted = job.get("submitted")
+            try:
+                age = (today - date.fromisoformat(submitted)).days if submitted else 999
+            except (ValueError, TypeError):
+                age = 999
+            if age > FLIGHTLABS_PENDING_EXPIRY_DAYS:
+                logger.info("FlightLabs: pending %s→%s vypršel (%d dní) – zahazuji",
+                            job.get("originIATACode"), job.get("destinationIATACode"),
+                            age)
+                continue
+            if not self._flightlabs_has_budget():
+                keep.append(job)  # bez kvóty → nech na příště
+                continue
+            try:
+                results, done = self.flightlabs.collect(job)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("FlightLabs collect selhal: %s", exc)
+                keep.append(job)
+                continue
+            if results:
+                survivors += results
+                collected += 1
+            if not done:
+                keep.append(job)  # job pořád ‚processing'
+
+        self._flightlabs_pending_survivors = keep
+        logger.info("FlightLabs collect: %d pending → %d hotových, %d zůstává",
+                    len(pending), collected, len(keep))
+        return survivors
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
@@ -837,6 +912,12 @@ class Scanner:
         )
 
         all_flights: list[FlightResult] = []
+
+        # FlightLabs 2-fázový sběr: nejdřív posbírej async joby submitnuté
+        # v minulých bězích (levné, 1 req/job), pak scan_route submituje nové.
+        self._flightlabs_new_pending: list[dict] = []
+        all_flights += self._flightlabs_collect_pending()
+
         routes = self.settings.routes
         for route in routes:
             try:
@@ -844,6 +925,12 @@ class Scanner:
                 all_flights += flights
             except Exception as exc:  # noqa: BLE001
                 logger.error("Trasa %s selhala: %s", route.get("name"), exc)
+
+        # Ulož pending joby (přeživší z collectu + nově submitnuté) pro příští běh.
+        if self.flightlabs:
+            self.history.set_flightlabs_pending(
+                self._flightlabs_pending_survivors + self._flightlabs_new_pending
+            )
 
         # URL enrichment: pro nabídky ≤ efektivnímu prahu (dealMaxEur − doprava)
         # s Aviasales URL přepíše cenu a doplní segmenty z booking tokenu.

@@ -39,14 +39,29 @@ logger = logging.getLogger(__name__)
 
 RETRIEVE_FLIGHTS_URL = "https://www.goflightlabs.com/retrieveFlights"
 _REQUEST_DELAY = 1.1   # rate limit 10 req/10 s → ~1 req/s
-_POLL_DELAY = 2.5      # pauza mezi polly async jobu
-_MAX_POLLS = 6         # max počet pollů (submit + až 6 dotazů na výsledek)
+_POLL_DELAY = 2.5      # pauza mezi krátkými polly při submitu
+# Krátké okno při submitu: 1 rychlé přepollování chytí už nacachované joby,
+# ale nepálí kvótu na čekání – nedokončené joby dořeší collect v dalším běhu.
+_MAX_POLLS = 1
+
+# Klíče, které tvoří dotaz na API (zbytek pending dictu je metadata).
+QUERY_KEYS = ("originIATACode", "destinationIATACode", "date", "returnDate",
+              "adults", "currency", "cabinClass")
 
 # IATA kód aerolinky z čísla letu: "EY25"→EY, "LO392"→LO, "U225"→U2, "3U88"→3U.
 _FLIGHTNO_RE = re.compile(r"^([A-Z]{2}|[A-Z]\d|\d[A-Z])")
 
 
 class FlightLabsSource:
+    """goflightlabs retrieveFlights – async job-queue API.
+
+    2-fázový provoz (řídí ho scanner):
+    * ``submit`` odešle job a krátce pollne; vrátí (results, pending|None).
+      Rychlé/nacachované joby se chytí hned, zbytek se vrátí jako *pending*.
+    * ``collect`` re-dotáže jeden pending job; vrátí (results, done) – done
+      znamená „odeber z pendingu" (přišly výsledky NEBO tvrdá chyba).
+    """
+
     name = "flightlabs"
 
     def __init__(self, access_key: str, session: Optional[requests.Session] = None,
@@ -57,7 +72,7 @@ class FlightLabsSource:
         self.poll_delay = poll_delay
         self.request_count = 0
 
-    # -- vyhledání --------------------------------------------------------
+    # -- veřejné rozhraní -------------------------------------------------
     def search(
         self,
         origin: str,
@@ -71,10 +86,30 @@ class FlightLabsSource:
         cabin_class: str = "economy",
         route_name: str = "",
     ) -> list[FlightResult]:
-        """Vyhledá ZPÁTEČNÍ lety. retrieveFlights je vždy roundtrip se shodným
-        origin/destination – open-jaw API nepodporuje. Bez return_date by API
-        vrátilo jen jednosměrné legy (nespárují se → 0 výsledků), proto se
-        return_date pro tento zdroj vždy posílá ze scanneru."""
+        """Jednorázové vyhledání (submit + krátký poll), vrací jen výsledky –
+        nedokončený job zahodí. Používá diagnostický skript; scanner volá
+        ``submit``/``collect`` kvůli 2-fázovému sběru."""
+        results, _pending = self.submit(
+            origin, destination, departure_date, return_date=return_date,
+            adults=adults, cabin_class=cabin_class, route_name=route_name,
+        )
+        return results[:max_results]
+
+    def submit(
+        self,
+        origin: str,
+        destination: str,
+        departure_date: date,
+        return_date: Optional[date] = None,
+        adults: int = 1,
+        cabin_class: str = "economy",
+        route_name: str = "",
+    ) -> tuple[list[FlightResult], Optional[dict]]:
+        """Odešle job a krátce pollne. Vrací (results, pending). Když job
+        dokončí v okně → (results, None). Když pořád ‚processing' → ([], pending
+        dict) k uložení a sběru v dalším běhu. retrieveFlights je vždy roundtrip
+        se shodným origin/destination (open-jaw nepodporuje); bez return_date by
+        vrátilo jen nepárovatelné one-way legy, proto ho scanner vždy posílá."""
         params: dict = {
             "originIATACode": origin,
             "destinationIATACode": destination,
@@ -86,10 +121,69 @@ class FlightLabsSource:
         if return_date:
             params["returnDate"] = return_date.isoformat()
 
-        payload = self._fetch_with_poll(params, origin, destination, departure_date)
-        if payload is None:
-            return []
+        for attempt in range(self.max_polls + 1):
+            resp = self._request(params, origin, destination)
+            if resp.status_code == 202:
+                if attempt < self.max_polls:
+                    time.sleep(self.poll_delay)
+                    continue
+                # Nedokončeno v krátkém okně → ulož jako pending pro collect.
+                pending = {**params, "route_name": route_name,
+                           "submitted": date.today().isoformat()}
+                return [], pending
+            results = self._results_from_response(resp, origin, destination,
+                                                  route_name)
+            return results, None
+        return [], None
 
+    def collect(self, pending: dict) -> tuple[list[FlightResult], bool]:
+        """Re-dotáže jeden pending job (1 request). Vrací (results, done):
+        done=True → odeber z pendingu (200 s výsledky NEBO tvrdá 4xx/5xx chyba);
+        done=False → job pořád ‚processing', ponech v pendingu na příště."""
+        params = {k: pending[k] for k in QUERY_KEYS if k in pending}
+        origin = pending.get("originIATACode", "")
+        destination = pending.get("destinationIATACode", "")
+        route_name = pending.get("route_name", "")
+        try:
+            resp = self._request(params, origin, destination)
+        except requests.RequestException:
+            return [], True  # síťová/tvrdá chyba → zahoď
+        if resp.status_code == 202:
+            return [], False
+        if resp.status_code >= 400:
+            logger.warning("FlightLabs collect %s→%s: HTTP %d → zahazuji job",
+                           origin, destination, resp.status_code)
+            return [], True
+        return self._results_from_response(resp, origin, destination, route_name), True
+
+    # -- HTTP --------------------------------------------------------------
+    def _request(self, params: dict, origin: str,
+                 destination: str) -> requests.Response:
+        """Jedno GET volání retrieveFlights (počítá request, drží rate limit)."""
+        full = {**params, "access_key": self.access_key}
+        try:
+            resp = self.session.get(RETRIEVE_FLIGHTS_URL, params=full, timeout=40)
+            self.request_count += 1
+            time.sleep(_REQUEST_DELAY)
+        except requests.RequestException as exc:
+            logger.error("FlightLabs %s→%s: %s", origin, destination, exc)
+            raise
+        if self.request_count <= 3:
+            logger.info("FlightLabs DIAG req#%d %s→%s: HTTP %d | %.250s",
+                        self.request_count, origin, destination,
+                        resp.status_code, resp.text)
+        return resp
+
+    def _results_from_response(self, resp: requests.Response, origin: str,
+                               destination: str,
+                               route_name: str) -> list[FlightResult]:
+        """Z 200 odpovědi naparsuje a seřadí výsledky; 4xx/5xx → []."""
+        try:
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logger.error("FlightLabs %s→%s: %s", origin, destination, exc)
+            return []
+        payload = resp.json()
         legs = payload if isinstance(payload, list) else (
             payload.get("data") if isinstance(payload, dict) else None
         )
@@ -97,51 +191,9 @@ class FlightLabsSource:
             logger.warning("FlightLabs %s→%s: neočekávaný tvar odpovědi (%s)",
                            origin, destination, type(payload).__name__)
             return []
-
         results = self._parse_legs(legs, origin, destination, route_name)
         results.sort(key=lambda r: r.price)
-        return results[:max_results]
-
-    # -- HTTP + async poll ------------------------------------------------
-    def _fetch_with_poll(self, params: dict, origin: str, destination: str,
-                         departure_date: date):
-        """Submitne job a pollne stejné parametry, dokud nepřijde 200 (nebo se
-        vyčerpá max_polls). Vrací naparsovaný JSON, nebo None."""
-        full = {**params, "access_key": self.access_key}
-        for attempt in range(self.max_polls + 1):
-            try:
-                resp = self.session.get(RETRIEVE_FLIGHTS_URL, params=full, timeout=40)
-                self.request_count += 1
-                time.sleep(_REQUEST_DELAY)
-            except requests.RequestException as exc:
-                logger.error("FlightLabs %s→%s %s: %s",
-                             origin, destination, departure_date, exc)
-                raise
-
-            if resp.status_code == 202:
-                # Job se zařadil/zpracovává → pollni stejné parametry znovu.
-                if attempt < self.max_polls:
-                    time.sleep(self.poll_delay)
-                    continue
-                logger.warning("FlightLabs %s→%s %s: job nedokončen po %d pollech",
-                               origin, destination, departure_date, self.max_polls)
-                return None
-
-            try:
-                resp.raise_for_status()
-            except requests.RequestException as exc:
-                logger.error("FlightLabs %s→%s %s: %s",
-                             origin, destination, departure_date, exc)
-                raise
-
-            if self.request_count <= 3:
-                logger.info(
-                    "FlightLabs DIAG req#%d %s→%s %s: HTTP %d po %d pollech | %.300s",
-                    self.request_count, origin, destination, departure_date,
-                    resp.status_code, attempt, resp.text,
-                )
-            return resp.json()
-        return None
+        return results
 
     # -- parsování plochých leg párů --------------------------------------
     def _parse_legs(self, legs: list, origin: str, destination: str,
