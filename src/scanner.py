@@ -511,7 +511,10 @@ class Scanner:
                 used, FLIGHTLABS_MONTHLY_LIMIT,
             )
             return False
-        return True
+        # Dočasný cap dokud nový endpoint (retrieveFlights) neprokáže funkčnost.
+        # Po potvrzení z actions logu zvýšit nebo odebrat.
+        _PER_RUN_CAP = 20
+        return self.flightlabs.request_count < _PER_RUN_CAP
 
     def _skyscrapper_has_budget(self) -> bool:
         if not self.skyscrapper:
