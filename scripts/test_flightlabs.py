@@ -39,9 +39,7 @@ def main() -> int:
         logger.error("FLIGHTLABS_KEY není nastaven – nelze testovat.")
         return 1
 
-    # Cache letišť mimo data/ → testovací běh nezašpiní commitnutý cache soubor.
-    src = FlightLabsSource(settings.flightlabs_key,
-                           cache_path="/tmp/flightlabs_test_airports.json")
+    src = FlightLabsSource(settings.flightlabs_key)
 
     total = 0
     for origin, destination in TEST_COMBOS:

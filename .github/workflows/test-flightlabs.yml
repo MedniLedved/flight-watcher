@@ -23,7 +23,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Probe FlightLabs endpoints
+      - name: Run FlightLabs diagnostic
+        env:
+          FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
+        run: python -m scripts.test_flightlabs
+
+      - name: Probe FlightLabs endpoints (jen při potřebě ladit kontrakt)
+        if: ${{ false }}
         env:
           FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
         run: python -m scripts.probe_flightlabs

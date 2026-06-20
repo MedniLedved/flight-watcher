@@ -1119,10 +1119,10 @@ def test_spread_budget_divides_over_remaining_days():
     assert _spread_budget(5, None, now=now) == 5
 
 
-# -- FlightLabs (goflightlabs Skyscanner API) -------------------------------
-def test_flightlabs_parse_itinerary_shared_with_skyscrapper():
-    """FlightLabs i SkyScrapper musí ze stejného Skyscanner itineráře vrátit
-    identicky naparsovaný FlightResult (sdílený parser)."""
+# -- SkyScrapper / skyscanner_common parser ---------------------------------
+def test_skyscanner_common_parse_itinerary():
+    """skyscanner_common.parse_itinerary (SkyScrapper) ze Skyscanner itineráře
+    vrátí FlightResult s oběma legy."""
     from src.sources.skyscanner_common import parse_itinerary
     it = {
         "price": {"raw": 498.0, "formatted": "€498"},
@@ -1135,9 +1135,9 @@ def test_flightlabs_parse_itinerary_shared_with_skyscrapper():
              "carriers": {"marketing": [{"name": "Finnair", "alternateId": "AY"}]}},
         ],
     }
-    r = parse_itinerary(it, "MUC", "KIX", "Test", "flightlabs")
+    r = parse_itinerary(it, "MUC", "KIX", "Test", "skyscrapper")
     assert r.price == 498.0
-    assert r.source == "flightlabs"
+    assert r.source == "skyscrapper"
     assert r.origin == "MUC" and r.destination == "KIX"
     assert r.depart_date == date(2026, 9, 10)
     assert r.return_date == date(2026, 9, 24)
@@ -1145,7 +1145,7 @@ def test_flightlabs_parse_itinerary_shared_with_skyscrapper():
 
 
 def test_itineraries_from_payload_handles_both_wrappers():
-    """Sky-scrapper obaluje do data.itineraries, goflightlabs vrací itineraries
+    """Sky-scrapper obaluje do data.itineraries, jiné zdroje vrací itineraries
     přímo na top-levelu – obojí musí projít."""
     from src.sources.skyscanner_common import itineraries_from_payload
     wrapped = {"data": {"itineraries": [{"price": {"raw": 1}}]}}
@@ -1155,73 +1155,143 @@ def test_itineraries_from_payload_handles_both_wrappers():
     assert itineraries_from_payload({}) == []
 
 
-def test_flightlabs_search_resolves_ids_and_parses(tmp_path):
-    """End-to-end přes mockovanou session: retrieveAirport → skyId/entityId,
-    pak retrieveFlights → itineráře. Ověřuje i správné query parametry."""
+# -- FlightLabs (goflightlabs retrieveFlights – async flat-leg API) ----------
+# Reálný tvar odpovědi: ploché pole legů (outbound a return zvlášť, stejná cena).
+_FLIGHTLABS_LEGS = [
+    {"price": "1057", "currency": "EUR",
+     "origin": {"code": "MUC"}, "destination": {"code": "NRT"},
+     "departure": "2026-09-10T11:25:00", "flightNumber": "EY25",
+     "marketingCarrier": "Etihad Airways"},
+    {"price": "1057", "currency": "EUR",
+     "origin": {"code": "NRT"}, "destination": {"code": "MUC"},
+     "departure": "2026-09-24T18:00:00", "flightNumber": "EY13",
+     "marketingCarrier": "Etihad Airways"},
+    {"price": "1079", "currency": "EUR",
+     "origin": {"code": "MUC"}, "destination": {"code": "NRT"},
+     "departure": "2026-09-10T16:50:00", "flightNumber": "QR83",
+     "marketingCarrier": "Qatar Airways"},
+    {"price": "1079", "currency": "EUR",
+     "origin": {"code": "NRT"}, "destination": {"code": "MUC"},
+     "departure": "2026-09-24T22:25:00", "flightNumber": "QR79",
+     "marketingCarrier": "Qatar Airways"},
+]
+
+
+def test_flightlabs_parse_legs_pairs_roundtrips():
+    """Ploché legy se párují na roundtrip; cena = celková zpáteční, datumy z
+    outbound/return, aerolinka z čísla letu (EY25→EY)."""
+    from src.sources.flightlabs import FlightLabsSource
+    src = FlightLabsSource(access_key="x")
+    out = src._parse_legs(_FLIGHTLABS_LEGS, "MUC", "NRT", "Test")
+    assert len(out) == 2
+    cheapest = min(out, key=lambda r: r.price)
+    assert cheapest.price == 1057.0
+    assert cheapest.origin == "MUC" and cheapest.destination == "NRT"
+    assert cheapest.return_origin == "NRT" and cheapest.return_destination == "MUC"
+    assert cheapest.depart_date == date(2026, 9, 10)
+    assert cheapest.return_date == date(2026, 9, 24)
+    assert cheapest.airlines == ["EY"]
+
+
+def test_flightlabs_parse_legs_drops_unpaired_oneway():
+    """Nespárovaný outbound (bez return legu) se NIKDY neuloží jako roundtrip
+    (ochrana proti one-way pollution)."""
+    from src.sources.flightlabs import FlightLabsSource
+    src = FlightLabsSource(access_key="x")
+    only_out = [_FLIGHTLABS_LEGS[0]]  # jen MUC→NRT, žádný návrat
+    assert src._parse_legs(only_out, "MUC", "NRT", "Test") == []
+
+
+def test_flightlabs_airline_code_from_flight_number():
+    from src.sources.flightlabs import FlightLabsSource
+    f = FlightLabsSource._airline_code
+    assert f("EY25") == "EY"
+    assert f("LO392") == "LO"
+    assert f("U225") == "U2"
+    assert f("") == ""
+    assert f(None) == ""
+
+
+def test_flightlabs_search_polls_then_parses():
+    """End-to-end: první volání 202 (processing), druhé 200 s plochými legy.
+    Ověří poll smyčku a správné query parametry (originIATACode/date/returnDate)."""
     from src.sources.flightlabs import FlightLabsSource
 
     class _Resp:
-        def __init__(self, payload):
+        def __init__(self, status, payload):
+            self.status_code = status
             self._payload = payload
-            self.status_code = 200
             self.text = "{}"
         def json(self):
             return self._payload
         def raise_for_status(self):
             pass
 
+    seq = [
+        _Resp(202, {"status": "processing", "jobId": "abc"}),
+        _Resp(200, _FLIGHTLABS_LEGS),
+    ]
     calls = []
 
     class _Session:
         def get(self, url, params=None, **k):
             calls.append((url, params))
-            if url.endswith("/retrieveAirport"):
-                q = params["query"]
-                return _Resp({"data": [{"skyId": q, "entityId": f"E{q}"}]})
-            # retrieveFlights
-            assert params["originSkyId"] == "MUC"
-            assert params["destinationEntityId"] == "EKIX"
-            assert params["returnDate"] == "2026-09-24"
-            assert "access_key" in params
-            return _Resp({"itineraries": [{
-                "price": {"raw": 512.0},
-                "legs": [
-                    {"origin": {"displayCode": "MUC"}, "destination": {"displayCode": "KIX"},
-                     "departure": "2026-09-10T09:00:00",
-                     "carriers": {"marketing": [{"alternateId": "AY"}]}},
-                    {"origin": {"displayCode": "KIX"}, "destination": {"displayCode": "MUC"},
-                     "departure": "2026-09-24T11:00:00",
-                     "carriers": {"marketing": [{"alternateId": "AY"}]}},
-                ],
-            }]})
+            return seq[min(len(calls) - 1, len(seq) - 1)]
 
     import src.sources.flightlabs as fl_mod
-    _orig_sleep = fl_mod.time.sleep
+    _orig = fl_mod.time.sleep
     fl_mod.time.sleep = lambda *a, **k: None
     try:
-        src = FlightLabsSource(access_key="secret", session=_Session(),
-                               cache_path=tmp_path / "ap.json")
-        out = src.search("MUC", "KIX", date(2026, 9, 10), return_date=date(2026, 9, 24))
+        src = FlightLabsSource(access_key="secret", session=_Session())
+        out = src.search("MUC", "NRT", date(2026, 9, 10),
+                         return_date=date(2026, 9, 24))
     finally:
-        fl_mod.time.sleep = _orig_sleep
+        fl_mod.time.sleep = _orig
 
-    assert len(out) == 1
-    assert out[0].price == 512.0
-    assert out[0].source == "flightlabs"
-    assert out[0].return_date == date(2026, 9, 24)
-    # access_key se nesmí objevit v DIAG logu (params bez klíče) – pojistka, že
-    # ho do logu neposíláme: search nikdy neloguje params['access_key'].
+    assert len(calls) == 2          # 202 → poll → 200
+    assert calls[0][0].endswith("/retrieveFlights")
+    assert calls[0][1]["originIATACode"] == "MUC"
+    assert calls[0][1]["destinationIATACode"] == "NRT"
+    assert calls[0][1]["date"] == "2026-09-10"
+    assert calls[0][1]["returnDate"] == "2026-09-24"
+    assert "access_key" in calls[0][1]
+    assert len(out) == 2
+    assert min(r.price for r in out) == 1057.0
+    assert all(r.source == "flightlabs" for r in out)
 
 
-def test_flightlabs_airport_cache_avoids_network(tmp_path):
+def test_flightlabs_search_gives_up_on_persistent_202():
+    """Když job stále jen 'processing', vrátí [] (ne výjimku) a nezacyklí se."""
     from src.sources.flightlabs import FlightLabsSource
-    cache = tmp_path / "ap.json"
-    src = FlightLabsSource(access_key="x", cache_path=cache)
-    src._airports["MUC"] = {"skyId": "MUC", "entityId": "E1"}
-    src._save_airport_cache()
-    src2 = FlightLabsSource(access_key="x", cache_path=cache)
-    assert src2.resolve_airport("MUC") == {"skyId": "MUC", "entityId": "E1"}
-    assert src2.request_count == 0  # z cache → žádný síťový dotaz
+
+    class _Resp:
+        status_code = 202
+        text = "{}"
+        def json(self):
+            return {"status": "processing"}
+        def raise_for_status(self):
+            pass
+
+    class _Session:
+        def __init__(self):
+            self.n = 0
+        def get(self, *a, **k):
+            self.n += 1
+            return _Resp()
+
+    import src.sources.flightlabs as fl_mod
+    _orig = fl_mod.time.sleep
+    fl_mod.time.sleep = lambda *a, **k: None
+    try:
+        sess = _Session()
+        src = FlightLabsSource(access_key="x", session=sess, max_polls=3)
+        out = src.search("MUC", "NRT", date(2026, 9, 10),
+                         return_date=date(2026, 9, 24))
+    finally:
+        fl_mod.time.sleep = _orig
+
+    assert out == []
+    assert sess.n == 4  # submit + 3 polly, pak vzdá
 
 
 # -- Scanner: syntetické režimy zdrojů se nesmí pustit do scanu --------------
