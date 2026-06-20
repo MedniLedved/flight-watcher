@@ -536,10 +536,12 @@ class Scanner:
                 used, FLIGHTLABS_MONTHLY_LIMIT,
             )
             return False
-        # Dočasný cap dokud nový endpoint (retrieveFlights) neprokáže funkčnost.
-        # Po potvrzení z actions logu zvýšit nebo odebrat.
-        _PER_RUN_CAP = 20
-        return self.flightlabs.request_count < _PER_RUN_CAP
+        # Endpoint ověřen jako funkční (živý retrieveFlights, viz CLAUDE.md) →
+        # provizorní hard-cap nahrazen řádným rozpočtem: zbytek měsíční kvóty
+        # rozpočítaný na zbývající dny (stejně jako serpApi/skyScrapper), ať se
+        # placená kvóta 4000/měsíc využije rovnoměrně a nevyplýtvá první den.
+        per_run = _spread_budget(remaining, _first_of_next_month().isoformat())
+        return self.flightlabs.request_count < per_run
 
     def _flightlabs_collect_pending(self) -> list[FlightResult]:
         """1. fáze: re-dotáže pending async joby z minulých běhů. Hotové (200)
