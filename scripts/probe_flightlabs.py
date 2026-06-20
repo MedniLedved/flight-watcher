@@ -1,10 +1,10 @@
-"""Probe přesného kontraktu goflightlabs /retrieveFlights.
+"""Probe goflightlabs /retrieveFlights AŽ DO DOKONČENÍ async jobu.
 
-Předchozí probe zjistil: /retrieveFlights je ŽIVÝ (HTTP 422, ne 404/410) a chce
-IATA kód přímo ("The origin i a t a code field is required") – žádný skyId/
-entityId lookup. Tenhle probe iterativně posílá kandidátní názvy parametrů a
-loguje plné tělo odpovědi, ať se z 422/200 pozná přesný kontrakt (názvy polí +
-tvar úspěšné odpovědi).
+Kontrakt zjištěn: params originIATACode/destinationIATACode/date; první volání
+vrátí 202 {"status":"processing","jobId":...}; výsledky se získají opakovaným
+voláním STEJNÝCH parametrů. Tenhle probe pollne až do 200 a vypíše PLNÉ tělo,
+ať se pozná tvar dokončené odpovědi (itineráře/price/legs) + jestli vrací
+roundtrip (2 legs) při zadaném returnDate.
 
 Read-only. Spuštění: python -m scripts.probe_flightlabs
 """
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 
 import requests
 
@@ -21,30 +22,17 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("probe_flightlabs")
 
 URL = "https://www.goflightlabs.com/retrieveFlights"
-
-# Postupně bohatší sady parametrů – z 422 hlášek zjistíme, co ještě chybí /
-# jak se pole jmenují. Posíláme víc variant názvů naráz (neznámé API ignoruje).
-PARAM_SETS = [
-    # Laravel humanizuje 'originIATACode' → "origin i a t a code" (každé velké
-    # písmeno akronymu = slovo). To přesně sedí na 422 hlášku → tohle je
-    # skutečný název pole. Date variantu necháme nahmatat z další 422.
-    ("IATACode + date", {
-        "originIATACode": "MUC", "destinationIATACode": "NRT",
-        "date": "2026-09-10", "adults": "1", "currency": "EUR",
-    }),
-    ("IATACode + departureDate/returnDate", {
-        "originIATACode": "MUC", "destinationIATACode": "NRT",
-        "departureDate": "2026-09-10", "returnDate": "2026-09-24",
-        "adults": "1", "currency": "EUR", "cabinClass": "economy",
-    }),
-    ("IATACode + široká síť dat", {
-        "originIATACode": "MUC", "destinationIATACode": "NRT",
-        "date": "2026-09-10", "departureDate": "2026-09-10",
-        "departureDateTime": "2026-09-10", "flightDate": "2026-09-10",
-        "returnDate": "2026-09-24", "adults": "1", "currency": "EUR",
-        "cabinClass": "economy",
-    }),
-]
+PARAMS = {
+    "originIATACode": "MUC",
+    "destinationIATACode": "NRT",
+    "date": "2026-09-10",
+    "returnDate": "2026-09-24",   # ověř, zda vrací roundtrip (2 legs)
+    "adults": "1",
+    "currency": "EUR",
+    "cabinClass": "economy",
+}
+MAX_POLLS = 10
+POLL_DELAY_S = 3.0
 
 
 def main() -> int:
@@ -54,15 +42,29 @@ def main() -> int:
         return 1
 
     session = requests.Session()
-    for desc, params in PARAM_SETS:
-        full = {**params, "access_key": settings.flightlabs_key}
+    full = {**PARAMS, "access_key": settings.flightlabs_key}
+
+    for attempt in range(1, MAX_POLLS + 1):
         try:
             resp = session.get(URL, params=full, timeout=30)
         except requests.RequestException as exc:
-            logger.info("%-38s EXC: %s", desc, exc)
+            logger.info("poll %d EXC: %s", attempt, exc)
+            time.sleep(POLL_DELAY_S)
             continue
-        body = resp.text.replace("\n", " ")[:600]
-        logger.info("%-38s HTTP %s | %s", desc, resp.status_code, body)
+
+        status = resp.status_code
+        if status == 202:
+            logger.info("poll %d: HTTP 202 processing (%.120s)", attempt,
+                        resp.text.replace("\n", " "))
+            time.sleep(POLL_DELAY_S)
+            continue
+
+        # 200 nebo cokoli jiného → dump plného těla a konec.
+        logger.info("poll %d: HTTP %s | FULL BODY:\n%s", attempt, status,
+                    resp.text[:4000])
+        return 0
+
+    logger.warning("Job se nedokončil ani po %d pollech.", MAX_POLLS)
     return 0
 
 
