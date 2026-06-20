@@ -27,3 +27,9 @@ jobs:
         env:
           FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
         run: python -m scripts.test_flightlabs
+
+      - name: Probe FlightLabs endpoints
+        if: always()
+        env:
+          FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
+        run: python -m scripts.probe_flightlabs
