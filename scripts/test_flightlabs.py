@@ -24,8 +24,8 @@ logging.basicConfig(
 logger = logging.getLogger("test_flightlabs")
 
 TEST_COMBOS = [("MUC", "KIX"), ("PRG", "NRT"), ("VIE", "HND")]
-DEPART = date(2026, 9, 10)
-RETURN = date(2026, 9, 24)
+DEPART = date(2026, 11, 12)
+RETURN = date(2026, 11, 26)
 COLLECT_ROUNDS = 5
 COLLECT_DELAY_S = 8.0
 
