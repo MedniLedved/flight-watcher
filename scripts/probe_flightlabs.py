@@ -25,27 +25,24 @@ URL = "https://www.goflightlabs.com/retrieveFlights"
 # Postupně bohatší sady parametrů – z 422 hlášek zjistíme, co ještě chybí /
 # jak se pole jmenují. Posíláme víc variant názvů naráz (neznámé API ignoruje).
 PARAM_SETS = [
-    ("camel iata + date", {
-        "originIata": "MUC", "destinationIata": "NRT",
+    # Laravel humanizuje 'originIATACode' → "origin i a t a code" (každé velké
+    # písmeno akronymu = slovo). To přesně sedí na 422 hlášku → tohle je
+    # skutečný název pole. Date variantu necháme nahmatat z další 422.
+    ("IATACode + date", {
+        "originIATACode": "MUC", "destinationIATACode": "NRT",
         "date": "2026-09-10", "adults": "1", "currency": "EUR",
     }),
-    ("camel iata + departureDate/returnDate", {
-        "originIata": "MUC", "destinationIata": "NRT",
+    ("IATACode + departureDate/returnDate", {
+        "originIATACode": "MUC", "destinationIATACode": "NRT",
         "departureDate": "2026-09-10", "returnDate": "2026-09-24",
         "adults": "1", "currency": "EUR", "cabinClass": "economy",
     }),
-    ("snake iata", {
-        "origin_iata": "MUC", "destination_iata": "NRT",
-        "departure_date": "2026-09-10", "return_date": "2026-09-24",
-        "adults": "1", "currency": "EUR",
-    }),
-    ("wide net (vše naráz)", {
-        "originIata": "MUC", "origin_iata": "MUC", "origin": "MUC",
-        "destinationIata": "NRT", "destination_iata": "NRT", "destination": "NRT",
+    ("IATACode + široká síť dat", {
+        "originIATACode": "MUC", "destinationIATACode": "NRT",
         "date": "2026-09-10", "departureDate": "2026-09-10",
-        "departure_date": "2026-09-10", "returnDate": "2026-09-24",
-        "return_date": "2026-09-24", "adults": "1", "currency": "EUR",
-        "cabinClass": "economy", "cabin_class": "economy",
+        "departureDateTime": "2026-09-10", "flightDate": "2026-09-10",
+        "returnDate": "2026-09-24", "adults": "1", "currency": "EUR",
+        "cabinClass": "economy",
     }),
 ]
 
