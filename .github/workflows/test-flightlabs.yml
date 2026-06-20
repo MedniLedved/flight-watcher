@@ -1,0 +1,29 @@
+name: Test FlightLabs
+
+# Izolovaný diagnostický běh FlightLabs po migraci na nový endpoint.
+# Spouští se POUZE ručně (workflow_dispatch). Nezapisuje historii, neposílá
+# Telegram, necommituje data – jen vypíše výsledky/chyby do logu.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-flightlabs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run FlightLabs diagnostic
+        env:
+          FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
+        run: python -m scripts.test_flightlabs
