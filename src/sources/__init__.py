@@ -43,6 +43,8 @@ class FlightResult:
     duration_out_min: Optional[int] = None  # celková doba cesty tam (let + čekání)
     duration_in_min: Optional[int] = None   # celková doba cesty zpět
     scanned_price: Optional[float] = None   # původní cena před korekcí z URL
+    stops_out: Optional[int] = None  # počet přestupů tam (0 = přímý)
+    stops_in: Optional[int] = None   # počet přestupů zpět (0 = přímý)
 
     @property
     def nights(self) -> Optional[int]:

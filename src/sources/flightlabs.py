@@ -249,7 +249,16 @@ class FlightLabsSource:
             deep_link=google_flights_url(o_code, d_code, depart_dt, return_dt,
                                          d_code, o_code),
             route_name=route_name,
+            stops_out=self._parse_stops(out_leg.get("stopCount")),
+            stops_in=self._parse_stops(in_leg.get("stopCount")),
         )
+
+    @staticmethod
+    def _parse_stops(value) -> Optional[int]:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
     @staticmethod
     def _parse_price(value) -> Optional[float]:

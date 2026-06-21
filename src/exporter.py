@@ -93,6 +93,16 @@ def _round(value: Optional[float], digits: int = 1) -> Optional[float]:
     return None if value is None else round(value, digits)
 
 
+def _offer_stops(f: "FlightResult", direction: str) -> Optional[int]:
+    """Počet přestupů v daném směru ('out'/'in'). Bere explicitní stops_* (má
+    FlightLabs), jinak odvodí ze segmentů (Skyscanner: počet úseků − 1)."""
+    explicit = f.stops_out if direction == "out" else f.stops_in
+    if explicit is not None:
+        return explicit
+    segs = f.segments_out if direction == "out" else f.segments_in
+    return (len(segs) - 1) if segs else None
+
+
 def _seg_to_dict(s: Segment) -> dict:
     return {
         "from": s.origin,
@@ -180,14 +190,16 @@ class Exporter:
     # -- hlavní vstup ------------------------------------------------------
     def run(self, flights: list[FlightResult],
             prev_state: Optional[dict[str, dict]] = None,
-            now: Optional[datetime] = None) -> None:
+            now: Optional[datetime] = None,
+            raw_offers: Optional[list[FlightResult]] = None) -> None:
         now = now or datetime.now(timezone.utc)
         today = now.date()
         prev_state = prev_state or {}
 
         series = self.append_history_series()
         self.write_calendar(series)
-        self.write_latest(flights, prev_state, series, today)
+        self.write_latest(flights, prev_state, series, today,
+                          raw_offers=raw_offers)
         self.write_stats(series, today)
         self.write_insights()
         self.write_routes(series, flights)
@@ -230,9 +242,52 @@ class Exporter:
         return out
 
     # -- latest.json ---------------------------------------------------------
+    @staticmethod
+    def _alternatives_by_trip(
+        raw_offers: Optional[list[FlightResult]],
+    ) -> dict[tuple, list[dict]]:
+        """Z (nededuplikovaného) seznamu nabídek sestaví alternativy per
+        ‚zájezd' = (route_key, odlet, návrat). Pro každý termín vrátí dražší
+        varianty (jiné aerolinky/zdroje) než nejlevnější – ta je hlavní nabídka
+        v latest.json, alternativy se zobrazí v detailu trasy. Dedup na
+        (aerolinky, cena); max 6 alternativ na termín."""
+        if not raw_offers:
+            return {}
+        trips: dict[tuple, list[FlightResult]] = {}
+        for o in raw_offers:
+            if o.depart_date is None or o.price is None:
+                continue
+            tk = (o.route_key(), o.depart_date.isoformat(),
+                  o.return_date.isoformat() if o.return_date else None)
+            trips.setdefault(tk, []).append(o)
+        result: dict[tuple, list[dict]] = {}
+        for tk, offers in trips.items():
+            offers_sorted = sorted(offers, key=lambda o: o.price)
+            seen: set = set()
+            alts: list[dict] = []
+            for o in offers_sorted[1:]:  # přeskoč nejlevnější = hlavní nabídka
+                sig = (tuple(sorted(o.airlines)), round(float(o.price), 2))
+                if sig in seen:
+                    continue
+                seen.add(sig)
+                alts.append({
+                    "price": _round(o.price),
+                    "airlines": list(o.airlines),
+                    "source": o.source,
+                    "dealUrl": o.deep_link or None,
+                    "stopsOut": _offer_stops(o, "out"),
+                    "stopsIn": _offer_stops(o, "in"),
+                })
+                if len(alts) >= 6:
+                    break
+            if alts:
+                result[tk] = alts
+        return result
+
     def write_latest(self, flights: list[FlightResult],
                      prev_state: dict[str, dict],
-                     series: dict[str, list[dict]], today: date) -> None:
+                     series: dict[str, list[dict]], today: date,
+                     raw_offers: Optional[list[FlightResult]] = None) -> None:
         big_drop_pct = float(
             self.agent.get("alertThresholds", {}).get("bigDropPct",
                                                       DEFAULT_BIG_DROP_PCT)
@@ -287,7 +342,10 @@ class Exporter:
                 "segments": {"out": [], "in": []},
                 "durationOutMin": None,
                 "durationInMin": None,
+                "stopsOut": None,
+                "stopsIn": None,
                 "scannedPrice": None,
+                "alternatives": [],
                 "flags": {
                     "isNewLow": prev_min is not None and hist_rec["price"] < prev_min,
                     "priceDeltaEur": None,
@@ -296,6 +354,8 @@ class Exporter:
                     "staleDays": stale_days,
                 },
             })
+
+        alternatives_map = self._alternatives_by_trip(raw_offers)
 
         items: list[dict] = []
         for (route_key, _depart), f in sorted(best.items(), key=lambda kv: kv[1].price):
@@ -333,7 +393,15 @@ class Exporter:
                 },
                 "durationOutMin": f.duration_out_min,
                 "durationInMin": f.duration_in_min,
+                "stopsOut": _offer_stops(f, "out"),
+                "stopsIn": _offer_stops(f, "in"),
                 "scannedPrice": _round(f.scanned_price),
+                # Alternativní aerolinky/ceny na stejný termín (jen pro detail
+                # trasy); hlavní nabídka výše je nejlevnější. Efemérní – live scan.
+                "alternatives": alternatives_map.get(
+                    (key, f.depart_date.isoformat() if f.depart_date else None,
+                     f.return_date.isoformat() if f.return_date else None), []
+                ),
                 "flags": {
                     "isNewLow": prev_min is None or f.price < prev_min,
                     "priceDeltaEur": _round(delta),

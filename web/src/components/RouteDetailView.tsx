@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,22 @@ function fmtDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString("cs-CZ", {
     day: "numeric", month: "numeric", year: "numeric",
   });
+}
+
+/** Popisek přestupů: "přímý" když 0/0, jinak "1×" nebo "0× / 1×" (tam/zpět). */
+function stopsLabel(
+  stopsOut?: number | null, stopsIn?: number | null,
+): string | null {
+  if (stopsOut == null && stopsIn == null) return null;
+  const one = (n?: number | null) =>
+    n == null ? "?" : n === 0 ? "přímý" : `${n}×`;
+  if (stopsOut === stopsIn) return one(stopsOut);
+  return `${one(stopsOut)} / ${one(stopsIn)}`;
+}
+
+/** Přímý let (0 přestupů tam i zpět) = zelená, jinak jantarová. */
+function isDirect(stopsOut?: number | null, stopsIn?: number | null): boolean {
+  return stopsOut === 0 && stopsIn === 0;
 }
 
 interface Props {
@@ -122,8 +139,11 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {relatedOffers.map((o) => (
-                  <TableRow key={o.routeKey + o.source}>
+                {relatedOffers.map((o) => {
+                  const stops = stopsLabel(o.stopsOut, o.stopsIn);
+                  return (
+                  <Fragment key={o.routeKey + o.source + o.departDate}>
+                  <TableRow>
                     <TableCell>{fmtDate(o.departDate)}</TableCell>
                     <TableCell>{fmtDate(o.returnDate)}</TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
@@ -136,7 +156,15 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                     </TableCell>
                     <TableCell>{o.nights ?? "—"}</TableCell>
                     <TableCell>
-                      <div>{o.airlines.length ? airlineNames(o.airlines) : "—"}</div>
+                      <div className="flex items-center gap-2">
+                        <span>{o.airlines.length ? airlineNames(o.airlines) : "—"}</span>
+                        {stops && (
+                          <span className={isDirect(o.stopsOut, o.stopsIn)
+                            ? "text-xs text-emerald-600" : "text-xs text-amber-600"}>
+                            {stops}
+                          </span>
+                        )}
+                      </div>
                       {o.durationOutMin != null && (
                         <div className="text-xs text-muted-foreground">✈ {fmtDuration(o.durationOutMin)}</div>
                       )}
@@ -146,7 +174,45 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                     </TableCell>
                     <TableCell className="text-muted-foreground">{o.source}</TableCell>
                   </TableRow>
-                ))}
+                  {(o.alternatives?.length ?? 0) > 0 && (
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={6} className="py-2">
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">
+                          Další nabídky na stejný termín (dražší, ale jiná aerolinka / přímý let):
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {o.alternatives!.map((a, i) => {
+                            const delta = Math.round(a.price - o.price);
+                            const aStops = stopsLabel(a.stopsOut, a.stopsIn);
+                            return (
+                              <div key={i} className="flex items-center gap-2 rounded border bg-background px-2 py-1 text-xs">
+                                <span className="font-medium">
+                                  {a.airlines.length ? airlineNames(a.airlines) : "—"}
+                                </span>
+                                {aStops && (
+                                  <span className={isDirect(a.stopsOut, a.stopsIn)
+                                    ? "text-emerald-600" : "text-amber-600"}>
+                                    {aStops}
+                                  </span>
+                                )}
+                                <span className="font-semibold tabular-nums">{Math.round(a.price)} €</span>
+                                {delta > 0 && (
+                                  <span className="text-muted-foreground">(+{delta} €)</span>
+                                )}
+                                {a.dealUrl && (
+                                  <a href={a.dealUrl} target="_blank" rel="noreferrer"
+                                     className="text-blue-600 underline">odkaz</a>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>

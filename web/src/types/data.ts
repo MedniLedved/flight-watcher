@@ -67,8 +67,28 @@ export interface LatestOffer {
   durationOutMin?: number | null;
   /** celková doba cesty zpět vč. přestupů (min); null pokud neznáme */
   durationInMin?: number | null;
+  /** počet přestupů tam (0 = přímý); null pokud neznáme */
+  stopsOut?: number | null;
+  /** počet přestupů zpět (0 = přímý); null pokud neznáme */
+  stopsIn?: number | null;
   /** původní nascanovaná cena před korekcí z URL; null = cena nebyla opravena */
   scannedPrice?: number | null;
+  /** dražší varianty na STEJNÝ termín (jiné aerolinky/počet přestupů) – hlavní
+   * nabídka výše je nejlevnější; tohle se zobrazuje v detailu trasy. Efemérní. */
+  alternatives?: OfferAlternative[];
+}
+
+/** Alternativní nabídka na stejný termín (jiná aerolinka/přestupy/cena). */
+export interface OfferAlternative {
+  /** EUR */
+  price: number;
+  airlines: string[];
+  source: string;
+  dealUrl: string | null;
+  /** počet přestupů tam (0 = přímý); null pokud neznáme */
+  stopsOut: number | null;
+  /** počet přestupů zpět (0 = přímý); null pokud neznáme */
+  stopsIn: number | null;
 }
 
 export type LatestFile = LatestOffer[];

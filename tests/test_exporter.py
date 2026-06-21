@@ -114,6 +114,42 @@ def test_latest_contains_ephemeral_fields_and_flags(exported):
     assert muc["flags"]["priceDeltaEur"] is None
 
 
+def test_latest_alternatives_keeps_pricier_premium_options(tmp_path):
+    """3 nabídky PRG→NRT na stejný termín: nejlevnější (přestupní, podřadná
+    aerolinka) je hlavní řádek, dvě dražší přímé/prémiové se zachovají jako
+    alternativy v detailu (i s počtem přestupů)."""
+    history = _history(tmp_path)
+    out = tmp_path / "data"
+    trip = dict(origin="PRG", destination="NRT", return_origin="NRT",
+                return_destination="PRG", depart_date=date(2026, 9, 5),
+                return_date=date(2026, 9, 19))
+    cheap = FlightResult(price=1011, airlines=["PC"], source="flightlabs",
+                         stops_out=1, stops_in=1, **trip)          # podřadná, přestup
+    direct_ek = FlightResult(price=1025, airlines=["EK"], source="flightlabs",
+                             stops_out=0, stops_in=0, **trip)       # přímý, prémiový
+    direct_qr = FlightResult(price=1029, airlines=["QR"], source="flightlabs",
+                             stops_out=0, stops_in=0, **trip)
+    raw = [cheap, direct_ek, direct_qr]
+    Exporter(history, _settings(), out_dir=out).run(
+        [cheap], prev_state={}, now=NOW, raw_offers=raw)
+
+    latest = _load(out / "latest.json")
+    prg = next(x for x in latest if x["routeKey"] == "PRG-NRT-roundtrip")
+    assert prg["price"] == 1011 and prg["stopsOut"] == 1   # hlavní = nejlevnější
+    alts = prg["alternatives"]
+    assert len(alts) == 2
+    assert {a["airlines"][0] for a in alts} == {"EK", "QR"}
+    assert all(a["stopsOut"] == 0 for a in alts)           # přímé lety zachovány
+    assert [a["price"] for a in alts] == [1025, 1029]      # seřazené dle ceny
+
+
+def test_latest_alternatives_empty_without_raw_offers(exported):
+    """Bez raw_offers (zpětná kompatibilita) má každá nabídka prázdné alternatives."""
+    out, _, _ = exported
+    latest = _load(out / "latest.json")
+    assert all(x["alternatives"] == [] for x in latest)
+
+
 def test_history_append_only_dedup(exported):
     out, history, prev = exported
     series_path = out / "history" / "PRG-TYO-roundtrip.json"

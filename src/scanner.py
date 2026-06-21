@@ -253,6 +253,8 @@ class Scanner:
         # Statistika pro denní report rozpočtu FlightLabs (collect vs submit).
         self._flightlabs_collect_reqs = 0
         self._flightlabs_collected_count = 0
+        # Raw nabídky pro alternativy v latest.json (naplní run()/scan_route).
+        self._raw_offers: list[FlightResult] = []
         # Plánovací stav (naplní se v run() / _ensure_plan_state před scanem).
         self.coverage: dict[str, dict] = {}
         self.best_depart_wd: Optional[int] = None
@@ -390,6 +392,7 @@ class Scanner:
 
         # Kvótované zdroje šetří requesty → jen první (hlavní) termín.
         if not date_pairs:  # pojistka – plánovač by měl vždy vrátit ≥1 dvojici
+            self._raw_offers.extend(results)
             return self._deduplicate(results)
         depart, ret = date_pairs[0]
 
@@ -448,6 +451,9 @@ class Scanner:
             except Exception as exc:  # noqa: BLE001
                 logger.error("Travelpayouts scan selhal pro %s: %s", name, exc)
 
+        # Raw (vč. dražších alternativ) pro detail trasy; vrácený list je dedup
+        # (nejlevnější/trasa+termín) pro historii, alerty a hlavní řádky.
+        self._raw_offers.extend(results)
         return self._deduplicate(results)
 
     def _scan_per_combo(self, source, source_name, legs, is_openjaw,
@@ -927,11 +933,16 @@ class Scanner:
         )
 
         all_flights: list[FlightResult] = []
+        # Raw (nededuplikované) nabídky napříč zdroji – jen pro alternativy v
+        # latest.json (detail trasy). Historie/alerty jedou z dedup all_flights.
+        self._raw_offers = []
 
         # FlightLabs 2-fázový sběr: nejdřív posbírej async joby submitnuté
         # v minulých bězích (levné, 1 req/job), pak scan_route submituje nové.
         self._flightlabs_new_pending: list[dict] = []
-        all_flights += self._flightlabs_collect_pending()
+        collected = self._flightlabs_collect_pending()
+        all_flights += collected
+        self._raw_offers += collected
         # Kolik requestů spotřebovala fáze collect (zbytek půjde na submit) –
         # pro denní report rozpočtu (viz log na konci run()).
         self._flightlabs_collect_reqs = (
@@ -1035,7 +1046,8 @@ class Scanner:
         # s efemérními poli) a nesmí shodit scan.
         try:
             Exporter(self.history, self.settings).run(
-                all_flights, prev_state=prev_state
+                all_flights, prev_state=prev_state,
+                raw_offers=self._raw_offers,
             )
         except Exception as exc:  # noqa: BLE001
             logger.error("Export pro dashboard selhal: %s", exc)
