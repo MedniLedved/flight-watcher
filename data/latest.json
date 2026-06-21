@@ -1,12 +1,54 @@
 [
   {
-    "routeKey": "PRG-HND-roundtrip",
+    "routeKey": "MUC-NRT-roundtrip",
     "type": "roundtrip",
-    "origin": "PRG",
+    "origin": "MUC",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 933.0,
+    "source": "googleflights",
+    "departDate": "2026-09-03",
+    "returnDate": "2026-09-20",
+    "nights": 17,
+    "airlines": [],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTA5LTIwagUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-06-21",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 961.0,
+        "airlines": [],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTA5LTIwagUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": null,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -195.0,
+      "pctChange7d": null,
+      "isBigDrop": true,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
     "destination": "HND",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1027.0,
+    "price": 1032.0,
     "source": "googleflights",
     "departDate": "2026-09-03",
     "returnDate": "2026-09-20",
@@ -14,7 +56,7 @@
     "airlines": [
       "Qatar Airways"
     ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDUFJHcgUSA0hORBoaEgoyMDI2LTA5LTIwagUSA0hORHIFEgNQUkdAAUgBmAEB&hl=en&curr=EUR",
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTA5LTIwagUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
     "observedDate": "2026-06-21",
     "segments": {
       "out": [],
@@ -22,42 +64,56 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1035.0,
+        "airlines": [
+          "Qatar Airways"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTA5LTIwagUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1171.0,
+        "airlines": [
+          "Air Dolomiti, ANA"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTA5LTIwagUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1193.0,
+        "airlines": [
+          "ANA"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTA5LTIwagUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 0,
+        "stopsIn": null
+      },
+      {
+        "price": 1214.0,
+        "airlines": [
+          "EVA Air"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMDktMDNqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTA5LTIwagUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
     "flags": {
-      "isNewLow": true,
-      "priceDeltaEur": -202.0,
-      "pctChange7d": null,
-      "isBigDrop": true,
-      "staleDays": null
-    }
-  },
-  {
-    "routeKey": "PRG-NRT-roundtrip",
-    "type": "roundtrip",
-    "origin": "PRG",
-    "destination": "NRT",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 1069.0,
-    "source": "googleflights",
-    "departDate": "2026-10-22",
-    "returnDate": "2026-11-03",
-    "nights": 12,
-    "airlines": [],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMjJqBRIDUFJHcgUSA05SVBoaEgoyMDI2LTExLTAzagUSA05SVHIFEgNQUkdAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-06-21",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "scannedPrice": null,
-    "flags": {
-      "isNewLow": true,
-      "priceDeltaEur": -469.0,
-      "pctChange7d": null,
-      "isBigDrop": true,
+      "isNewLow": false,
+      "priceDeltaEur": -18.0,
+      "pctChange7d": 12.8,
+      "isBigDrop": false,
       "staleDays": null
     }
   },
@@ -82,7 +138,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -112,7 +171,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -142,7 +204,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -172,7 +237,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -202,7 +270,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -232,7 +303,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -262,7 +336,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -292,7 +369,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -322,7 +402,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -352,7 +435,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -382,7 +468,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -412,7 +501,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -442,7 +534,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -472,7 +567,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -502,41 +600,14 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
       "pctChange7d": -8.6,
-      "isBigDrop": false,
-      "staleDays": 1
-    }
-  },
-  {
-    "routeKey": "MUC-NRT-roundtrip",
-    "type": "roundtrip",
-    "origin": "MUC",
-    "destination": "NRT",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 933.0,
-    "source": "googleflights",
-    "departDate": "2026-09-07",
-    "returnDate": "2026-09-20",
-    "nights": 13,
-    "airlines": [],
-    "dealUrl": null,
-    "observedDate": "2026-06-20",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "scannedPrice": null,
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": null,
-      "pctChange7d": null,
       "isBigDrop": false,
       "staleDays": 1
     }
@@ -562,7 +633,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -592,7 +666,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -622,7 +699,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -652,7 +732,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -682,7 +765,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -712,43 +798,16 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
       "staleDays": 8
-    }
-  },
-  {
-    "routeKey": "MUC-HND-roundtrip",
-    "type": "roundtrip",
-    "origin": "MUC",
-    "destination": "HND",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 960.0,
-    "source": "googleflights",
-    "departDate": "2026-09-07",
-    "returnDate": "2026-09-20",
-    "nights": 13,
-    "airlines": [],
-    "dealUrl": null,
-    "observedDate": "2026-06-20",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "scannedPrice": null,
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": null,
-      "pctChange7d": 4.9,
-      "isBigDrop": false,
-      "staleDays": 1
     }
   },
   {
@@ -772,7 +831,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -802,13 +864,49 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
       "staleDays": 8
+    }
+  },
+  {
+    "routeKey": "PRG-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "PRG",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1027.0,
+    "source": "googleflights",
+    "departDate": "2026-09-03",
+    "returnDate": "2026-09-20",
+    "nights": 17,
+    "airlines": [],
+    "dealUrl": null,
+    "observedDate": "2026-06-21",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": null,
+      "pctChange7d": null,
+      "isBigDrop": false,
+      "staleDays": 0
     }
   },
   {
@@ -832,13 +930,49 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
       "staleDays": 9
+    }
+  },
+  {
+    "routeKey": "PRG-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "PRG",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1069.0,
+    "source": "googleflights",
+    "departDate": "2026-10-22",
+    "returnDate": "2026-11-03",
+    "nights": 12,
+    "airlines": [],
+    "dealUrl": null,
+    "observedDate": "2026-06-21",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": null,
+      "pctChange7d": null,
+      "isBigDrop": false,
+      "staleDays": 0
     }
   },
   {
@@ -862,7 +996,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -892,7 +1029,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -922,7 +1062,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -952,7 +1095,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -982,7 +1128,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1012,7 +1161,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1042,7 +1194,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1072,7 +1227,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1102,7 +1260,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1132,7 +1293,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1162,7 +1326,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1192,7 +1359,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
@@ -1222,7 +1392,10 @@
     },
     "durationOutMin": null,
     "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
     "scannedPrice": null,
+    "alternatives": [],
     "flags": {
       "isNewLow": false,
       "priceDeltaEur": null,
