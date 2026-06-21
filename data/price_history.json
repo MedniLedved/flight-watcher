@@ -1630,7 +1630,7 @@
   },
   "PRG-HND-roundtrip": {
     "alerts": {},
-    "all_time_min": 1204.0,
+    "all_time_min": 1027.0,
     "history": [
       {
         "date": "2026-06-15",
@@ -1645,10 +1645,17 @@
         "price": 1229.0,
         "return_date": "2026-10-13",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-21",
+        "depart_date": "2026-09-03",
+        "price": 1027.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1229.0,
-    "last_seen": "2026-06-15"
+    "last_price": 1027.0,
+    "last_seen": "2026-06-21"
   },
   "PRG-KIX-roundtrip": {
     "alerts": {},
@@ -1689,7 +1696,7 @@
   },
   "PRG-NRT-roundtrip": {
     "alerts": {},
-    "all_time_min": 1538.0,
+    "all_time_min": 1069.0,
     "history": [
       {
         "date": "2026-06-15",
@@ -1697,10 +1704,17 @@
         "price": 1538.0,
         "return_date": "2026-10-30",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-21",
+        "depart_date": "2026-10-22",
+        "price": 1069.0,
+        "return_date": "2026-11-03",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1538.0,
-    "last_seen": "2026-06-15"
+    "last_price": 1069.0,
+    "last_seen": "2026-06-21"
   },
   "PRG-TYO-roundtrip": {
     "alerts": {
@@ -2623,8 +2637,571 @@
     "disabled_until": {
       "skyscrapper": "2026-07-09T12:50:50.224190"
     },
+    "flightlabs_pending": [
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "KIX",
+        "originIATACode": "FMM",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NGO",
+        "originIATACode": "FMM",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "HND",
+        "originIATACode": "FMM",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NRT",
+        "originIATACode": "FMM",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "ITM",
+        "originIATACode": "FMM",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "KIX",
+        "originIATACode": "PRG",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NGO",
+        "originIATACode": "PRG",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "HND",
+        "originIATACode": "PRG",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NRT",
+        "originIATACode": "PRG",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "ITM",
+        "originIATACode": "PRG",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "KIX",
+        "originIATACode": "VIE",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NGO",
+        "originIATACode": "VIE",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "HND",
+        "originIATACode": "VIE",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NRT",
+        "originIATACode": "VIE",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "ITM",
+        "originIATACode": "VIE",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "KIX",
+        "originIATACode": "MUC",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NGO",
+        "originIATACode": "MUC",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "HND",
+        "originIATACode": "MUC",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "NRT",
+        "originIATACode": "MUC",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-09-03",
+        "destinationIATACode": "ITM",
+        "originIATACode": "MUC",
+        "returnDate": "2026-09-20",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "KIX",
+        "originIATACode": "FMM",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NGO",
+        "originIATACode": "FMM",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "HND",
+        "originIATACode": "FMM",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NRT",
+        "originIATACode": "FMM",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "ITM",
+        "originIATACode": "FMM",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "KIX",
+        "originIATACode": "PRG",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NGO",
+        "originIATACode": "PRG",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "HND",
+        "originIATACode": "PRG",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NRT",
+        "originIATACode": "PRG",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "ITM",
+        "originIATACode": "PRG",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "KIX",
+        "originIATACode": "VIE",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NGO",
+        "originIATACode": "VIE",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "HND",
+        "originIATACode": "VIE",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NRT",
+        "originIATACode": "VIE",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "ITM",
+        "originIATACode": "VIE",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "KIX",
+        "originIATACode": "MUC",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NGO",
+        "originIATACode": "MUC",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "HND",
+        "originIATACode": "MUC",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "NRT",
+        "originIATACode": "MUC",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-12-10",
+        "destinationIATACode": "ITM",
+        "originIATACode": "MUC",
+        "returnDate": "2026-12-27",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "KIX",
+        "originIATACode": "FMM",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "NGO",
+        "originIATACode": "FMM",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "HND",
+        "originIATACode": "FMM",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "NRT",
+        "originIATACode": "FMM",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "ITM",
+        "originIATACode": "FMM",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "KIX",
+        "originIATACode": "PRG",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "NGO",
+        "originIATACode": "PRG",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "HND",
+        "originIATACode": "PRG",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "NRT",
+        "originIATACode": "PRG",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "ITM",
+        "originIATACode": "PRG",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      },
+      {
+        "adults": 1,
+        "cabinClass": "economy",
+        "currency": "EUR",
+        "date": "2026-10-22",
+        "destinationIATACode": "KIX",
+        "originIATACode": "VIE",
+        "returnDate": "2026-11-03",
+        "route_name": "Evropa → Japonsko zpáteční",
+        "submitted": "2026-06-21"
+      }
+    ],
     "flightlabs_requests": {
-      "2026-06": 210
+      "2026-06": 420
     },
     "flightlabs_requests_total": 50,
     "quota": {
@@ -2635,47 +3212,47 @@
         "reset_at": "2026-07-09T12:50:50.224190"
       }
     },
-    "scan_count": 9,
+    "scan_count": 10,
     "serpapi_requests": {
-      "2026-06": 241
+      "2026-06": 242
     },
     "skyscrapper_requests": {
       "2026-06": 57
     },
     "source_efficiency": {
       "flightlabs": {
-        "last_run": "2026-06-20",
-        "runs": 9,
+        "last_run": "2026-06-21",
+        "runs": 10,
         "total_deals": 0,
-        "total_requests": 260,
+        "total_requests": 470,
         "total_results": 0
       },
       "googleflights": {
-        "last_run": "2026-06-20",
-        "runs": 9,
+        "last_run": "2026-06-21",
+        "runs": 10,
         "total_deals": 0,
-        "total_requests": 228,
-        "total_results": 83
+        "total_requests": 264,
+        "total_results": 85
       },
       "serpapi": {
-        "last_run": "2026-06-20",
-        "runs": 9,
+        "last_run": "2026-06-21",
+        "runs": 10,
         "total_deals": 0,
-        "total_requests": 241,
+        "total_requests": 242,
         "total_results": 22
       },
       "skyscrapper": {
-        "last_run": "2026-06-20",
-        "runs": 9,
+        "last_run": "2026-06-21",
+        "runs": 10,
         "total_deals": 0,
         "total_requests": 0,
         "total_results": 0
       },
       "travelpayouts": {
-        "last_run": "2026-06-20",
-        "runs": 9,
+        "last_run": "2026-06-21",
+        "runs": 10,
         "total_deals": 22,
-        "total_requests": 360,
+        "total_requests": 400,
         "total_results": 26
       }
     }

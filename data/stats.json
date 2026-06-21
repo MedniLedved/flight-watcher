@@ -450,14 +450,18 @@
     "currentVsAvgPct": 0.0
   },
   "PRG-HND-roundtrip": {
-    "allTimeMin": 1204.0,
-    "min90d": 1204.0,
+    "allTimeMin": 1027.0,
+    "min90d": 1027.0,
     "max90d": 1229.0,
-    "avg90d": 1216.5,
-    "trend30d": null,
-    "biggestDrop": null,
-    "lastPrice": 1229.0,
-    "currentVsAvgPct": 1.0
+    "avg90d": 1153.3,
+    "trend30d": -14.7,
+    "biggestDrop": {
+      "from": 1204.0,
+      "to": 1027.0,
+      "date": "2026-06-21"
+    },
+    "lastPrice": 1027.0,
+    "currentVsAvgPct": -11.0
   },
   "PRG-KIX-roundtrip": {
     "allTimeMin": 1251.0,
@@ -480,14 +484,18 @@
     "currentVsAvgPct": 0.0
   },
   "PRG-NRT-roundtrip": {
-    "allTimeMin": 1538.0,
-    "min90d": 1538.0,
+    "allTimeMin": 1069.0,
+    "min90d": 1069.0,
     "max90d": 1538.0,
-    "avg90d": 1538.0,
-    "trend30d": null,
-    "biggestDrop": null,
-    "lastPrice": 1538.0,
-    "currentVsAvgPct": 0.0
+    "avg90d": 1303.5,
+    "trend30d": -30.5,
+    "biggestDrop": {
+      "from": 1538.0,
+      "to": 1069.0,
+      "date": "2026-06-21"
+    },
+    "lastPrice": 1069.0,
+    "currentVsAvgPct": -18.0
   },
   "PRG-TYO-roundtrip": {
     "allTimeMin": 473.0,
