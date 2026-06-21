@@ -1121,6 +1121,42 @@ def test_spread_budget_divides_over_remaining_days():
     assert _spread_budget(5, None, now=now) == 5
 
 
+def test_flightlabs_billing_period_anchored_on_19th():
+    """FlightLabs kvóta se obnovuje 19., ne 1. Období i příští reset musí jet
+    na tomto okně (jinak se 1. dne počítadlo vynuluje, plán ale ne → přečerpání)."""
+    from datetime import datetime
+    from src.scanner import (
+        _flightlabs_period_key, _flightlabs_next_reset,
+    )
+    # Den ≥ 19 → období začalo 19. tohoto měsíce, reset příští 19.
+    after = datetime(2026, 6, 21)
+    assert _flightlabs_period_key(after) == "2026-06-19"
+    assert _flightlabs_next_reset(after).date().isoformat() == "2026-07-19"
+    # Den < 19 → období začalo 19. minulého měsíce.
+    before = datetime(2026, 7, 5)
+    assert _flightlabs_period_key(before) == "2026-06-19"
+    assert _flightlabs_next_reset(before).date().isoformat() == "2026-07-19"
+    # Přechod přes leden (období prosinec→leden).
+    jan = datetime(2026, 1, 3)
+    assert _flightlabs_period_key(jan) == "2025-12-19"
+    assert _flightlabs_next_reset(jan).date().isoformat() == "2026-01-19"
+
+
+def test_flightlabs_migrate_legacy_month_into_period(tmp_path):
+    """Migrace přenese spotřebu z legacy kalendářního klíče (YYYY-MM) do období
+    (YYYY-MM-19), ať se už spotřebovaná kvóta neztratí a rozpočet nepřečerpá."""
+    from src.history import PriceHistory
+    h = PriceHistory(tmp_path / "h.json")
+    h.add_flightlabs_usage(681, "2026-06")  # legacy kalendářní klíč
+    h.migrate_flightlabs_period("2026-06-19")
+    assert h.flightlabs_usage("2026-06-19") == 681
+    assert h.flightlabs_usage("2026-06") == 0  # legacy klíč odstraněn
+    # Idempotence: druhé spuštění nic nepřičte ani nesmaže.
+    h.add_flightlabs_usage(10, "2026-06-19")
+    h.migrate_flightlabs_period("2026-06-19")
+    assert h.flightlabs_usage("2026-06-19") == 691
+
+
 # -- SkyScrapper / skyscanner_common parser ---------------------------------
 def test_skyscanner_common_parse_itinerary():
     """skyscanner_common.parse_itinerary (SkyScrapper) ze Skyscanner itineráře

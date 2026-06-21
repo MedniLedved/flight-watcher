@@ -58,7 +58,12 @@ logger = logging.getLogger(__name__)
 AMADEUS_MONTHLY_LIMIT = 2000
 SKYSCRAPPER_MONTHLY_LIMIT = 100  # RapidAPI free tier
 SERPAPI_MONTHLY_LIMIT = 250       # SerpAPI free tier
-FLIGHTLABS_MONTHLY_LIMIT = 4000  # FlightLabs plán: 4000 req/měsíc (reset 1. den)
+FLIGHTLABS_MONTHLY_LIMIT = 4000  # FlightLabs plán: 4000 req/období (reset 19. den)
+# FlightLabs se neobnovuje 1. dne v měsíci, ale 19. (fakturační období běží od
+# 19. do 19.). Rozpočet i počítadlo spotřeby proto musí jet na tomto okně, ne na
+# kalendářním měsíci — jinak by se 1. dne počítadlo vynulovalo (plán ale ne) a
+# 18 dní by se utrácelo z „čerstvých" 4000 → přečerpání.
+FLIGHTLABS_RESET_DAY = 19
 # Po kolika dnech zahodit nedokončený FlightLabs async job (viz CLAUDE.md /
 # _flightlabs_collect_pending): zaseknutý job by jinak věčně pálil kvótu a
 # případný pozdní výsledek by byl zastaralý (date = den pozorování).
@@ -116,6 +121,31 @@ def _first_of_next_month(today: Optional[date] = None) -> datetime:
     year = today.year + (1 if today.month == 12 else 0)
     month = 1 if today.month == 12 else today.month + 1
     return datetime(year, month, 1)
+
+
+def _flightlabs_period_start(now: Optional[datetime] = None) -> date:
+    """Začátek aktuálního FlightLabs fakturačního období (poslední 19.).
+    Den ≥ 19 → 19. tohoto měsíce; jinak 19. minulého měsíce."""
+    d = (now or datetime.now()).date()
+    if d.day >= FLIGHTLABS_RESET_DAY:
+        return date(d.year, d.month, FLIGHTLABS_RESET_DAY)
+    year = d.year - (1 if d.month == 1 else 0)
+    month = 12 if d.month == 1 else d.month - 1
+    return date(year, month, FLIGHTLABS_RESET_DAY)
+
+
+def _flightlabs_next_reset(now: Optional[datetime] = None) -> datetime:
+    """Konec aktuálního období = příští 19. (kdy se kvóta obnoví)."""
+    start = _flightlabs_period_start(now)
+    year = start.year + (1 if start.month == 12 else 0)
+    month = 1 if start.month == 12 else start.month + 1
+    return datetime(year, month, FLIGHTLABS_RESET_DAY)
+
+
+def _flightlabs_period_key(now: Optional[datetime] = None) -> str:
+    """Klíč období pro počítadlo spotřeby (ISO datum začátku, např. 2026-06-19).
+    Nahrazuje kalendářní %Y-%m klíč u FlightLabs."""
+    return _flightlabs_period_start(now).isoformat()
 
 
 def _spread_budget(remaining: int, reset_at_iso: Optional[str],
@@ -546,19 +576,20 @@ class Scanner:
     def _flightlabs_has_budget(self) -> bool:
         if not self.flightlabs:
             return False
-        used = self.history.flightlabs_usage() + self.flightlabs.request_count
+        used = (self.history.flightlabs_usage(_flightlabs_period_key())
+                + self.flightlabs.request_count)
         remaining = FLIGHTLABS_MONTHLY_LIMIT - used
         if remaining <= 0:
             logger.warning(
-                "FlightLabs: měsíční kvóta vyčerpána (%d/%d req)",
+                "FlightLabs: kvóta období vyčerpána (%d/%d req)",
                 used, FLIGHTLABS_MONTHLY_LIMIT,
             )
             return False
         # Endpoint ověřen jako funkční (živý retrieveFlights, viz CLAUDE.md) →
-        # provizorní hard-cap nahrazen řádným rozpočtem: zbytek měsíční kvóty
-        # rozpočítaný na zbývající dny (stejně jako serpApi/skyScrapper), ať se
-        # placená kvóta 4000/měsíc využije rovnoměrně a nevyplýtvá první den.
-        per_run = _spread_budget(remaining, _first_of_next_month().isoformat())
+        # provizorní hard-cap nahrazen řádným rozpočtem: zbytek kvóty rozpočítaný
+        # na dny do příštího resetu (19.), ať se placená kvóta 4000/období
+        # využije rovnoměrně a nevyplýtvá hned po resetu.
+        per_run = _spread_budget(remaining, _flightlabs_next_reset().isoformat())
         return self.flightlabs.request_count < per_run
 
     def _flightlabs_collect_pending(self) -> list[FlightResult]:
@@ -937,6 +968,12 @@ class Scanner:
         # latest.json (detail trasy). Historie/alerty jedou z dedup all_flights.
         self._raw_offers = []
 
+        # FlightLabs počítadlo jede na fakturačním období (reset 19.), ne na
+        # kalendářním měsíci – přenes případnou legacy spotřebu, ať rozpočet
+        # nezačne od nuly a nepřečerpá kvótu.
+        if self.flightlabs:
+            self.history.migrate_flightlabs_period(_flightlabs_period_key())
+
         # FlightLabs 2-fázový sběr: nejdřív posbírej async joby submitnuté
         # v minulých bězích (levné, 1 req/job), pak scan_route submituje nové.
         self._flightlabs_new_pending: list[dict] = []
@@ -1007,7 +1044,8 @@ class Scanner:
             self.history.add_serpapi_usage(self.serpapi.request_count)
             self._update_serpapi_quota()
         if self.flightlabs and self.flightlabs.request_count:
-            self.history.add_flightlabs_usage(self.flightlabs.request_count)
+            self.history.add_flightlabs_usage(
+                self.flightlabs.request_count, _flightlabs_period_key())
             # Denní report rozpočtu: rozpad requestů na fázi collect vs submit,
             # ať se dá v budoucnu rozhodnout, jestli collect nehladoví submit
             # (viz code-review #7). Pokud submit=0 PŘESTO že zbyl rozpočet a
@@ -1020,11 +1058,13 @@ class Scanner:
                        and bool(self.settings.routes))
             logger.info(
                 "FlightLabs ROZPOČET: %d req (collect %d → %d nabídek, submit %d "
-                "→ %d nových pending) | měsíc %d/%d%s",
+                "→ %d nových pending) | období %d/%d (reset %s)%s",
                 self.flightlabs.request_count,
                 collect_reqs, self._flightlabs_collected_count,
                 submit_reqs, len(self._flightlabs_new_pending),
-                self.history.flightlabs_usage(), FLIGHTLABS_MONTHLY_LIMIT,
+                self.history.flightlabs_usage(_flightlabs_period_key()),
+                FLIGHTLABS_MONTHLY_LIMIT,
+                _flightlabs_next_reset().date().isoformat(),
                 " | ⚠ submit HLADOVĚL (collect spotřeboval celý per-run rozpočet)"
                 if starved else "",
             )

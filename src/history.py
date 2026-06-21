@@ -265,6 +265,22 @@ class PriceHistory:
     def add_flightlabs_usage(self, count: int, month: Optional[str] = None) -> None:
         self._add_usage("flightlabs_requests", count, month)
 
+    def migrate_flightlabs_period(self, period_key: str) -> None:
+        """Jednorázová migrace počítadla z kalendářního měsíce (legacy klíč
+        YYYY-MM) na fakturační období FlightLabs (klíč YYYY-MM-19). Bez ní by se
+        při přechodu ztratila už spotřebovaná kvóta (např. 681/4000) a rozpočet
+        by povolil přečerpání. Běží jen jednou — jakmile klíč období existuje,
+        nedělá nic. Legacy klíč po přenosu odstraní, ať meta nezůstává matoucí."""
+        reqs = self.data.get(META_KEY, {}).get("flightlabs_requests", {})
+        if period_key in reqs:
+            return  # už migrováno (nebo nové období bez legacy dat)
+        legacy_key = period_key[:7]  # "2026-06-19" → "2026-06"
+        carried = reqs.get(legacy_key, 0)
+        if carried:
+            reqs[period_key] = carried
+            del reqs[legacy_key]
+            self.data.setdefault(META_KEY, {})["flightlabs_requests"] = reqs
+
     # -- FlightLabs async pending joby (2-fázový submit/collect) -----------
     def flightlabs_pending(self) -> list[dict]:
         """Seznam odeslaných, ještě nedokončených FlightLabs jobů (parametry
