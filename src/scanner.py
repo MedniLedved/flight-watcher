@@ -250,6 +250,9 @@ class Scanner:
         # scan_route, persistuje run()); init i zde kvůli přímému volání v testech.
         self._flightlabs_new_pending: list[dict] = []
         self._flightlabs_pending_survivors: list[dict] = []
+        # Statistika pro denní report rozpočtu FlightLabs (collect vs submit).
+        self._flightlabs_collect_reqs = 0
+        self._flightlabs_collected_count = 0
         # Plánovací stav (naplní se v run() / _ensure_plan_state před scanem).
         self.coverage: dict[str, dict] = {}
         self.best_depart_wd: Optional[int] = None
@@ -598,6 +601,7 @@ class Scanner:
                 keep.append(job)  # job pořád ‚processing'
 
         self._flightlabs_pending_survivors = keep
+        self._flightlabs_collected_count = collected
         logger.info("FlightLabs collect: %d pending → %d hotových, %d zůstává",
                     len(pending), collected, len(keep))
         return survivors
@@ -928,6 +932,11 @@ class Scanner:
         # v minulých bězích (levné, 1 req/job), pak scan_route submituje nové.
         self._flightlabs_new_pending: list[dict] = []
         all_flights += self._flightlabs_collect_pending()
+        # Kolik requestů spotřebovala fáze collect (zbytek půjde na submit) –
+        # pro denní report rozpočtu (viz log na konci run()).
+        self._flightlabs_collect_reqs = (
+            self.flightlabs.request_count if self.flightlabs else 0
+        )
 
         routes = self.settings.routes
         for route in routes:
@@ -988,11 +997,25 @@ class Scanner:
             self._update_serpapi_quota()
         if self.flightlabs and self.flightlabs.request_count:
             self.history.add_flightlabs_usage(self.flightlabs.request_count)
+            # Denní report rozpočtu: rozpad requestů na fázi collect vs submit,
+            # ať se dá v budoucnu rozhodnout, jestli collect nehladoví submit
+            # (viz code-review #7). Pokud submit=0 PŘESTO že zbyl rozpočet a
+            # byly trasy, je to signál, že collect spotřeboval celý per-run limit.
+            collect_reqs = self._flightlabs_collect_reqs
+            submit_reqs = self.flightlabs.request_count - collect_reqs
+            # Hladovění = collect spotřeboval requesty, ale na submit už 0 zbylo
+            # (přitom trasy ke scanu byly) → kandidát na fix (oddělit rozpočty).
+            starved = (submit_reqs == 0 and collect_reqs > 0
+                       and bool(self.settings.routes))
             logger.info(
-                "FlightLabs: %d req tento scan, tento měsíc %d/%d",
+                "FlightLabs ROZPOČET: %d req (collect %d → %d nabídek, submit %d "
+                "→ %d nových pending) | měsíc %d/%d%s",
                 self.flightlabs.request_count,
-                self.history.flightlabs_usage(),
-                FLIGHTLABS_MONTHLY_LIMIT,
+                collect_reqs, self._flightlabs_collected_count,
+                submit_reqs, len(self._flightlabs_new_pending),
+                self.history.flightlabs_usage(), FLIGHTLABS_MONTHLY_LIMIT,
+                " | ⚠ submit HLADOVĚL (collect spotřeboval celý per-run rozpočet)"
+                if starved else "",
             )
 
         # Per-source efektivita (výsledky/run, dealy/run, dealy/request).
