@@ -23,6 +23,14 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
 
 
+def _safe_transfers(value) -> Optional[int]:
+    """Počet přestupů z Aviasales (transfers/return_transfers); None když chybí."""
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return None
+
+
 class TravelpayoutsSource:
     name = "travelpayouts"
 
@@ -122,6 +130,9 @@ class TravelpayoutsSource:
             source=self.name,
             deep_link=link,
             route_name=route_name,
+            # Aviasales vrací počet přestupů tam/zpět → přímý/přestup indikátor.
+            stops_out=_safe_transfers(item.get("transfers")),
+            stops_in=_safe_transfers(item.get("return_transfers")),
         )
 
     @staticmethod

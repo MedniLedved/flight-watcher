@@ -356,6 +356,7 @@ def test_travelpayouts_parse_item():
         "price": 510, "origin": "FRA", "destination": "NRT",
         "airline": "LH", "departure_at": "2026-09-10T00:00:00Z",
         "return_at": "2026-09-24T00:00:00Z", "link": "/deal/1",
+        "transfers": 0, "return_transfers": 1,
     }
     r = src._parse_item(item, "FRA", "NRT", "Test")
     assert r is not None
@@ -363,6 +364,7 @@ def test_travelpayouts_parse_item():
     assert r.depart_date == date(2026, 9, 10)
     assert r.return_date == date(2026, 9, 24)
     assert r.deep_link.startswith("https://")
+    assert r.stops_out == 0 and r.stops_in == 1  # přímý tam, 1 přestup zpět
     # Roundtrip → nesmí být open-jaw a MUSÍ mít návratové datum.
     assert r.route_key().endswith("-roundtrip")
 

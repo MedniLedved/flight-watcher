@@ -35,6 +35,18 @@ logger = logging.getLogger(__name__)
 
 _REQUEST_DELAY = 2.0  # scraping → šetrně, sekvenčně (viz scanner)
 
+
+def _safe_stops(value) -> Optional[int]:
+    """Bezpečný převod počtu přestupů z fast-flights (int / "Nonstop" / None)."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return 0 if "nonstop" in value.lower() or "direct" in value.lower() else None
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return None
+
 # Detekce měny z textové ceny ("€533", "$1234", "CHF 920"…). Delší tokeny
 # musí být před kratšími ("US$" před "$").
 _CURRENCY_TOKENS: list[tuple[str, str]] = [
@@ -205,6 +217,9 @@ class GoogleFlightsSource:
                 return_origin, return_destination,
             ),
             route_name=route_name,
+            # fast-flights vrací počet přestupů (outbound listing) → přímý/přestup
+            # indikátor i pro Google Flights (hlavní zdroj).
+            stops_out=_safe_stops(getattr(fl, "stops", None)),
         )
 
     @staticmethod
