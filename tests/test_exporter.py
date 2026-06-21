@@ -143,6 +143,39 @@ def test_latest_alternatives_keeps_pricier_premium_options(tmp_path):
     assert [a["price"] for a in alts] == [1025, 1029]      # seřazené dle ceny
 
 
+def test_alternatives_history_append_only_and_excludes_cheapest(tmp_path):
+    """Dražší varianty se ukládají do data/alternatives/{route}.json (append-only),
+    nejlevnější tam NENÍ (ta jde do běžné history/stats)."""
+    history = _history(tmp_path)
+    out = tmp_path / "data"
+    trip = dict(origin="PRG", destination="NRT", return_origin="NRT",
+                return_destination="PRG", depart_date=date(2026, 9, 5),
+                return_date=date(2026, 9, 19))
+    cheap = FlightResult(price=1011, airlines=["PC"], source="flightlabs",
+                         stops_out=1, stops_in=1, **trip)
+    ek = FlightResult(price=1025, airlines=["EK"], source="flightlabs",
+                      stops_out=0, stops_in=0, **trip)
+    exp = Exporter(history, _settings(), out_dir=out)
+    exp.run([cheap], prev_state={}, now=NOW, raw_offers=[cheap, ek])
+
+    alt = _load(out / "alternatives" / "PRG-NRT-roundtrip.json")
+    assert len(alt) == 1
+    assert alt[0]["airlines"] == ["EK"] and alt[0]["stopsOut"] == 0
+    assert alt[0]["price"] == 1025 and alt[0]["date"] == "2026-06-10"
+    # nejlevnější (PC) se do alternatives NEpíše
+    assert all(r["airlines"] != ["PC"] for r in alt)
+
+    # Druhý běh (jiný den, dražší EK) → append, ne přepis; starý záznam zůstává.
+    later = datetime(2026, 6, 12, 6, 0, tzinfo=timezone.utc)
+    ek2 = FlightResult(price=999, airlines=["EK"], source="flightlabs",
+                       stops_out=0, stops_in=0, **trip)
+    Exporter(history, _settings(), out_dir=out).run(
+        [cheap], prev_state={}, now=later, raw_offers=[cheap, ek2])
+    alt2 = _load(out / "alternatives" / "PRG-NRT-roundtrip.json")
+    assert len(alt2) == 2  # append-only: oba dny
+    assert {r["date"] for r in alt2} == {"2026-06-10", "2026-06-12"}
+
+
 def test_latest_alternatives_empty_without_raw_offers(exported):
     """Bez raw_offers (zpětná kompatibilita) má každá nabídka prázdné alternatives."""
     out, _, _ = exported

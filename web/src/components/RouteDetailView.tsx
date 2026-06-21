@@ -9,9 +9,45 @@ import { CalendarHeatmap } from "./CalendarHeatmap";
 import { PriceHistoryChart } from "./PriceHistoryChart";
 import { StatsCards } from "./StatsCards";
 import { useRouteDetail } from "@/hooks/useRouteDetail";
-import type { FlightSegment, LatestOffer, RouteStats } from "@/types/data";
+import type {
+  AlternativeRecord, FlightSegment, LatestOffer, RouteStats,
+} from "@/types/data";
 import { airlineNames, airlineName } from "@/lib/airlines";
 import { fmtDuration } from "@/lib/transport";
+
+interface AltOption {
+  airlines: string[];
+  stopsOut: number | null;
+  stopsIn: number | null;
+  lastPrice: number;
+  minPrice: number;
+  count: number;
+  firstDate: string;
+  lastDate: string;
+}
+
+/** Seskupí historické alternativy podle „varianty" (aerolinky + přestupy) a
+ *  spočítá poslední/min cenu, počet pozorování a období. */
+function groupAlternatives(alts: AlternativeRecord[]): AltOption[] {
+  const map = new Map<string, AltOption>();
+  for (const a of [...alts].sort((x, y) => x.date.localeCompare(y.date))) {
+    const key = `${[...a.airlines].sort().join(",")}|${a.stopsOut}|${a.stopsIn}`;
+    const ex = map.get(key);
+    if (!ex) {
+      map.set(key, {
+        airlines: a.airlines, stopsOut: a.stopsOut, stopsIn: a.stopsIn,
+        lastPrice: a.price, minPrice: a.price, count: 1,
+        firstDate: a.date, lastDate: a.date,
+      });
+    } else {
+      ex.lastPrice = a.price; // řazeno dle data vzestupně → poslední vyhrává
+      ex.lastDate = a.date;
+      ex.minPrice = Math.min(ex.minPrice, a.price);
+      ex.count += 1;
+    }
+  }
+  return [...map.values()].sort((a, b) => a.lastPrice - b.lastPrice);
+}
 
 function routeLabel(routeKey: string): string {
   const parts = routeKey.split("-");
@@ -70,7 +106,8 @@ interface Props {
 }
 
 export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Props) {
-  const { history, calendar, loading, error } = useRouteDetail(routeKey);
+  const { history, calendar, alternatives, loading, error } = useRouteDetail(routeKey);
+  const altOptions = groupAlternatives(alternatives);
 
   return (
     <div className="space-y-6">
@@ -211,6 +248,61 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                     </TableRow>
                   )}
                   </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Historie dražších-ale-lepších variant (přímý let / prémiová aerolinka) */}
+      {altOptions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Dražší varianty v čase (přímý let / lepší aerolinka)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Tyto nabídky jsou nad nejlevnější cenou, ale můžou být přímé nebo
+              s lepší aerolinkou. Nepočítají se do cenových statistik výše.
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aerolinka</TableHead>
+                  <TableHead>Přestupy</TableHead>
+                  <TableHead className="text-right">Poslední cena</TableHead>
+                  <TableHead className="text-right">Min</TableHead>
+                  <TableHead className="text-right">Pozorování</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {altOptions.map((opt, i) => {
+                  const stops = stopsLabel(opt.stopsOut, opt.stopsIn);
+                  return (
+                    <TableRow key={i}>
+                      <TableCell>
+                        {opt.airlines.length ? airlineNames(opt.airlines) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {stops ? (
+                          <span className={isDirect(opt.stopsOut, opt.stopsIn)
+                            ? "text-emerald-600" : "text-amber-600"}>{stops}</span>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {Math.round(opt.lastPrice)} €
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {Math.round(opt.minPrice)} €
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {opt.count}×
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
               </TableBody>

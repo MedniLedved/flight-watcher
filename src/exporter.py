@@ -121,6 +121,14 @@ def _record_key(rec: dict) -> tuple:
             rec.get("returnDate"), rec.get("price"))
 
 
+def _alt_record_key(rec: dict) -> tuple:
+    """Dedup n-tice řady alternativ (rozlišuje i aerolinku – víc variant na
+    stejnou cenu)."""
+    return (rec.get("date"), rec.get("source"), rec.get("departDate"),
+            rec.get("returnDate"), rec.get("price"),
+            tuple(rec.get("airlines") or []))
+
+
 def _best_historical_offer(records: list[dict],
                            require_return: bool = False) -> Optional[dict]:
     """Nejlepší (nejlevnější) záznam z nejnovějšího dne pozorování v řadě.
@@ -200,6 +208,7 @@ class Exporter:
         self.write_calendar(series)
         self.write_latest(flights, prev_state, series, today,
                           raw_offers=raw_offers)
+        self.write_alternatives_history(raw_offers, today)
         self.write_stats(series, today)
         self.write_insights()
         self.write_routes(series, flights)
@@ -240,6 +249,60 @@ class Exporter:
                 _write_json(path, existing)
             out[key] = existing
         return out
+
+    def write_alternatives_history(self, raw_offers: Optional[list[FlightResult]],
+                                   today: date) -> None:
+        """Append-only řada DRAŽŠÍCH variant (nad nejlevnější) per trasa do
+        ``data/alternatives/{route_key}.json``. ODDĚLENÉ od history/stats –
+        cenové statistiky (min/avg/medián/trend) se počítají DÁL jen z nejlevnější
+        (history), tahle řada slouží k sledování lepších variant (přímý let,
+        prémiová aerolinka) v čase. Nikdy se neprořezává; dedup na
+        (date, source, departDate, returnDate, price, airlines). Běží in-process
+        (efemérní pole airlines/stops existují jen v živém scanu)."""
+        if not raw_offers:
+            return
+        trips: dict[tuple, list[FlightResult]] = {}
+        for o in raw_offers:
+            if o.depart_date is None or o.price is None:
+                continue
+            tk = (o.route_key(), o.depart_date.isoformat(),
+                  o.return_date.isoformat() if o.return_date else None)
+            trips.setdefault(tk, []).append(o)
+
+        today_iso = today.isoformat()
+        new_by_route: dict[str, list[dict]] = {}
+        for (route_key, dep, ret), offers in trips.items():
+            offers_sorted = sorted(offers, key=lambda o: o.price)
+            seen_opt: set = set()
+            for o in offers_sorted[1:]:  # přeskoč nejlevnější = hlavní (v history)
+                sig = (tuple(sorted(o.airlines)), round(float(o.price), 2))
+                if sig in seen_opt:
+                    continue
+                seen_opt.add(sig)
+                new_by_route.setdefault(route_key, []).append({
+                    "date": today_iso, "departDate": dep, "returnDate": ret,
+                    "price": _round(o.price), "source": o.source,
+                    "airlines": list(o.airlines),
+                    "stopsOut": _offer_stops(o, "out"),
+                    "stopsIn": _offer_stops(o, "in"),
+                })
+
+        alt_dir = self.out_dir / "alternatives"
+        for route_key, recs in new_by_route.items():
+            path = alt_dir / f"{route_key}.json"
+            existing: list[dict] = _read_json(path, [])
+            seen = {_alt_record_key(r) for r in existing}
+            added = False
+            for rec in recs:
+                k = _alt_record_key(rec)
+                if k in seen:
+                    continue
+                seen.add(k)
+                existing.append(rec)
+                added = True
+            existing.sort(key=lambda r: (r.get("date") or "", r.get("price") or 0))
+            if added or not path.exists():
+                _write_json(path, existing)
 
     # -- latest.json ---------------------------------------------------------
     @staticmethod

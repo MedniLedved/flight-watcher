@@ -110,6 +110,28 @@ export interface HistoryRecord {
 export type HistoryFile = HistoryRecord[];
 
 // ---------------------------------------------------------------------------
+// data/alternatives/{route_key}.json — append-only řada DRAŽŠÍCH variant (nad
+// nejlevnější) v čase. ODDĚLENÉ od history – necpe se do cenových statistik,
+// slouží ke sledování lepších variant (přímý let, prémiová aerolinka) v čase.
+// ---------------------------------------------------------------------------
+export interface AlternativeRecord {
+  /** den pozorování */
+  date: string;
+  departDate: string | null;
+  returnDate: string | null;
+  /** EUR */
+  price: number;
+  source: string;
+  airlines: string[];
+  /** počet přestupů tam (0 = přímý); null pokud neznáme */
+  stopsOut: number | null;
+  /** počet přestupů zpět (0 = přímý); null pokud neznáme */
+  stopsIn: number | null;
+}
+
+export type AlternativesFile = AlternativeRecord[];
+
+// ---------------------------------------------------------------------------
 // data/calendar/{route_key}.json — aktuální nejlepší cena per odletový den.
 // ---------------------------------------------------------------------------
 export interface CalendarDay {

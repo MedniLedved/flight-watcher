@@ -50,8 +50,8 @@ for f in "${OPTIONAL[@]}"; do
   fi
 done
 
-# 3. history/ a calendar/ řady: každý soubor musí být validní JSON.
-for sub in history calendar; do
+# 3. history/, calendar/ a alternatives/ řady: každý soubor musí být validní JSON.
+for sub in history calendar alternatives; do
   if [ -d "$DATA_DIR/$sub" ]; then
     while IFS= read -r -d '' jf; do
       if ! jq empty "$jf" 2>/dev/null; then
