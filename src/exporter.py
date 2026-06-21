@@ -261,24 +261,10 @@ class Exporter:
         (efemérní pole airlines/stops existují jen v živém scanu)."""
         if not raw_offers:
             return
-        trips: dict[tuple, list[FlightResult]] = {}
-        for o in raw_offers:
-            if o.depart_date is None or o.price is None:
-                continue
-            tk = (o.route_key(), o.depart_date.isoformat(),
-                  o.return_date.isoformat() if o.return_date else None)
-            trips.setdefault(tk, []).append(o)
-
         today_iso = today.isoformat()
         new_by_route: dict[str, list[dict]] = {}
-        for (route_key, dep, ret), offers in trips.items():
-            offers_sorted = sorted(offers, key=lambda o: o.price)
-            seen_opt: set = set()
-            for o in offers_sorted[1:]:  # přeskoč nejlevnější = hlavní (v history)
-                sig = (tuple(sorted(o.airlines)), round(float(o.price), 2))
-                if sig in seen_opt:
-                    continue
-                seen_opt.add(sig)
+        for (route_key, dep, ret), alts in self._trip_alternatives(raw_offers).items():
+            for o in alts:
                 new_by_route.setdefault(route_key, []).append({
                     "date": today_iso, "departDate": dep, "returnDate": ret,
                     "price": _round(o.price), "source": o.source,
@@ -305,47 +291,60 @@ class Exporter:
                 _write_json(path, existing)
 
     # -- latest.json ---------------------------------------------------------
+    _MAX_ALTS_PER_TRIP = 6
+
     @staticmethod
-    def _alternatives_by_trip(
+    def _trip_alternatives(
         raw_offers: Optional[list[FlightResult]],
-    ) -> dict[tuple, list[dict]]:
-        """Z (nededuplikovaného) seznamu nabídek sestaví alternativy per
-        ‚zájezd' = (route_key, odlet, návrat). Pro každý termín vrátí dražší
-        varianty (jiné aerolinky/zdroje) než nejlevnější – ta je hlavní nabídka
-        v latest.json, alternativy se zobrazí v detailu trasy. Dedup na
-        (aerolinky, cena); max 6 alternativ na termín."""
-        if not raw_offers:
-            return {}
+    ) -> dict[tuple, list[FlightResult]]:
+        """Jádro sdílené latest.json i alternatives/ řadou: per ‚zájezd'
+        (route_key, odlet, návrat) vrátí dražší varianty nad nejlevnější.
+        Nejlevnější = hlavní nabídka (v latest.json / history), proto se vyřadí
+        – a její (aerolinky, cena) signatura se předem zařadí do dedupu, aby se
+        druhá kopie nejlevnější (jiný zdroj, stejná cena+aerolinka) nezapsala
+        jako ‚alternativa'. Dedup na (aerolinky, cena); max _MAX_ALTS_PER_TRIP."""
         trips: dict[tuple, list[FlightResult]] = {}
-        for o in raw_offers:
+        for o in raw_offers or []:
             if o.depart_date is None or o.price is None:
                 continue
             tk = (o.route_key(), o.depart_date.isoformat(),
                   o.return_date.isoformat() if o.return_date else None)
             trips.setdefault(tk, []).append(o)
-        result: dict[tuple, list[dict]] = {}
+        result: dict[tuple, list[FlightResult]] = {}
         for tk, offers in trips.items():
             offers_sorted = sorted(offers, key=lambda o: o.price)
-            seen: set = set()
-            alts: list[dict] = []
-            for o in offers_sorted[1:]:  # přeskoč nejlevnější = hlavní nabídka
+            cheapest = offers_sorted[0]
+            seen = {(tuple(sorted(cheapest.airlines)),
+                     round(float(cheapest.price), 2))}
+            alts: list[FlightResult] = []
+            for o in offers_sorted[1:]:
                 sig = (tuple(sorted(o.airlines)), round(float(o.price), 2))
                 if sig in seen:
                     continue
                 seen.add(sig)
-                alts.append({
-                    "price": _round(o.price),
-                    "airlines": list(o.airlines),
-                    "source": o.source,
-                    "dealUrl": o.deep_link or None,
-                    "stopsOut": _offer_stops(o, "out"),
-                    "stopsIn": _offer_stops(o, "in"),
-                })
-                if len(alts) >= 6:
+                alts.append(o)
+                if len(alts) >= Exporter._MAX_ALTS_PER_TRIP:
                     break
             if alts:
                 result[tk] = alts
         return result
+
+    @classmethod
+    def _alternatives_by_trip(
+        cls, raw_offers: Optional[list[FlightResult]],
+    ) -> dict[tuple, list[dict]]:
+        """Alternativy pro latest.json (efemérní pole pro detail trasy)."""
+        return {
+            tk: [{
+                "price": _round(o.price),
+                "airlines": list(o.airlines),
+                "source": o.source,
+                "dealUrl": o.deep_link or None,
+                "stopsOut": _offer_stops(o, "out"),
+                "stopsIn": _offer_stops(o, "in"),
+            } for o in alts]
+            for tk, alts in cls._trip_alternatives(raw_offers).items()
+        }
 
     def write_latest(self, flights: list[FlightResult],
                      prev_state: dict[str, dict],

@@ -143,6 +143,31 @@ def test_latest_alternatives_keeps_pricier_premium_options(tmp_path):
     assert [a["price"] for a in alts] == [1025, 1029]      # seřazené dle ceny
 
 
+def test_alternatives_exclude_duplicate_of_cheapest(tmp_path):
+    """Když je nejlevnější nabídka ve dvou zdrojích (stejná cena+aerolinka),
+    ta druhá kopie se NESMÍ zapsat jako 'alternativa' – alternativa je jen
+    skutečně dražší/jiná varianta."""
+    history = _history(tmp_path)
+    out = tmp_path / "data"
+    trip = dict(origin="PRG", destination="NRT", return_origin="NRT",
+                return_destination="PRG", depart_date=date(2026, 9, 5),
+                return_date=date(2026, 9, 19))
+    pc1 = FlightResult(price=1011, airlines=["PC"], source="flightlabs",
+                       stops_out=1, stops_in=1, **trip)
+    pc2 = FlightResult(price=1011, airlines=["PC"], source="googleflights",
+                       stops_out=1, stops_in=1, **trip)  # duplikát nejlevnější
+    ek = FlightResult(price=1025, airlines=["EK"], source="flightlabs",
+                      stops_out=0, stops_in=0, **trip)
+    Exporter(history, _settings(), out_dir=out).run(
+        [pc1], prev_state={}, now=NOW, raw_offers=[pc1, pc2, ek])
+
+    alt = _load(out / "alternatives" / "PRG-NRT-roundtrip.json")
+    assert [r["airlines"] for r in alt] == [["EK"]]  # PC duplikát vyřazen
+    latest = _load(out / "latest.json")
+    prg = next(x for x in latest if x["routeKey"] == "PRG-NRT-roundtrip")
+    assert [a["airlines"] for a in prg["alternatives"]] == [["EK"]]
+
+
 def test_alternatives_history_append_only_and_excludes_cheapest(tmp_path):
     """Dražší varianty se ukládají do data/alternatives/{route}.json (append-only),
     nejlevnější tam NENÍ (ta jde do běžné history/stats)."""
