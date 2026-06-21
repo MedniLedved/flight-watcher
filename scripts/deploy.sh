@@ -15,12 +15,13 @@ echo "==> [1/4] Syncing scanner data (root data/ -> web/public/data/)"
 # kroku by se nasadil starý snapshot z web/public/data a živá data na gh-pages
 # by se přepsala. Guardy „[ -f ] && cp || true" kopírují JEN co existuje, takže
 # chybějící zdroj nikdy nevymaže už nasazenou historii/kalendář.
-mkdir -p "$REPO_ROOT/web/public/data/calendar" "$REPO_ROOT/web/public/data/history" "$REPO_ROOT/web/public/config"
+mkdir -p "$REPO_ROOT/web/public/data/calendar" "$REPO_ROOT/web/public/data/history" "$REPO_ROOT/web/public/data/alternatives" "$REPO_ROOT/web/public/config"
 for f in latest.json stats.json routes.json meta.json insights.json; do
   [ -f "$REPO_ROOT/data/$f" ] && cp "$REPO_ROOT/data/$f" "$REPO_ROOT/web/public/data/$f" || true
 done
 [ -d "$REPO_ROOT/data/history" ] && cp -r "$REPO_ROOT/data/history/." "$REPO_ROOT/web/public/data/history/" || true
 [ -d "$REPO_ROOT/data/calendar" ] && cp -r "$REPO_ROOT/data/calendar/." "$REPO_ROOT/web/public/data/calendar/" || true
+[ -d "$REPO_ROOT/data/alternatives" ] && cp -r "$REPO_ROOT/data/alternatives/." "$REPO_ROOT/web/public/data/alternatives/" || true
 [ -f "$REPO_ROOT/config/agent.json" ] && cp "$REPO_ROOT/config/agent.json" "$REPO_ROOT/web/public/config/agent.json" || true
 
 echo ""
@@ -61,7 +62,7 @@ cp dist/index.html "$WORKTREE_DIR/"
 
 # Overlay data a config. `cp` přepíše stejnojmenné soubory, ale NEMAŽE ty, co
 # jsou na gh-pages navíc → nasazená append-only historie/kalendář se neztratí.
-mkdir -p "$WORKTREE_DIR/data/calendar" "$WORKTREE_DIR/data/history" "$WORKTREE_DIR/config"
+mkdir -p "$WORKTREE_DIR/data/calendar" "$WORKTREE_DIR/data/history" "$WORKTREE_DIR/data/alternatives" "$WORKTREE_DIR/config"
 cp -r "$REPO_ROOT/web/public/data/." "$WORKTREE_DIR/data/"
 cp -r "$REPO_ROOT/web/public/config/." "$WORKTREE_DIR/config/"
 

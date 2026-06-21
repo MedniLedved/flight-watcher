@@ -74,7 +74,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/*.json data/history data/calendar 2>/dev/null || true
+          git add data/*.json data/history data/calendar data/alternatives 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Žádné změny v exportu – nic necommituji."
           else

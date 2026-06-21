@@ -146,6 +146,32 @@ if [ $MISSING_CALENDARS -gt 0 ]; then
 fi
 echo "✓ Calendar check complete"
 
+# 6b. Datové podadresáře, které exporter zapisuje, MUSÍ být všude propsané:
+#     stagované v scan.yml (jinak CI nezacommituje) a kopírované do web/public
+#     v obou deploy cestách (deploy.yml i deploy.sh, jinak se nenasadí na Pages).
+#     Regrese: exporter psal data/alternatives/, ale scan.yml je nestagoval a
+#     deploy je nekopíroval → dlouhodobá řada „dražší varianty" se každý běh
+#     ztratila. Tato kontrola hlídá, aby žádný nový podadresář nezůstal odpojený.
+echo ""
+echo "[6b] Data subdir wiring (scan + deploy)..."
+DATA_SUBDIRS=(history calendar alternatives)
+WIRING_FAILED=0
+for sub in "${DATA_SUBDIRS[@]}"; do
+  for target in \
+    "$REPO_ROOT/.github/workflows/scan.yml:git add" \
+    "$REPO_ROOT/.github/workflows/deploy.yml:deploy.yml sync" \
+    "$REPO_ROOT/scripts/deploy.sh:deploy.sh sync"; do
+    path="${target%:*}"
+    label="${target#*:}"
+    if ! grep -q "data/$sub" "$path"; then
+      echo "  ❌ data/$sub není propsané v $label ($path)"
+      WIRING_FAILED=1
+    fi
+  done
+done
+if [ $WIRING_FAILED -eq 1 ]; then exit 1; fi
+echo "  ✓ history, calendar i alternatives jsou stagované i deployované"
+
 # 7. Optional: Test deployed site (requires network + curl)
 echo ""
 echo "[7/7] GitHub Pages deployment..."

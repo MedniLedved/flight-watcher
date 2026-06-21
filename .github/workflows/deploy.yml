@@ -51,12 +51,13 @@ jobs:
       # so validate.sh and the build see the latest scan output.
       - name: Sync scanner data to web/public/data
         run: |
-          mkdir -p web/public/data/calendar web/public/data/history web/public/config
+          mkdir -p web/public/data/calendar web/public/data/history web/public/data/alternatives web/public/config
           for f in latest.json stats.json routes.json meta.json insights.json; do
             [ -f "data/$f" ] && cp "data/$f" "web/public/data/$f" || true
           done
           [ -d "data/history" ] && cp -r data/history/. web/public/data/history/ || true
           [ -d "data/calendar" ] && cp -r data/calendar/. web/public/data/calendar/ || true
+          [ -d "data/alternatives" ] && cp -r data/alternatives/. web/public/data/alternatives/ || true
           cp config/agent.json web/public/config/agent.json
 
       - name: Deploy
