@@ -1,13 +1,10 @@
-"""Sdílené parsování Skyscanner-formátu itinerářů.
+"""Sdílené parsování Skyscanner-formátu itinerářů (price.raw + legs[]).
 
-Skyscanner data (price.raw + legs[] s carriers/segments) vrací VÍCE zdrojů:
-* Sky Scrapper přes RapidAPI (`sky-scrapper.p.rapidapi.com`)
-* FlightLabs / goflightlabs (`retrieveFlights`)
-
-Tvar odpovědi je u obou identický (oba proxují Skyscanner). Aby se parsovací
-logika neduplikovala (a oprava jednoho tvaru se nemusela dělat dvakrát),
-žije zde jako sdílené funkce. Při změně tvaru Skyscanner odpovědi uprav JEN
-tento soubor – oba zdroje se aktualizují naráz.
+Používá zatím JEN Sky Scrapper přes RapidAPI (`sky-scrapper.p.rapidapi.com`),
+jehož odpověď má tvar `{...itineraries:[{price:{raw},legs:[...]}]}`. Žije to v
+samostatném modulu, aby šel parser sdílet, kdyby přibyl další Skyscanner-proxy
+zdroj se stejným tvarem. POZOR: FlightLabs (`retrieveFlights`) tenhle modul
+NEPOUŽÍVÁ – vrací ploché pole legů a má vlastní parser `flightlabs._parse_legs`.
 """
 from __future__ import annotations
 
@@ -46,8 +43,13 @@ def format_skyscanner_dt(dt: dict | str) -> Optional[str]:
         except ValueError:
             return None
     if isinstance(dt, dict):
-        h = dt.get("hour") or dt.get("hours")
-        m = dt.get("minute") or dt.get("minutes")
+        # Pozor na 0 (půlnoc / celá hodina) – `or` by 0 spolklo jako chybějící.
+        h = dt.get("hour")
+        if h is None:
+            h = dt.get("hours")
+        m = dt.get("minute")
+        if m is None:
+            m = dt.get("minutes")
         if h is not None and m is not None:
             return f"{int(h):02d}:{int(m):02d}"
     return None

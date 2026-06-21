@@ -47,6 +47,7 @@ from .sources.miles_and_more import MilesAndMoreSource
 from .sources.miles_and_more import should_run_today as mm_should_run_today
 from .sources.secret_flying import SecretFlyingSource
 from .sources.skyscrapper import SkyScrapperSource
+from .sources.flightlabs import QUERY_KEYS as FLIGHTLABS_QUERY_KEYS
 from .sources.flightlabs import FlightLabsSource
 from .sources.letsfg_source import LetsFGSource
 from .sources.travelpayouts import TravelpayoutsSource
@@ -366,8 +367,16 @@ class Scanner:
                         for d in fd:
                             if not self._flightlabs_has_budget():
                                 raise _BudgetExhausted
-                            res, pending = self.flightlabs.submit(
-                                o, d, fl_dep, return_date=fl_ret, route_name=name)
+                            # Per-combo try/except: jeden výpadek sítě nesmí
+                            # shodit submit zbytku kombinací této trasy.
+                            try:
+                                res, pending = self.flightlabs.submit(
+                                    o, d, fl_dep, return_date=fl_ret,
+                                    route_name=name)
+                            except Exception as exc:  # noqa: BLE001
+                                logger.error("FlightLabs submit %s→%s selhal: %s",
+                                             o, d, exc)
+                                continue
                             results += res
                             if pending is not None:
                                 self._flightlabs_new_pending.append(pending)
@@ -929,10 +938,19 @@ class Scanner:
                 logger.error("Trasa %s selhala: %s", route.get("name"), exc)
 
         # Ulož pending joby (přeživší z collectu + nově submitnuté) pro příští běh.
+        # Dedup na query signaturu (survivor má přednost = starší submit, aby
+        # expirace běžela od původního odeslání a nepřibýval duplicitní job na
+        # stejnou kombinaci, který by zbytečně pálil kvótu při collectu).
         if self.flightlabs:
-            self.history.set_flightlabs_pending(
-                self._flightlabs_pending_survivors + self._flightlabs_new_pending
-            )
+            merged: list[dict] = []
+            seen: set[tuple] = set()
+            for job in self._flightlabs_pending_survivors + self._flightlabs_new_pending:
+                sig = tuple(job.get(k) for k in FLIGHTLABS_QUERY_KEYS)
+                if sig in seen:
+                    continue
+                seen.add(sig)
+                merged.append(job)
+            self.history.set_flightlabs_pending(merged)
 
         # URL enrichment: pro nabídky ≤ efektivnímu prahu (dealMaxEur − doprava)
         # s Aviasales URL přepíše cenu a doplní segmenty z booking tokenu.

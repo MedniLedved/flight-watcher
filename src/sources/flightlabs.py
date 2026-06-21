@@ -39,10 +39,12 @@ logger = logging.getLogger(__name__)
 
 RETRIEVE_FLIGHTS_URL = "https://www.goflightlabs.com/retrieveFlights"
 _REQUEST_DELAY = 1.1   # rate limit 10 req/10 s → ~1 req/s
-_POLL_DELAY = 2.5      # pauza mezi krátkými polly při submitu
-# Krátké okno při submitu: 1 rychlé přepollování chytí už nacachované joby,
-# ale nepálí kvótu na čekání – nedokončené joby dořeší collect v dalším běhu.
-_MAX_POLLS = 1
+_POLL_DELAY = 2.5      # pauza mezi polly (jen když submit dostane max_polls>0)
+# Submit defaultně NEPOLLUJE (0): async job není v rámci submitu nikdy hotový
+# (ověřeno – dozrává 30–80 s), takže každý poll = zbytečný request + 2,5 s
+# čekání. Nedokončené joby sebere collect v dalším běhu. Polling lze zapnout
+# (max_polls>0) pro test/diagnostiku, kde chceme chytit už nacachovaný job.
+_MAX_POLLS = 0
 
 # Klíče, které tvoří dotaz na API (zbytek pending dictu je metadata).
 QUERY_KEYS = ("originIATACode", "destinationIATACode", "date", "returnDate",

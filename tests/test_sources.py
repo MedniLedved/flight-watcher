@@ -1144,6 +1144,16 @@ def test_skyscanner_common_parse_itinerary():
     assert "AY" in r.airlines
 
 
+def test_format_skyscanner_dt_keeps_midnight_and_whole_hour():
+    """hour=0 (půlnoc) ani minute=0 (celá hodina) se nesmí ztratit – dřív je
+    `or` spolklo jako chybějící hodnotu."""
+    from src.sources.skyscanner_common import format_skyscanner_dt
+    assert format_skyscanner_dt({"hour": 0, "minute": 0}) == "00:00"
+    assert format_skyscanner_dt({"hour": 14, "minute": 0}) == "14:00"
+    assert format_skyscanner_dt({"hour": 0, "minute": 30}) == "00:30"
+    assert format_skyscanner_dt("2026-09-06T00:00:00") == "00:00"
+
+
 def test_itineraries_from_payload_handles_both_wrappers():
     """Sky-scrapper obaluje do data.itineraries, jiné zdroje vrací itineraries
     přímo na top-levelu – obojí musí projít."""
@@ -1242,7 +1252,9 @@ def test_flightlabs_search_polls_then_parses():
     _orig = fl_mod.time.sleep
     fl_mod.time.sleep = lambda *a, **k: None
     try:
-        src = FlightLabsSource(access_key="secret", session=_Session())
+        # max_polls=1 zapne poll (default je 0 = bez pollu) → 202 pak 200.
+        src = FlightLabsSource(access_key="secret", session=_Session(),
+                               max_polls=1)
         out = src.search("MUC", "NRT", date(2026, 9, 10),
                          return_date=date(2026, 9, 24))
     finally:
