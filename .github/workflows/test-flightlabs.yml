@@ -23,7 +23,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run FlightLabs diagnostic
+      - name: Probe FlightLabs (správný Skyscanner-style kontrakt, ~6 req, 1 trasa)
+        env:
+          FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
+        run: python -m scripts.probe_flightlabs_correct
+
+      - name: Run FlightLabs diagnostic (STARÝ rozbitý kontrakt – pálí kvótu, vypnuto)
+        if: ${{ false }}
         env:
           FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
         run: python -m scripts.test_flightlabs
