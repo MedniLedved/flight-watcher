@@ -98,21 +98,27 @@ class GoogleFlightsSource:
                             or return_destination != origin))
         legs = [(origin, destination, departure_date)]
         if return_date and openjaw:
-            # Multi-city stránky Google neservíruje server-side (jen „Loading
-            # results") a veřejná fallback služba fast-flights je mrtvá (401).
-            # Bez JS renderu nemá smysl pálit dotazy → přeskoč, dokud uživatel
-            # nezapne GOOGLEFLIGHTS_FETCH_MODE=local (playwright, viz README).
-            if self.fetch_mode == "common":
-                if not self._openjaw_warned:
-                    logger.warning(
-                        "Google Flights: open-jaw (multi-city) vyžaduje JS "
-                        "render – přeskakuji. Zapni GOOGLEFLIGHTS_FETCH_MODE="
-                        "local (playwright) pro open-jaw pokrytí."
-                    )
-                    self._openjaw_warned = True
-                return []
-            trip = "multi-city"
-            legs.append((return_origin, return_destination, return_date))
+            # Open-jaw (multi-city) přes Google Flights NEFUNGUJE v žádném režimu:
+            # - "common" (GET): server vrací jen „Loading results" bez server-side
+            #   dat (a veřejná fallback služba fast-flights je mrtvá, 401),
+            # - "local" (playwright): multi-city stránka nerenderuje výsledkový
+            #   kontejner (.eQ35Ce) → 30s timeout na KAŽDÝ dotaz, 0 nabídek
+            #   (ověřeno scanem 2026-06-22: ~35 min spáleno jen na timeoutech).
+            # Proto open-jaw přeskakujeme bez ohledu na režim; pokrytí zajišťují
+            # ostatní zdroje (serpapi, flightlabs, historie).
+            # TODO(googleflights open-jaw): vyřešit multi-city render zvlášť
+            #   (nový selektor / jiný přístup) a teprve PAK obnovit:
+            #     trip = "multi-city"
+            #     legs.append((return_origin, return_destination, return_date))
+            #   Naplánováno na později (viz rozhodnutí uživatele 2026-06-22).
+            if not self._openjaw_warned:
+                logger.warning(
+                    "Google Flights: open-jaw (multi-city) přeskakuji – nevrací "
+                    "data v žádném režimu (common=Loading, local=timeout). "
+                    "Pokrytí zajišťují ostatní zdroje."
+                )
+                self._openjaw_warned = True
+            return []
         elif return_date:
             trip = "round-trip"
             legs.append((destination, origin, return_date))

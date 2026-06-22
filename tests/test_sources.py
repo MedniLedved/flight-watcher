@@ -1642,20 +1642,22 @@ def test_googleflights_roundtrip_maps_results(monkeypatch):
     assert best.nights == 14
 
 
-def test_googleflights_openjaw_uses_multicity(monkeypatch):
+def test_googleflights_openjaw_skipped_in_local_mode(monkeypatch):
+    """Open-jaw (multi-city) přes Google Flights nevrací data v ŽÁDNÉM režimu:
+    common = „Loading results" bez dat, local (playwright) = 30s timeout na
+    nerenderovaný .eQ35Ce kontejner (0 nabídek, jen spálený čas – ověřeno
+    scanem 2026-06-22). Proto se open-jaw přeskakuje i v local módu BEZ dotazu
+    na Google; multi-city dotaz se nesmí odeslat."""
     from src.sources import googleflights as gf_mod
     import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
     captured: dict = {}
-    # Open-jaw vyžaduje JS render → mód local (v common se přeskakuje).
     src = _gf_source([_GfFlight("€612")], captured=captured,
                      fetch_mode="local")
     out = src.search("MUC", "KIX", date(2026, 9, 5),
                      return_date=date(2026, 9, 19),
                      return_origin="NRT", return_destination="PRG")
-    assert captured["trip"] == "multi-city"
-    assert captured["legs"] == [("MUC", "KIX", date(2026, 9, 5)),
-                                ("NRT", "PRG", date(2026, 9, 19))]
-    assert out[0].route_key() == "MUC-KIX-NRT-openjaw"
+    assert out == []            # přeskočeno
+    assert captured == {}       # fetcher se vůbec nezavolal (žádný 30s timeout)
 
 
 def test_googleflights_converts_foreign_currency_and_skips_unknown(monkeypatch):
@@ -1697,10 +1699,10 @@ def test_scanner_initializes_googleflights_by_default():
     assert sc2.googleflights is None
 
 
-def test_googleflights_openjaw_skipped_in_common_mode(monkeypatch):
-    """Multi-city stránky Google neservíruje server-side a veřejný fallback
-    je mrtvý (401) → v common módu se open-jaw přeskakuje BEZ dotazu na
-    Google; s local/fallback módem se vyhledává jako multi-city."""
+def test_googleflights_openjaw_skipped_in_all_modes(monkeypatch):
+    """Open-jaw se přeskakuje BEZ dotazu na Google ve VŠECH režimech (common
+    i local) – nevrací data ani v jednom, jen by pálil čas/timeouty. Roundtrip
+    přitom normálně jede."""
     from src.sources import googleflights as gf_mod
     import src.sources.http_utils as _hu; monkeypatch.setattr(_hu, "random_sleep", lambda *a, **k: None)
     calls: list = []
@@ -1709,20 +1711,16 @@ def test_googleflights_openjaw_skipped_in_common_mode(monkeypatch):
         calls.append(trip)
         return []
 
-    src = gf_mod.GoogleFlightsSource(fetch_mode="common", fetcher=fetcher)
-    out = src.search("MUC", "KIX", date(2026, 9, 5),
-                     return_date=date(2026, 9, 19),
-                     return_origin="NRT", return_destination="PRG")
-    assert out == [] and calls == []   # žádný dotaz neproběhl
-    # Roundtrip v common módu normálně jede.
-    src.search("MUC", "NRT", date(2026, 9, 5), return_date=date(2026, 9, 19))
-    assert calls == ["round-trip"]
-    # local mód open-jaw vyhledává přes multi-city.
-    src_local = gf_mod.GoogleFlightsSource(fetch_mode="local", fetcher=fetcher)
-    src_local.search("MUC", "KIX", date(2026, 9, 5),
-                     return_date=date(2026, 9, 19),
-                     return_origin="NRT", return_destination="PRG")
-    assert calls[-1] == "multi-city"
+    for mode in ("common", "local", "fallback"):
+        calls.clear()
+        src = gf_mod.GoogleFlightsSource(fetch_mode=mode, fetcher=fetcher)
+        out = src.search("MUC", "KIX", date(2026, 9, 5),
+                         return_date=date(2026, 9, 19),
+                         return_origin="NRT", return_destination="PRG")
+        assert out == [] and calls == [], f"open-jaw nesmí volat fetcher ({mode})"
+        # Roundtrip ve stejném módu normálně jede.
+        src.search("MUC", "NRT", date(2026, 9, 5), return_date=date(2026, 9, 19))
+        assert calls == ["round-trip"], f"roundtrip má jet ({mode})"
 
 
 def test_googleflights_truncates_parse_error(monkeypatch):

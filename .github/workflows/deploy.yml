@@ -11,6 +11,16 @@ on:
       - 'scripts/deploy.sh'
       - 'scripts/validate.sh'
       - '.github/workflows/deploy.yml'
+  # Denní scan commituje data/ přes GITHUB_TOKEN; takový push ALE NESPOUŠTÍ
+  # workflow přes `push:` (GitHub potlačuje rekurzivní běhy z GITHUB_TOKENu),
+  # takže gh-pages by po cronu zůstal zastaralý (zdroj „stale dashboard"
+  # bugu z 2026-06-22). `workflow_run` se spouští podle DOKONČENÍ jiného
+  # workflow, ne podle commitu, a tomuto potlačení nepodléhá → po každém
+  # úspěšném scanu se dashboard přebuilduje s čerstvými daty.
+  workflow_run:
+    workflows: ["Japan Flight Scan"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -19,6 +29,11 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Při workflow_run spusť jen po ÚSPĚŠNÉM scanu (event přijde i při selhání
+    # nebo zrušení). Ostatní spouštěče (push, manuální dispatch) běží vždy.
+    if: >-
+      ${{ github.event_name != 'workflow_run'
+          || github.event.workflow_run.conclusion == 'success' }}
     # Prevent concurrent deploys; cancel stale run if a newer one queues up.
     concurrency:
       group: gh-pages-deploy
