@@ -1381,6 +1381,54 @@ def test_flightlabs_submit_returns_pending_on_202():
     assert pending["submitted"] == date.today().isoformat()
 
 
+def test_flightlabs_circuit_breaker_trips_on_consecutive_429():
+    """Po _RATE_LIMIT_CIRCUIT po sobě jdoucích 429 se shodí rate_limited flag,
+    aby scanner přestal submitovat a nepálil kvótu. Ne-429 počítadlo resetuje."""
+    from src.sources.flightlabs import FlightLabsSource, _RATE_LIMIT_CIRCUIT
+
+    class _Resp:
+        def __init__(self, status):
+            self.status_code = status
+            self.text = "{}"
+        def json(self):
+            return {}
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                import requests as _rq
+                raise _rq.HTTPError(f"{self.status_code}")
+
+    class _Session:
+        def __init__(self, statuses):
+            self._statuses = statuses
+            self.i = 0
+        def get(self, *a, **k):
+            s = self._statuses[min(self.i, len(self._statuses) - 1)]
+            self.i += 1
+            return _Resp(s)
+
+    import src.sources.flightlabs as fl_mod
+    _orig = fl_mod.time.sleep
+    fl_mod.time.sleep = lambda *a, **k: None
+    try:
+        # _RATE_LIMIT_CIRCUIT × 429 → tripne
+        src = FlightLabsSource(access_key="x",
+                               session=_Session([429] * _RATE_LIMIT_CIRCUIT))
+        for _ in range(_RATE_LIMIT_CIRCUIT):
+            src.submit("MUC", "NRT", date(2026, 9, 10),
+                       return_date=date(2026, 9, 24))
+        assert src.rate_limited is True
+
+        # Ne-429 mezi 429 resetuje počítadlo → netripne.
+        src2 = FlightLabsSource(access_key="x",
+                                session=_Session([429, 429, 202, 429, 429]))
+        for _ in range(5):
+            src2.submit("MUC", "NRT", date(2026, 9, 10),
+                        return_date=date(2026, 9, 24))
+        assert src2.rate_limited is False
+    finally:
+        fl_mod.time.sleep = _orig
+
+
 def test_flightlabs_collect_completes_and_keeps():
     """collect: 200 → (results, done=True); 202 → ([], done=False, ponech)."""
     from src.sources.flightlabs import FlightLabsSource

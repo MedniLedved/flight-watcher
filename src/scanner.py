@@ -400,6 +400,10 @@ class Scanner:
                 for fl_dep, fl_ret in date_pairs:
                     for o in fo:
                         for d in fd:
+                            # Circuit breaker: klíč throttlovaný (samé 429) →
+                            # přestaň submitovat, ať se nepálí kvóta nadarmo.
+                            if self.flightlabs.rate_limited:
+                                raise _BudgetExhausted
                             if not self._flightlabs_has_budget():
                                 raise _BudgetExhausted
                             # Per-combo try/except: jeden výpadek sítě nesmí

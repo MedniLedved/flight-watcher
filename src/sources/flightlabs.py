@@ -38,7 +38,14 @@ from .http_utils import make_api_session
 logger = logging.getLogger(__name__)
 
 RETRIEVE_FLIGHTS_URL = "https://www.goflightlabs.com/retrieveFlights"
-_REQUEST_DELAY = 1.1   # rate limit 10 req/10 s → ~1 req/s
+# Delay zvýšen z 1.1 s: i tak API vracelo 429 na KAŽDÝ request dva dny po sobě
+# (118/118 i 210/210 submitů). Pomalejší tempo dává plánu šanci, pokud je limit
+# per-minute. Pokud 429 přetrvá i tak, je to tvrdý blok (viz circuit breaker níže).
+_REQUEST_DELAY = 3.0
+# Circuit breaker: po tolika 429 ZA SEBOU přestaň v daném běhu submitovat. Když
+# je klíč tvrdě throttlovaný, nemá smysl spálit celý per-run rozpočet na samé
+# 429 (každý 429 navíc utrácí kvótu i čas). Reset při prvním ne-429.
+_RATE_LIMIT_CIRCUIT = 4
 _POLL_DELAY = 2.5      # pauza mezi polly (jen když submit dostane max_polls>0)
 # Submit defaultně NEPOLLUJE (0): async job není v rámci submitu nikdy hotový
 # (ověřeno – dozrává 30–80 s), takže každý poll = zbytečný request + 2,5 s
@@ -73,6 +80,9 @@ class FlightLabsSource:
         self.max_polls = max_polls
         self.poll_delay = poll_delay
         self.request_count = 0
+        # Circuit breaker stav (per instance = per scan běh).
+        self._consecutive_429 = 0
+        self.rate_limited = False
 
     # -- veřejné rozhraní -------------------------------------------------
     def search(
@@ -170,6 +180,19 @@ class FlightLabsSource:
         except requests.RequestException as exc:
             logger.error("FlightLabs %s→%s: %s", origin, destination, exc)
             raise
+        # Circuit breaker: počítej 429 za sebou; po _RATE_LIMIT_CIRCUIT shoď flag,
+        # ať scanner přestane v tomto běhu submitovat (nepálí kvótu na samé 429).
+        if resp.status_code == 429:
+            self._consecutive_429 += 1
+            if self._consecutive_429 >= _RATE_LIMIT_CIRCUIT and not self.rate_limited:
+                self.rate_limited = True
+                logger.warning(
+                    "FlightLabs: %d× 429 za sebou → zastavuji submit pro tento "
+                    "běh (klíč je throttlovaný, další requesty by jen pálily kvótu)",
+                    self._consecutive_429,
+                )
+        else:
+            self._consecutive_429 = 0
         if self.request_count <= 3:
             logger.info("FlightLabs DIAG req#%d %s→%s: HTTP %d | %.250s",
                         self.request_count, origin, destination,
