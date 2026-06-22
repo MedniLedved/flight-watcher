@@ -27,11 +27,13 @@ from src.sources.flightlabs import FlightLabsSource
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("probe_flightlabs_correct")
 
-# Pár tras Evropa→Japonsko v cestovním okně (září–prosinec 2026).
-COMBOS = [("MUC", "NRT"), ("PRG", "NRT"), ("VIE", "HND")]
+# Async job-queue → jedna trasa, submit + poll do 200 (strop 6 req: 1 submit +
+# 5 pollů). Joby dozrávají ~30–80 s, proto delší poll_delay.
+ORIGIN, DESTINATION = "MUC", "NRT"
 DEPART = date(2026, 11, 12)
 RETURN = date(2026, 11, 26)
-MAX_REQUESTS = 6   # tvrdý strop – ať se nespálí víc, než je schváleno
+MAX_POLLS = 5        # 1 submit + 5 pollů = strop 6 requestů
+POLL_DELAY_S = 12.0
 
 
 def main() -> int:
@@ -40,33 +42,27 @@ def main() -> int:
         logger.error("FLIGHTLABS_KEY není nastaven – nelze testovat.")
         return 1
 
-    src = FlightLabsSource(settings.flightlabs_key)
-    all_results = []
+    # max_polls>0 → submit pollne stejné parametry až do 200 (async job-queue).
+    src = FlightLabsSource(settings.flightlabs_key, max_polls=MAX_POLLS,
+                           poll_delay=POLL_DELAY_S)
+    try:
+        results = src.search(ORIGIN, DESTINATION, DEPART, return_date=RETURN,
+                             route_name="diag")
+    except Exception as exc:  # noqa: BLE001
+        logger.error("search %s→%s selhal: %s", ORIGIN, DESTINATION, exc)
+        return 0
 
-    for origin, destination in COMBOS:
-        if src.request_count >= MAX_REQUESTS:
-            logger.info("Dosažen strop %d requestů – končím.", MAX_REQUESTS)
-            break
-        try:
-            results = src.search(origin, destination, DEPART,
-                                 return_date=RETURN, route_name="diag")
-        except Exception as exc:  # noqa: BLE001
-            logger.error("search %s→%s selhal: %s", origin, destination, exc)
-            continue
-        logger.info("SEARCH %s→%s: %d nabídek (po %d req, rate_limited=%s)",
-                    origin, destination, len(results), src.request_count,
-                    src.rate_limited)
-        for r in sorted(results, key=lambda r: r.price)[:3]:
-            logger.info("  %.0f € | %s→%s | %s→%s | %s",
-                        r.price, r.origin, r.destination, r.depart_date,
-                        r.return_date, ",".join(r.airlines) or "-")
-        all_results += results
-
-    logger.info("CELKEM: %d nabídek za %d requestů.", len(all_results),
-                src.request_count)
-    if not all_results:
-        logger.warning("Žádné nabídky – viz DIAG surová těla výše pro skutečný "
-                       "tvar odpovědi / chybu.")
+    logger.info("SEARCH %s→%s: %d nabídek (po %d req, rate_limited=%s)",
+                ORIGIN, DESTINATION, len(results), src.request_count,
+                src.rate_limited)
+    for r in sorted(results, key=lambda r: r.price)[:5]:
+        logger.info("  %.0f € | %s→%s | %s→%s | %s",
+                    r.price, r.origin, r.destination, r.depart_date,
+                    r.return_date, ",".join(r.airlines) or "-")
+    if not results:
+        logger.warning("Žádné nabídky – job se buď nedokončil v %d pollech, nebo "
+                       "viz DIAG surová těla výše pro skutečný tvar/chybu.",
+                       MAX_POLLS)
     return 0
 
 

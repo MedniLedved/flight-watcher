@@ -6,7 +6,12 @@ Kontrakt dle OFICIÁLNÍ dokumentace (goflightlabs dashboard, Flight Prices API)
           volitelně returnDate, adults, currency, cabinClass,
           mode=roundtrip, sortBy=best, group_by_roundtrip=true
   → IATA kódy přímo (NE skyId/entityId; goflightlabs retrieveFlights bere IATA).
-* SYNCHRONNÍ: jedno volání vrátí HTTP 200 s výsledky (žádný async 202/jobId).
+* ASYNC job-queue (ověřeno živě 2026-06-22): první volání vrátí HTTP 202
+  {"status":"processing","jobId":...,"message":"...check again later with the
+  same parameters..."}; výsledky se získají OPAKOVANÝM voláním STEJNÝCH parametrů
+  (poll), dokud nevrátí HTTP 200. Joby dozrávají ~30–80 s → scanner submitne
+  (uloží pending) a sebere je collectem v dalším běhu. (Dokumentační příklad
+  vypadá synchronně, ale produkční API je job-queue.)
 * Tělo 200 (group_by_roundtrip=true):
     {"pairs":[{"outbound":{...leg...},"inbound":{...leg...}, "price":...}],
      "unpaired":[...legů, které nešly spárovat...]}
@@ -18,8 +23,8 @@ Kontrakt dle OFICIÁLNÍ dokumentace (goflightlabs dashboard, Flight Prices API)
   (`unpaired`) se zahazují (ochrana proti one-way pollution).
 
 Kvóta: 4000 req/měsíc (po upgradu), fakturační období kotví na 19. Rate limit
-~10 req/10 s. submit() je díky synchronnímu API fakticky 1 request = výsledky;
-202/pending větev zůstává jen jako bezpečná pojistka (běžně se netriggeruje).
+~10 req/10 s. POZOR: async poll znamená VÍC requestů na kombinaci (submit + N
+collect pollů v dalších bězích).
 """
 from __future__ import annotations
 
