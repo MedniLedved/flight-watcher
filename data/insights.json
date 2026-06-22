@@ -20,22 +20,16 @@
         "observations": 2
       },
       {
-        "code": "MUC",
-        "dealRatePct": 69.6,
-        "medianEur": 564.0,
-        "observations": 92
-      },
-      {
-        "code": "PRG",
-        "dealRatePct": 69.2,
-        "medianEur": 557.0,
-        "observations": 26
-      },
-      {
         "code": "VIE",
         "dealRatePct": 68.8,
         "medianEur": 547.0,
         "observations": 128
+      },
+      {
+        "code": "MUC",
+        "dealRatePct": 64.6,
+        "medianEur": 585.0,
+        "observations": 99
       },
       {
         "code": "BUD",
@@ -54,6 +48,12 @@
         "dealRatePct": 54.5,
         "medianEur": 505.0,
         "observations": 11
+      },
+      {
+        "code": "PRG",
+        "dealRatePct": 51.4,
+        "medianEur": 557.0,
+        "observations": 35
       },
       {
         "code": "NUE",
@@ -89,27 +89,27 @@
       },
       {
         "code": "KIX",
-        "dealRatePct": 13.0,
-        "medianEur": 1064.5,
-        "observations": 46
-      },
-      {
-        "code": "NGO",
-        "dealRatePct": 11.1,
-        "medianEur": 1031.0,
-        "observations": 9
+        "dealRatePct": 11.8,
+        "medianEur": 1072.0,
+        "observations": 51
       },
       {
         "code": "HND",
-        "dealRatePct": 8.9,
-        "medianEur": 1060.0,
-        "observations": 45
+        "dealRatePct": 8.3,
+        "medianEur": 1061.0,
+        "observations": 48
+      },
+      {
+        "code": "NGO",
+        "dealRatePct": 8.3,
+        "medianEur": 1083.0,
+        "observations": 12
       },
       {
         "code": "NRT",
-        "dealRatePct": 5.6,
-        "medianEur": 1020.5,
-        "observations": 36
+        "dealRatePct": 7.3,
+        "medianEur": 1024.0,
+        "observations": 41
       },
       {
         "code": "ITM",
@@ -120,11 +120,6 @@
     ]
   },
   "cheapestDepartureDow": [
-    {
-      "dow": "SO",
-      "dealRatePct": 70.6,
-      "medianEur": 505.0
-    },
     {
       "dow": "PÁ",
       "dealRatePct": 70.0,
@@ -154,18 +149,23 @@
       "dow": "ÚT",
       "dealRatePct": 49.3,
       "medianEur": 660.0
+    },
+    {
+      "dow": "SO",
+      "dealRatePct": 48.0,
+      "medianEur": 885.5
     }
   ],
   "cheapestArrivalDow": [
     {
-      "dow": "NE",
-      "dealRatePct": 0.0,
-      "medianEur": 977.0
-    },
-    {
       "dow": "PO",
       "dealRatePct": 0.0,
       "medianEur": 982.5
+    },
+    {
+      "dow": "NE",
+      "dealRatePct": 0.0,
+      "medianEur": 1008.5
     },
     {
       "dow": "ÚT",
@@ -190,7 +190,7 @@
     {
       "dow": "ČT",
       "dealRatePct": 0.0,
-      "medianEur": 1352.0
+      "medianEur": 1327.5
     }
   ]
 }
