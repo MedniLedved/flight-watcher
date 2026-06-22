@@ -34,9 +34,19 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("probe_flightlabs_correct")
 
 BASE = "https://www.goflightlabs.com"
-SEARCH_AIRPORT_URL = f"{BASE}/searchAirport"
+# Resolce skyId/entityId pro Flight Prices API: dle dokumentace endpoint
+# `retrieveAirport` (ne `searchAirport` – ten na hostu vrací 404).
+RETRIEVE_AIRPORT_URL = f"{BASE}/retrieveAirport"
 RETRIEVE_FLIGHTS_URL = f"{BASE}/retrieveFlights"
 RETRIEVE_INCOMPLETE_URL = f"{BASE}/retrieveFlightsIncomplete"
+
+# Pojistka: dokumentovaný příklad z goflightlabs (LOND→NYCA). Když resolce
+# selže, ověříme aspoň, že retrieveFlights + parser fungují s known-good ID.
+DOC_EXAMPLE = {
+    "originSkyId": "LOND", "originEntityId": "27544008",
+    "destinationSkyId": "NYCA", "destinationEntityId": "27537542",
+    "date": "2026-09-15",
+}
 
 # Jedna trasa, termíny v cestovním okně (září–prosinec 2026).
 ORIGIN_IATA = "MUC"
@@ -102,8 +112,8 @@ def resolve_airport(session: requests.Session, key: str, iata: str,
         logger.warning("Rozpočet vyčerpán před resolcí %s", iata)
         return None
     params = {"query": iata, "access_key": key}
-    resp = session.get(SEARCH_AIRPORT_URL, params=params, timeout=40)
-    _dump(f"searchAirport {iata}", resp)
+    resp = session.get(RETRIEVE_AIRPORT_URL, params=params, timeout=40)
+    _dump(f"retrieveAirport {iata}", resp)
     time.sleep(REQUEST_DELAY_S)
     if resp.status_code != 200:
         return None
@@ -166,28 +176,35 @@ def main() -> int:
 
     origin = resolve_airport(session, key, ORIGIN_IATA, budget)
     dest = resolve_airport(session, key, DEST_IATA, budget)
-    if not origin or not dest:
-        logger.error("Resolce letiště selhala → nelze volat retrieveFlights "
-                     "(použito %d req).", budget.used)
-        return 0
+
+    if origin and dest:
+        params = {
+            "originSkyId": origin["skyId"],
+            "originEntityId": origin["entityId"],
+            "destinationSkyId": dest["skyId"],
+            "destinationEntityId": dest["entityId"],
+            "date": DEPART,
+            "returnDate": RETURN,
+            "adults": 1,
+            "currency": "EUR",
+            "cabinClass": "economy",
+            "access_key": key,
+        }
+        label = f"retrieveFlights {ORIGIN_IATA}→{DEST_IATA} (reálná trasa)"
+    else:
+        # Pojistka: resolce selhala → ověř aspoň mechaniku hledání + parser
+        # s dokumentovanými known-good skyId/entityId (LOND→NYCA, one-way).
+        logger.warning("Resolce letiště selhala → fallback na dokumentovaný "
+                       "příklad LOND→NYCA (ověří jen retrieveFlights + parser).")
+        params = {**DOC_EXAMPLE, "adults": 1, "currency": "EUR",
+                  "cabinClass": "economy", "access_key": key}
+        label = "retrieveFlights LOND→NYCA (dokumentovaný příklad)"
 
     if not budget.spend():
         logger.warning("Rozpočet vyčerpán před retrieveFlights.")
         return 0
-    params = {
-        "originSkyId": origin["skyId"],
-        "originEntityId": origin["entityId"],
-        "destinationSkyId": dest["skyId"],
-        "destinationEntityId": dest["entityId"],
-        "date": DEPART,
-        "returnDate": RETURN,
-        "adults": 1,
-        "currency": "EUR",
-        "cabinClass": "economy",
-        "access_key": key,
-    }
     resp = session.get(RETRIEVE_FLIGHTS_URL, params=params, timeout=60)
-    _dump("retrieveFlights", resp)
+    _dump(label, resp)
     time.sleep(REQUEST_DELAY_S)
     if resp.status_code != 200:
         logger.error("retrieveFlights vrátil HTTP %d (použito %d req).",
