@@ -168,9 +168,15 @@ for sub in "${DATA_SUBDIRS[@]}"; do
       WIRING_FAILED=1
     fi
   done
+  # .gitignore nesmí tyto adresáře blokovat — jinak je scan.yml „git add" tiše
+  # přeskočí (gitignore přebíjí explicitní add bez -f) a řady se každý běh ztratí.
+  if git -C "$REPO_ROOT" check-ignore -q "data/$sub" 2>/dev/null; then
+    echo "  ❌ data/$sub je v .gitignore → scan ho nezacommituje (zamrzlá pipeline)"
+    WIRING_FAILED=1
+  fi
 done
 if [ $WIRING_FAILED -eq 1 ]; then exit 1; fi
-echo "  ✓ history, calendar i alternatives jsou stagované i deployované"
+echo "  ✓ history, calendar i alternatives jsou stagované, deployované a ne-ignorované"
 
 # 7. Optional: Test deployed site (requires network + curl)
 echo ""

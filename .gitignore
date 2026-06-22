@@ -19,9 +19,11 @@ venv/
 # Sky Scrapper IATA→skyId/entityId cache (regeneruje se za běhu, drží Actions cache)
 data/skyscrapper_airports.json
 
-# Generated data directories
-data/calendar/
-data/history/
+# POZOR: data/calendar/ a data/history/ NESMÍ být v .gitignore. Jsou to kanonické
+# append-only řady (viz CLAUDE.md) — scanner je zapisuje a scan.yml je commituje,
+# deploy je synchronizuje na gh-pages. Když je ignoruješ, scan je každý běh zahodí
+# a deploy přepíše deployovaný kalendář/historii zastaralým snapshotem (regrese
+# „zamrzlá pipeline"). validate.sh [6b] hlídá, že tu nejsou.
 
 # Vite cache
 web/.vite/
