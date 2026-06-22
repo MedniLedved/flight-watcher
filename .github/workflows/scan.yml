@@ -32,17 +32,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Open-jaw (multi-city) na Google Flights vyžaduje JS render – zapíná se
-      # repo variable GOOGLEFLIGHTS_FETCH_MODE=local; pak je potřeba playwright.
-      - name: Install playwright (jen pro GOOGLEFLIGHTS_FETCH_MODE=local)
-        if: vars.GOOGLEFLIGHTS_FETCH_MODE == 'local'
+      # Google Flights servíruje většinu výsledků (i open-jaw) jen po JS renderu –
+      # přímý GET (mode "common") vrací „Loading results" bez dat. Proto výchozí
+      # režim = "local" (playwright/headless Chromium). Repo variable
+      # GOOGLEFLIGHTS_FETCH_MODE může default přebít (common/fallback).
+      - name: Install playwright (pro GOOGLEFLIGHTS_FETCH_MODE=local)
+        if: ${{ (vars.GOOGLEFLIGHTS_FETCH_MODE || 'local') == 'local' }}
         run: |
           pip install playwright
           playwright install --with-deps chromium
 
       - name: Run scanner
         env:
-          GOOGLEFLIGHTS_FETCH_MODE: ${{ vars.GOOGLEFLIGHTS_FETCH_MODE }}
+          GOOGLEFLIGHTS_FETCH_MODE: ${{ vars.GOOGLEFLIGHTS_FETCH_MODE || 'local' }}
           DUFFEL_TOKEN: ${{ secrets.DUFFEL_TOKEN }}
           FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
