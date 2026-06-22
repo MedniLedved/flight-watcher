@@ -1250,6 +1250,104 @@ def test_flightlabs_parse_legs_drops_unpaired_oneway():
     assert src._parse_legs(only_out, "MUC", "NRT", "Test") == []
 
 
+# Oficiální tvar group_by_roundtrip=true: {"pairs":[{outbound,inbound,price}], "unpaired":[]}
+_FLIGHTLABS_PAIRS = {
+    "pairs": [
+        {"price": 1057,
+         "outbound": {"origin": {"code": "MUC"}, "destination": {"code": "NRT"},
+                      "departure": "2026-09-10T11:25:00", "flightNumber": "EY25",
+                      "stopCount": 1},
+         "inbound": {"origin": {"code": "NRT"}, "destination": {"code": "MUC"},
+                     "departure": "2026-09-24T18:00:00", "flightNumber": "EY13",
+                     "stopCount": 1}},
+        {"price": 1290,
+         "outbound": {"origin": {"code": "MUC"}, "destination": {"code": "NRT"},
+                      "departure": "2026-09-11T09:00:00", "flightNumber": "QR83",
+                      "stopCount": 1},
+         "inbound": {"origin": {"code": "NRT"}, "destination": {"code": "MUC"},
+                     "departure": "2026-09-25T22:25:00", "flightNumber": "QR79",
+                     "stopCount": 1}},
+    ],
+    "unpaired": [
+        {"origin": {"code": "MUC"}, "destination": {"code": "NRT"},
+         "departure": "2026-09-12T07:00:00", "flightNumber": "LH716"},
+    ],
+}
+
+
+def test_flightlabs_parse_pairs_roundtrips():
+    """pairs[].outbound/.inbound → roundtrip; cena z páru, datumy z legů,
+    aerolinka z čísla letu. `unpaired` se ignoruje."""
+    from src.sources.flightlabs import FlightLabsSource
+    src = FlightLabsSource(access_key="x")
+    out = src._parse_pairs(_FLIGHTLABS_PAIRS["pairs"], "MUC", "NRT", "Test")
+    assert len(out) == 2
+    cheapest = min(out, key=lambda r: r.price)
+    assert cheapest.price == 1057.0
+    assert cheapest.origin == "MUC" and cheapest.destination == "NRT"
+    assert cheapest.return_origin == "NRT" and cheapest.return_destination == "MUC"
+    assert cheapest.depart_date == date(2026, 9, 10)
+    assert cheapest.return_date == date(2026, 9, 24)
+    assert cheapest.airlines == ["EY"]
+
+
+def test_flightlabs_results_from_response_prefers_pairs():
+    """_results_from_response naparsuje oficiální {"pairs":[...]} tvar (ne plochý
+    seznam) a seřadí podle ceny."""
+    from src.sources.flightlabs import FlightLabsSource
+
+    class _Resp:
+        status_code = 200
+        text = "{}"
+        def json(self):
+            return _FLIGHTLABS_PAIRS
+        def raise_for_status(self):
+            pass
+
+    src = FlightLabsSource(access_key="x")
+    out = src._results_from_response(_Resp(), "MUC", "NRT", "Test")
+    assert [r.price for r in out] == [1057.0, 1290.0]
+
+
+def test_flightlabs_submit_sends_documented_params():
+    """submit() musí poslat originIATACode/destinationIATACode + mode=roundtrip,
+    sortBy=best, group_by_roundtrip=true (oficiální Flight Prices kontrakt)."""
+    from src.sources.flightlabs import FlightLabsSource
+
+    class _Resp:
+        status_code = 200
+        text = "{}"
+        def json(self):
+            return _FLIGHTLABS_PAIRS
+        def raise_for_status(self):
+            pass
+
+    captured = {}
+
+    class _Session:
+        def get(self, url, params=None, **k):
+            captured.update(params or {})
+            return _Resp()
+
+    import src.sources.flightlabs as fl_mod
+    _orig = fl_mod.time.sleep
+    fl_mod.time.sleep = lambda *a, **k: None
+    try:
+        src = FlightLabsSource(access_key="secret", session=_Session())
+        results, pending = src.submit("MUC", "NRT", date(2026, 9, 10),
+                                      return_date=date(2026, 9, 24))
+    finally:
+        fl_mod.time.sleep = _orig
+
+    assert pending is None and len(results) == 2
+    assert captured["originIATACode"] == "MUC"
+    assert captured["destinationIATACode"] == "NRT"
+    assert captured["mode"] == "roundtrip"
+    assert captured["sortBy"] == "best"
+    assert captured["group_by_roundtrip"] == "true"
+    assert captured["returnDate"] == "2026-09-24"
+
+
 def test_flightlabs_airline_code_from_flight_number():
     from src.sources.flightlabs import FlightLabsSource
     f = FlightLabsSource._airline_code

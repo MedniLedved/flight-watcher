@@ -1,249 +1,72 @@
-"""Read-only probe goflightlabs podle SPRÁVNÉHO Skyscanner-style kontraktu.
+"""Minimální živý test FlightLabs přes PRODUKČNÍ zdroj (src.sources.flightlabs).
 
-Smysl: na malém vzorku (cap ~6 requestů, JEDNA trasa) ověřit, jestli při
-správném volání dostáváme reálné spoje – na rozdíl od produkčního zdroje
-(`src/sources/flightlabs.py`), který posílá `originIATACode`/`destinationIATACode`
-a poll dělá re-submitem celého hledání (špalil kvótu, 429, 0 výsledků).
+Smysl: na malém vzorku (strop 6 requestů) ověřit, že po opravě dostáváme reálné
+spoje. Volá přímo FlightLabsSource.search() – tedy úplně stejný kód i parser,
+jaký používá scanner v produkci (žádná paralelní reimplementace, která by se
+mohla rozejít s realitou).
 
-Správný flow (goflightlabs = Skyscanner klon):
-  1. GET /searchAirport?query=MUC   → skyId + entityId   (1 req / letiště)
-  2. GET /retrieveFlights?originSkyId&originEntityId&destinationSkyId&
-         destinationEntityId&date[&returnDate&adults&currency&cabinClass]
-     → 200 {context:{status, sessionId, totalResults}, itineraries:[{price:{raw},legs}]}
-  3. když context.status == "incomplete": GET /retrieveFlightsIncomplete?sessionId=…
-     (poll STEJNÝM sessionId, NE re-submit celého hledání) až do "complete".
+Oficiální kontrakt (goflightlabs Flight Prices API):
+  GET /retrieveFlights?access_key=…&originIATACode=…&destinationIATACode=…
+      &date=…&returnDate=…&mode=roundtrip&sortBy=best&group_by_roundtrip=true
+  → synchronní 200 {"pairs":[{outbound,inbound,price}], "unpaired":[…]}
 
 NEdělá nic destruktivního: nezapisuje historii, neposílá Telegram, necommituje.
-Vypisuje surové (zkrácené) odpovědi, ať vidíme skutečný tvar a field names.
+Zdroj sám loguje surové tělo prvních 3 requestů (DIAG) → vidíme skutečný tvar.
 
 Spuštění (v CI, kde je FLIGHTLABS_KEY): python -m scripts.probe_flightlabs_correct
 """
 from __future__ import annotations
 
-import json
 import logging
 import sys
-import time
-from typing import Optional
-
-import requests
+from datetime import date
 
 from src.config import Settings
+from src.sources.flightlabs import FlightLabsSource
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("probe_flightlabs_correct")
 
-BASE = "https://www.goflightlabs.com"
-# Resolce skyId/entityId pro Flight Prices API: dle dokumentace endpoint
-# `retrieveAirport` (ne `searchAirport` – ten na hostu vrací 404).
-RETRIEVE_AIRPORT_URL = f"{BASE}/retrieveAirport"
-RETRIEVE_FLIGHTS_URL = f"{BASE}/retrieveFlights"
-RETRIEVE_INCOMPLETE_URL = f"{BASE}/retrieveFlightsIncomplete"
-
-# Pojistka: dokumentovaný příklad z goflightlabs (LOND→NYCA). Když resolce
-# selže, ověříme aspoň, že retrieveFlights + parser fungují s known-good ID.
-DOC_EXAMPLE = {
-    "originSkyId": "LOND", "originEntityId": "27544008",
-    "destinationSkyId": "NYCA", "destinationEntityId": "27537542",
-    "date": "2026-09-15",
-}
-
-# Jedna trasa, termíny v cestovním okně (září–prosinec 2026).
-ORIGIN_IATA = "MUC"
-DEST_IATA = "NRT"
-DEPART = "2026-11-12"
-RETURN = "2026-11-26"
-
-MAX_REQUESTS = 6          # tvrdý strop – ať se nespálí víc, než uživatel schválil
-INCOMPLETE_POLLS = 3      # kolik dotažení sessionId po prvním "incomplete"
-POLL_DELAY_S = 6.0
-REQUEST_DELAY_S = 2.0
-
-
-class Budget:
-    def __init__(self, limit: int):
-        self.limit = limit
-        self.used = 0
-
-    def spend(self) -> bool:
-        if self.used >= self.limit:
-            return False
-        self.used += 1
-        return True
-
-
-def _dump(label: str, resp: requests.Response) -> None:
-    body = resp.text or ""
-    logger.info("%s → HTTP %d | %.700s", label, resp.status_code,
-                body.replace("\n", " "))
-
-
-def _find_airport(payload: object, iata: str) -> Optional[dict]:
-    """Najde v odpovědi searchAirport položku se skyId+entityId; preferuje
-    shodu skyId == IATA, jinak první nalezenou (tvar odpovědi neznáme jistě,
-    proto rekurzivně)."""
-    candidates: list[dict] = []
-
-    def walk(node: object) -> None:
-        if isinstance(node, dict):
-            sky = node.get("skyId") or node.get("skyid")
-            ent = node.get("entityId") or node.get("entityid")
-            if sky and ent:
-                candidates.append({"skyId": str(sky), "entityId": str(ent),
-                                   "raw": node})
-            for v in node.values():
-                walk(v)
-        elif isinstance(node, list):
-            for v in node:
-                walk(v)
-
-    walk(payload)
-    if not candidates:
-        return None
-    for c in candidates:
-        if c["skyId"].upper() == iata.upper():
-            return c
-    return candidates[0]
-
-
-def resolve_airport(session: requests.Session, key: str, iata: str,
-                    budget: Budget) -> Optional[dict]:
-    if not budget.spend():
-        logger.warning("Rozpočet vyčerpán před resolcí %s", iata)
-        return None
-    params = {"query": iata, "access_key": key}
-    resp = session.get(RETRIEVE_AIRPORT_URL, params=params, timeout=40)
-    _dump(f"retrieveAirport {iata}", resp)
-    time.sleep(REQUEST_DELAY_S)
-    if resp.status_code != 200:
-        return None
-    try:
-        found = _find_airport(resp.json(), iata)
-    except ValueError:
-        logger.error("searchAirport %s: tělo není JSON", iata)
-        return None
-    if found:
-        logger.info("  %s → skyId=%s entityId=%s", iata, found["skyId"],
-                    found["entityId"])
-    else:
-        logger.warning("  %s: v odpovědi nenalezen skyId/entityId", iata)
-    return found
-
-
-def parse_itineraries(payload: dict) -> tuple[Optional[str], Optional[str], list]:
-    """Vrátí (status, sessionId, itineraries) z context obálky."""
-    ctx = payload.get("context", {}) if isinstance(payload, dict) else {}
-    status = ctx.get("status")
-    session_id = ctx.get("sessionId") or ctx.get("sessionid")
-    its = payload.get("itineraries") if isinstance(payload, dict) else None
-    if its is None and isinstance(payload.get("data"), dict):
-        inner = payload["data"]
-        its = inner.get("itineraries")
-        ctx2 = inner.get("context", {})
-        status = status or ctx2.get("status")
-        session_id = session_id or ctx2.get("sessionId")
-    return status, session_id, its or []
-
-
-def cheapest(itineraries: list, n: int = 5) -> list[tuple]:
-    rows = []
-    for it in itineraries:
-        if not isinstance(it, dict):
-            continue
-        raw = (it.get("price") or {}).get("raw")
-        legs = it.get("legs") or []
-        carriers = []
-        for leg in legs:
-            for c in (leg.get("carriers", {}) or {}).get("marketing", []) or []:
-                code = c.get("alternateId") or c.get("name")
-                if code:
-                    carriers.append(str(code))
-        rows.append((raw, len(legs), ",".join(sorted(set(carriers))) or "-"))
-    rows = [r for r in rows if r[0] is not None]
-    rows.sort(key=lambda r: r[0])
-    return rows[:n]
+# Pár tras Evropa→Japonsko v cestovním okně (září–prosinec 2026).
+COMBOS = [("MUC", "NRT"), ("PRG", "NRT"), ("VIE", "HND")]
+DEPART = date(2026, 11, 12)
+RETURN = date(2026, 11, 26)
+MAX_REQUESTS = 6   # tvrdý strop – ať se nespálí víc, než je schváleno
 
 
 def main() -> int:
     settings = Settings.load()
     if not settings.flightlabs_key:
-        logger.error("FLIGHTLABS_KEY není nastaven – nelze probovat.")
+        logger.error("FLIGHTLABS_KEY není nastaven – nelze testovat.")
         return 1
-    key = settings.flightlabs_key
 
-    session = requests.Session()
-    budget = Budget(MAX_REQUESTS)
+    src = FlightLabsSource(settings.flightlabs_key)
+    all_results = []
 
-    origin = resolve_airport(session, key, ORIGIN_IATA, budget)
-    dest = resolve_airport(session, key, DEST_IATA, budget)
-
-    if origin and dest:
-        params = {
-            "originSkyId": origin["skyId"],
-            "originEntityId": origin["entityId"],
-            "destinationSkyId": dest["skyId"],
-            "destinationEntityId": dest["entityId"],
-            "date": DEPART,
-            "returnDate": RETURN,
-            "adults": 1,
-            "currency": "EUR",
-            "cabinClass": "economy",
-            "access_key": key,
-        }
-        label = f"retrieveFlights {ORIGIN_IATA}→{DEST_IATA} (reálná trasa)"
-    else:
-        # Pojistka: resolce selhala → ověř aspoň mechaniku hledání + parser
-        # s dokumentovanými known-good skyId/entityId (LOND→NYCA, one-way).
-        logger.warning("Resolce letiště selhala → fallback na dokumentovaný "
-                       "příklad LOND→NYCA (ověří jen retrieveFlights + parser).")
-        params = {**DOC_EXAMPLE, "adults": 1, "currency": "EUR",
-                  "cabinClass": "economy", "access_key": key}
-        label = "retrieveFlights LOND→NYCA (dokumentovaný příklad)"
-
-    if not budget.spend():
-        logger.warning("Rozpočet vyčerpán před retrieveFlights.")
-        return 0
-    resp = session.get(RETRIEVE_FLIGHTS_URL, params=params, timeout=60)
-    _dump(label, resp)
-    time.sleep(REQUEST_DELAY_S)
-    if resp.status_code != 200:
-        logger.error("retrieveFlights vrátil HTTP %d (použito %d req).",
-                     resp.status_code, budget.used)
-        return 0
-
-    payload = resp.json()
-    status, session_id, its = parse_itineraries(payload)
-    logger.info("retrieveFlights: status=%s sessionId=%s itineraries=%d",
-                status, (session_id or "")[:12], len(its))
-
-    # Poll incomplete přes sessionId (NE re-submit), dokud nemáme complete
-    # nebo nedojde rozpočet.
-    polls = 0
-    while (status == "incomplete" and session_id and polls < INCOMPLETE_POLLS
-           and budget.used < budget.limit):
-        time.sleep(POLL_DELAY_S)
-        if not budget.spend():
+    for origin, destination in COMBOS:
+        if src.request_count >= MAX_REQUESTS:
+            logger.info("Dosažen strop %d requestů – končím.", MAX_REQUESTS)
             break
-        polls += 1
-        ip = {"sessionId": session_id, "access_key": key}
-        r = session.get(RETRIEVE_INCOMPLETE_URL, params=ip, timeout=60)
-        _dump(f"retrieveFlightsIncomplete #{polls}", r)
-        time.sleep(REQUEST_DELAY_S)
-        if r.status_code != 200:
-            logger.warning("incomplete poll #%d: HTTP %d", polls, r.status_code)
-            break
-        payload = r.json()
-        status, sid2, its = parse_itineraries(payload)
-        session_id = sid2 or session_id
-        logger.info("  poll #%d: status=%s itineraries=%d", polls, status,
-                    len(its))
+        try:
+            results = src.search(origin, destination, DEPART,
+                                 return_date=RETURN, route_name="diag")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("search %s→%s selhal: %s", origin, destination, exc)
+            continue
+        logger.info("SEARCH %s→%s: %d nabídek (po %d req, rate_limited=%s)",
+                    origin, destination, len(results), src.request_count,
+                    src.rate_limited)
+        for r in sorted(results, key=lambda r: r.price)[:3]:
+            logger.info("  %.0f € | %s→%s | %s→%s | %s",
+                        r.price, r.origin, r.destination, r.depart_date,
+                        r.return_date, ",".join(r.airlines) or "-")
+        all_results += results
 
-    logger.info("VÝSLEDEK: status=%s, %d itinerářů, %d requestů celkem.",
-                status, len(its), budget.used)
-    for raw, nlegs, carriers in cheapest(its):
-        logger.info("  %.0f EUR | %d legů | %s", raw, nlegs, carriers)
-    if not its:
-        logger.warning("Žádné itineráře – viz surová těla výše pro skutečný tvar.")
+    logger.info("CELKEM: %d nabídek za %d requestů.", len(all_results),
+                src.request_count)
+    if not all_results:
+        logger.warning("Žádné nabídky – viz DIAG surová těla výše pro skutečný "
+                       "tvar odpovědi / chybu.")
     return 0
 
 
