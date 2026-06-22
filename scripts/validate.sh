@@ -178,6 +178,23 @@ done
 if [ $WIRING_FAILED -eq 1 ]; then exit 1; fi
 echo "  ✓ history, calendar i alternatives jsou stagované, deployované a ne-ignorované"
 
+# 6c. Deploy MUSÍ běžet po denním scanu. Scan commituje data/ přes GITHUB_TOKEN
+#     a takový push NESPOUŠTÍ deploy.yml přes `push:` (GitHub potlačuje
+#     rekurzivní běhy) → bez `workflow_run` triggeru by gh-pages po cronu
+#     zůstal zastaralý (kořen „stale dashboard" bugu z 2026-06-22). Tato
+#     kontrola hlídá, že workflow_run vazba na scan v deploy.yml nezmizí.
+echo ""
+echo "[6c] Auto-deploy po scanu (workflow_run vazba)..."
+DEPLOY_YML="$REPO_ROOT/.github/workflows/deploy.yml"
+SCAN_NAME="$(grep -m1 '^name:' "$REPO_ROOT/.github/workflows/scan.yml" | sed 's/^name:[[:space:]]*//')"
+if ! grep -q "workflow_run:" "$DEPLOY_YML" \
+   || ! grep -qF "$SCAN_NAME" "$DEPLOY_YML"; then
+  echo "  ❌ deploy.yml nemá workflow_run trigger na scan (\"$SCAN_NAME\")"
+  echo "     → data z cronu by se nikdy nenasadila na gh-pages."
+  exit 1
+fi
+echo "  ✓ deploy.yml se spouští po dokončení scanu \"$SCAN_NAME\""
+
 # 7. Optional: Test deployed site (requires network + curl)
 echo ""
 echo "[7/7] GitHub Pages deployment..."
