@@ -283,14 +283,20 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                   const eff = effPrices[i];
                   const isSel = selected ? offerKey(selected) === offerKey(o) : false;
                   const estimated = !o.returnDate;
+                  const staleDays = o.flags.staleDays ?? 0;
+                  const stale = staleDays > 0;
+                  const staleHint = stale
+                    ? ` · ⚠ archiv ${staleDays} d (poslední cena, ne živá nabídka)`
+                    : "";
                   return (
                     <div key={offerKey(o)} className="relative h-9">
                       <button
                         onClick={() => setSelected((prev) => (prev && offerKey(prev) === offerKey(o) ? null : o))}
                         className={cn(
-                          "absolute inset-y-1 flex items-center overflow-hidden rounded px-2",
+                          "absolute inset-y-1 flex items-center gap-1 overflow-hidden rounded px-2",
                           "text-[11px] font-semibold text-white transition-all hover:brightness-110",
                           estimated && "border-r-2 border-dashed border-white/60",
+                          stale && "opacity-50",
                           isSel && "outline outline-2 outline-offset-1 outline-foreground",
                         )}
                         style={{
@@ -299,11 +305,12 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                           background: priceColor(eff, minPrice, maxPrice),
                         }}
                         title={
-                          estimated
+                          (estimated
                             ? `${laneLabel(o)} · od ${fmtDay(o.departDate!)} · délka pobytu odhadnuta (${o.nights ?? minNights} nocí)`
-                            : `${laneLabel(o)} · ${fmtDay(o.departDate!)} – ${fmtDay(o.returnDate!)}`
+                            : `${laneLabel(o)} · ${fmtDay(o.departDate!)} – ${fmtDay(o.returnDate!)}`) + staleHint
                         }
                       >
+                        {stale && <span className="text-[9px] leading-none">🕓</span>}
                         <span className="truncate tabular-nums">{Math.round(eff)} €</span>
                       </button>
                     </div>
@@ -325,6 +332,11 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
                   nové minimum
                 </span>
               )}
+              {(selected.flags.staleDays ?? 0) > 0 && (
+                <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                  🕓 archiv {selected.flags.staleDays} d
+                </span>
+              )}
             </p>
             <div className="flex gap-2">
               <DealButton offer={selected} />
@@ -333,6 +345,13 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               </Button>
             </div>
           </div>
+          {(selected.flags.staleDays ?? 0) > 0 && (
+            <p className="mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
+              Tohle je <strong>poslední známá cena</strong> (pozorováno před{" "}
+              {selected.flags.staleDays} dny), ne živá nabídka — proto chybí
+              přímý odkaz. Aktuální cena může být jiná.
+            </p>
+          )}
           <dl className="grid grid-cols-2 gap-x-8 gap-y-1 sm:grid-cols-4">
             <dt className="text-muted-foreground">Odlet</dt>
             <dd className="tabular-nums">{fmtDay(selected.departDate!)}</dd>

@@ -180,11 +180,17 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                   const stops = stopsLabel(o.stopsOut, o.stopsIn);
                   return (
                   <Fragment key={o.routeKey + o.source + o.departDate}>
-                  <TableRow>
+                  <TableRow className={(o.flags?.staleDays ?? 0) > 0 ? "opacity-60" : undefined}>
                     <TableCell>{fmtDate(o.departDate)}</TableCell>
                     <TableCell>{fmtDate(o.returnDate)}</TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">
                       {Math.round(o.price)} €
+                      {(o.flags?.staleDays ?? 0) > 0 && (
+                        <div className="text-xs font-normal text-amber-600"
+                             title="Poslední známá cena, ne živá nabídka">
+                          🕓 archiv {o.flags!.staleDays} d
+                        </div>
+                      )}
                       {o.scannedPrice != null && (
                         <div className="text-xs font-normal text-amber-600" title="Původní cena ze scanu">
                           scan: {Math.round(o.scannedPrice)} €
