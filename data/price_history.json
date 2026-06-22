@@ -865,10 +865,24 @@
         "price": 1032.0,
         "return_date": "2026-09-20",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-10-24",
+        "price": 963.0,
+        "return_date": "2026-11-05",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-09-05",
+        "price": 1062.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1032.0,
-    "last_seen": "2026-06-21"
+    "last_price": 1062.0,
+    "last_seen": "2026-06-22"
   },
   "MUC-KIX-roundtrip": {
     "alerts": {},
@@ -929,10 +943,31 @@
         "price": 1227.0,
         "return_date": "2026-11-07",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-09-05",
+        "price": 974.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-10-24",
+        "price": 1072.0,
+        "return_date": "2026-11-05",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-12-12",
+        "price": 1190.0,
+        "return_date": "2026-12-27",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1227.0,
-    "last_seen": "2026-06-20"
+    "last_price": 1190.0,
+    "last_seen": "2026-06-22"
   },
   "MUC-NGO-KIX-openjaw": {
     "alerts": {},
@@ -1015,10 +1050,24 @@
         "price": 933.0,
         "return_date": "2026-09-20",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-09-05",
+        "price": 933.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-12-12",
+        "price": 1162.0,
+        "return_date": "2026-12-27",
+        "source": "googleflights"
       }
     ],
-    "last_price": 933.0,
-    "last_seen": "2026-06-21"
+    "last_price": 1162.0,
+    "last_seen": "2026-06-22"
   },
   "MUC-OSA-roundtrip": {
     "alerts": {
@@ -1725,14 +1774,21 @@
         "price": 1027.0,
         "return_date": "2026-09-20",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-10-24",
+        "price": 1101.0,
+        "return_date": "2026-11-05",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1027.0,
-    "last_seen": "2026-06-21"
+    "last_price": 1101.0,
+    "last_seen": "2026-06-22"
   },
   "PRG-KIX-roundtrip": {
     "alerts": {},
-    "all_time_min": 1251.0,
+    "all_time_min": 1133.0,
     "history": [
       {
         "date": "2026-06-15",
@@ -1747,10 +1803,24 @@
         "price": 1512.0,
         "return_date": "2026-10-30",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-10-24",
+        "price": 1133.0,
+        "return_date": "2026-11-05",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-12-12",
+        "price": 1180.0,
+        "return_date": "2026-12-27",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1512.0,
-    "last_seen": "2026-06-15"
+    "last_price": 1180.0,
+    "last_seen": "2026-06-22"
   },
   "PRG-NGO-KIX-openjaw": {
     "alerts": {},
@@ -1767,9 +1837,38 @@
     "last_price": 982.0,
     "last_seen": "2026-06-12"
   },
+  "PRG-NGO-roundtrip": {
+    "alerts": {},
+    "all_time_min": 1203.0,
+    "history": [
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-09-05",
+        "price": 1203.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-10-24",
+        "price": 1307.0,
+        "return_date": "2026-11-05",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-12-12",
+        "price": 1477.0,
+        "return_date": "2026-12-27",
+        "source": "googleflights"
+      }
+    ],
+    "last_price": 1477.0,
+    "last_seen": "2026-06-22"
+  },
   "PRG-NRT-roundtrip": {
     "alerts": {},
-    "all_time_min": 1069.0,
+    "all_time_min": 838.0,
     "history": [
       {
         "date": "2026-06-15",
@@ -1784,10 +1883,31 @@
         "price": 1069.0,
         "return_date": "2026-11-03",
         "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-09-05",
+        "price": 838.0,
+        "return_date": "2026-09-20",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-12-12",
+        "price": 1065.0,
+        "return_date": "2026-12-27",
+        "source": "googleflights"
+      },
+      {
+        "date": "2026-06-22",
+        "depart_date": "2026-10-24",
+        "price": 1167.0,
+        "return_date": "2026-11-05",
+        "source": "googleflights"
       }
     ],
-    "last_price": 1069.0,
-    "last_seen": "2026-06-21"
+    "last_price": 1167.0,
+    "last_seen": "2026-06-22"
   },
   "PRG-TYO-roundtrip": {
     "alerts": {
@@ -2768,7 +2888,7 @@
     },
     "flightlabs_pending": [],
     "flightlabs_requests": {
-      "2026-06-19": 799
+      "2026-06-19": 803
     },
     "flightlabs_requests_total": 50,
     "quota": {
@@ -2779,9 +2899,9 @@
         "reset_at": "2026-07-09T12:50:50.224190"
       }
     },
-    "scan_count": 12,
+    "scan_count": 13,
     "serpapi_requests": {
-      "2026-06": 244
+      "2026-06": 245
     },
     "skyscrapper_requests": {
       "2026-06": 57
@@ -2789,37 +2909,37 @@
     "source_efficiency": {
       "flightlabs": {
         "last_run": "2026-06-22",
-        "runs": 12,
+        "runs": 13,
         "total_deals": 0,
-        "total_requests": 849,
+        "total_requests": 853,
         "total_results": 0
       },
       "googleflights": {
         "last_run": "2026-06-22",
-        "runs": 12,
+        "runs": 13,
         "total_deals": 0,
-        "total_requests": 336,
-        "total_results": 100
+        "total_requests": 474,
+        "total_results": 116
       },
       "serpapi": {
         "last_run": "2026-06-22",
-        "runs": 12,
+        "runs": 13,
         "total_deals": 0,
-        "total_requests": 244,
+        "total_requests": 245,
         "total_results": 22
       },
       "skyscrapper": {
         "last_run": "2026-06-22",
-        "runs": 12,
+        "runs": 13,
         "total_deals": 0,
         "total_requests": 0,
         "total_results": 0
       },
       "travelpayouts": {
         "last_run": "2026-06-22",
-        "runs": 12,
+        "runs": 13,
         "total_deals": 22,
-        "total_requests": 480,
+        "total_requests": 520,
         "total_results": 26
       }
     }
