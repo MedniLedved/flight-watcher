@@ -23,7 +23,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Probe FlightLabs (správný Skyscanner-style kontrakt, ~6 req, 1 trasa)
+      - name: Probe FlightLabs měna (currency+market+countryCode → EUR?, ~6 req)
+        env:
+          FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
+        run: python -m scripts.probe_flightlabs_currency
+
+      - name: Probe FlightLabs (Flight Prices async kontrakt, ~6 req, 1 trasa)
+        if: ${{ false }}
         env:
           FLIGHTLABS_KEY: ${{ secrets.FLIGHTLABS_KEY }}
         run: python -m scripts.probe_flightlabs_correct
