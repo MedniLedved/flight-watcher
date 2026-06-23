@@ -31,7 +31,7 @@ export function useRouteDetail(routeKey: string | null): RouteDetailState {
     (async () => {
       try {
         const [history, calendar, alternatives] = await Promise.all([
-          fetchJson<HistoryFile>(`data/history/${routeKey}.json`),
+          fetchJson<HistoryFile>(`data/history/${routeKey}.json`).catch(() => null as HistoryFile | null),
           fetchJson<CalendarFile>(`data/calendar/${routeKey}.json`).catch(() => [] as CalendarFile),
           fetchJson<AlternativesFile>(`data/alternatives/${routeKey}.json`).catch(() => [] as AlternativesFile),
         ]);

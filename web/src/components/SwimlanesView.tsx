@@ -82,7 +82,7 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const [includeTransport, setIncludeTransport] = useState(true);
 
   const offers = latest ?? [];
-  const dealMax = SWIMLANE_MAX_EUR;
+  const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? SWIMLANE_MAX_EUR;
   const minNights = agentConfig?.stayLength?.minNights ?? FALLBACK_NIGHTS;
 
   // Filtruj na EFEKTIVNÍ cenu (vč. dopravy, dle toggle) — stejná sémantika jako

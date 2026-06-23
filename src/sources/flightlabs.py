@@ -305,10 +305,11 @@ class FlightLabsSource:
             return None
         # Měna z odpovědi (typicky USD) → převod na EUR denním kurzem ECB.
         # API vždy vrací USD (ignoruje currency/market/countryCode params).
-        # Při nedostupném ECB kurzu: zkus poslední známý, pak hardcoded 0.88.
+        # Při nedostupném ECB kurzu: zkus poslední známý, pak hardcoded záloha.
+        # Kurz v ECB konvenci: 1 EUR = X USD → dělíme (shodně s _last_known).
         currency = str(out_leg.get("currency") or in_leg.get("currency") or "EUR").upper()
         price = self.fx.to_eur_with_fallback(raw_price, currency,
-                                             hardcoded={"USD": 0.88})
+                                             hardcoded={"USD": 1.09})
         if price is None:
             logger.warning("FlightLabs %s→%s: kurz %s→EUR nedostupný ani "
                            "jako fallback – nabídku přeskakuji",

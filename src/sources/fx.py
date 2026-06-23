@@ -98,13 +98,14 @@ class FxRates:
                 logger.warning("FX: kurz %s→EUR nedostupný, použit "
                                "poslední známý (%.4f)", currency, rate)
                 return round(amount / rate, 2)
-        # Fallback 2 – hardcoded aproximace.
+        # Fallback 2 – hardcoded aproximace. Kurzy mají stejnou konvenci jako
+        # živé kurzy (EUR-base: 1 EUR = X jednotek cizí měny), tj. dělíme.
         if hardcoded:
             rate = hardcoded.get(currency)
             if rate and rate > 0:
                 logger.warning("FX: kurz %s→EUR nedostupný, použit "
                                "hardcoded fallback (%.4f)", currency, rate)
-                return round(amount * rate, 2)
+                return round(amount / rate, 2)
         return None
 
     def _get_rates(self) -> Optional[dict[str, float]]:

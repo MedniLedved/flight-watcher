@@ -31,9 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     # Při workflow_run spusť jen po ÚSPĚŠNÉM scanu (event přijde i při selhání
     # nebo zrušení). Ostatní spouštěče (push, manuální dispatch) běží vždy.
-    if: >-
-      ${{ github.event_name != 'workflow_run'
-          || github.event.workflow_run.conclusion == 'success' }}
+    # Poznámka: ${{ }} na job-level if: vrací string "false" (truthy) — psát
+    # výraz přímo bez obálky, aby byl vyhodnocen jako boolean.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     # Prevent concurrent deploys; cancel stale run if a newer one queues up.
     concurrency:
       group: gh-pages-deploy

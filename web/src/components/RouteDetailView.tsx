@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,7 +107,7 @@ interface Props {
 
 export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Props) {
   const { history, calendar, alternatives, loading, error } = useRouteDetail(routeKey);
-  const altOptions = groupAlternatives(alternatives);
+  const altOptions = useMemo(() => groupAlternatives(alternatives), [alternatives]);
 
   return (
     <div className="space-y-6">
@@ -179,7 +179,7 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                 {relatedOffers.map((o) => {
                   const stops = stopsLabel(o.stopsOut, o.stopsIn);
                   return (
-                  <Fragment key={o.routeKey + o.source + o.departDate}>
+                  <Fragment key={o.routeKey + o.source + (o.departDate ?? "") + (o.returnDate ?? "") + o.price}>
                   <TableRow className={(o.flags?.staleDays ?? 0) > 0 ? "opacity-60" : undefined}>
                     <TableCell>{fmtDate(o.departDate)}</TableCell>
                     <TableCell>{fmtDate(o.returnDate)}</TableCell>
@@ -224,11 +224,12 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                           Další nabídky na stejný termín (dražší, ale jiná aerolinka / přímý let):
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {o.alternatives!.map((a, i) => {
+                          {o.alternatives!.map((a) => {
                             const delta = Math.round(a.price - o.price);
                             const aStops = stopsLabel(a.stopsOut, a.stopsIn);
+                            const altKey = `${[...a.airlines].sort().join(",")}|${a.stopsOut}|${a.stopsIn}|${a.price}`;
                             return (
-                              <div key={i} className="flex items-center gap-2 rounded border bg-background px-2 py-1 text-xs">
+                              <div key={altKey} className="flex items-center gap-2 rounded border bg-background px-2 py-1 text-xs">
                                 <span className="font-medium">
                                   {a.airlines.length ? airlineNames(a.airlines) : "—"}
                                 </span>
