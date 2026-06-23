@@ -340,6 +340,8 @@ class FlightLabsSource:
             route_name=route_name,
             stops_out=self._parse_stops(out_leg.get("stopCount")),
             stops_in=self._parse_stops(in_leg.get("stopCount")),
+            duration_out_min=self._parse_stops(out_leg.get("durationInMinutes")),
+            duration_in_min=self._parse_stops(in_leg.get("durationInMinutes")),
         )
 
     @staticmethod

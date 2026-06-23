@@ -1024,7 +1024,7 @@ def test_duffel_non_eur_offers_skipped_without_rates(monkeypatch):
     assert src.live_mode is True
 
 
-# -- FxRates (frankfurter.app / ECB) -----------------------------------------
+# -- FxRates (frankfurter.app / ECB a zálohy) ---------------------------------
 class _FxFakeSession:
     def __init__(self, payload=None, fail=False):
         self.payload = payload
@@ -1036,6 +1036,8 @@ class _FxFakeSession:
         sess = self
 
         class _Resp:
+            text = ""  # pro ECB XML větev
+
             def raise_for_status(self):
                 if sess.fail:
                     import requests
@@ -1056,16 +1058,19 @@ def test_fx_rates_convert_to_eur():
     assert fx.to_eur(85.0, "GBP") == 100.0
     assert fx.to_eur(500.0, "EUR") == 500.0   # EUR bez fetchee
     assert fx.to_eur(100.0, "XXX") is None    # neznámá měna
-    assert session.calls == 1                  # kurzy se stahují jen jednou
+    assert session.calls == 1                  # první zdroj uspěl → ostatní se nevolají
 
 
 def test_fx_rates_fetch_failure_only_once():
     from src.sources.fx import FxRates
+    from src.sources.fx import _RATE_SOURCES
     session = _FxFakeSession(fail=True)
     fx = FxRates(session=session)
     assert fx.to_eur(100.0, "USD") is None
     assert fx.to_eur(200.0, "USD") is None
-    assert session.calls == 1   # po selhání se už znovu nezkouší (per běh)
+    # Všechny zdroje selhaly (1 call na zdroj), pak se _fetch_failed=True → žádný
+    # další call i přes opakované volání to_eur.
+    assert session.calls == len(_RATE_SOURCES)
 
 
 # -- Kvóty: auto-vypnutí + spread (#1, #2) ----------------------------------
