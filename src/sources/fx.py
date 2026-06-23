@@ -1,12 +1,14 @@
-"""Převod měn na EUR přes denní referenční kurzy (ECB a zálohy).
+"""Převod měn na EUR přes denní referenční kurzy (free/keyless zdroje).
 
 Historie cen měnu neukládá (vše je EUR), takže nabídku v cizí měně je nutné
 buď převést, nebo zahodit. Kurzy se tahají z více free/keyless zdrojů v pořadí
 priority – pokud jeden selže, zkusí se další:
 
-  1. frankfurter.app  – wrapper ECB kurzů (JSON, bez klíče)
-  2. open.er-api.com  – ExchangeRate-API free tier (JSON, bez klíče)
-  3. ECB direct XML   – autoritativní zdroj přímo z ECB (XML)
+  1. open.er-api.com  – ExchangeRate-API free tier (JSON, bez klíče)
+  2. ECB direct XML   – autoritativní zdroj přímo z ECB (XML)
+
+(frankfurter.app byl odstraněn – v GitHub Actions CI dlouhodobě vracel prázdné
+tělo / 4xx, takže jen přidával zbytečnou latenci na fallback.)
 
 Chování při výpadku všech zdrojů: ``to_eur`` vrací None. Volající, kteří
 nechtějí nabídku zahodit, mohou volat ``to_eur_with_fallback`` – ten zkusí
@@ -28,11 +30,9 @@ _TIMEOUT = 15
 
 # Zdroje kurzů s bází EUR, zkoušeny v pořadí dokud jeden neuspěje.
 _RATE_SOURCES = [
-    # 1. frankfurter.app – ECB wrapper (JSON)
-    ("frankfurter", "https://api.frankfurter.app/latest"),
-    # 2. open.er-api.com – free tier bez klíče (JSON, stejný tvar)
+    # 1. open.er-api.com – free tier bez klíče (JSON)
     ("open.er-api", "https://open.er-api.com/v6/latest/EUR"),
-    # 3. ECB direct XML – autoritativní, ale XML
+    # 2. ECB direct XML – autoritativní, ale XML
     ("ecb-xml", "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
 ]
 
