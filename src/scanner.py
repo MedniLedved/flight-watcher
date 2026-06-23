@@ -160,8 +160,14 @@ def _spread_budget(remaining: int, reset_at_iso: Optional[str],
     if reset_at_iso:
         try:
             reset = datetime.fromisoformat(reset_at_iso)
+            # reset_at může přijít jako tz-aware (sufix Z / offset) – odečtení od
+            # naivního now() by jinak hodilo TypeError a propadlo až do run(),
+            # kde by se přeskočila celá trasa. Aware časy bereme jako naivní
+            # (spread potřebuje jen denní granularitu).
+            if reset.tzinfo is not None:
+                reset = reset.replace(tzinfo=None)
             days_left = max(1, (reset - now).days + 1)
-        except ValueError:
+        except (ValueError, TypeError):
             days_left = 1
     return max(1, remaining // days_left)
 
@@ -960,7 +966,7 @@ class Scanner:
         self._ensure_plan_state()
         # Dynamicky přeřaď letiště podle historických cen PŘED scanem,
         # aby levnější letiště přežila ořezání dle rate limitů.
-        airport_stats = self._apply_dynamic_priority()
+        self._apply_dynamic_priority()
         self.api_count = sum(
             1 for s in (self.googleflights, self.letsfg, self.flightlabs,
                         self.duffel, self.skyscrapper, self.serpapi,
