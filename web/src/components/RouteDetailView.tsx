@@ -139,7 +139,7 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
           {history && history.length > 0 && (
             <PriceHistoryChart history={history} stats={stats} />
           )}
-          {(!history || history.length === 0) && (
+          {!loading && !error && (!history || history.length === 0) && (
             <p className="py-4 text-sm text-muted-foreground">Žádná data v historii.</p>
           )}
         </CardContent>
