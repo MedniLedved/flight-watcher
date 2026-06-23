@@ -274,6 +274,28 @@ def test_apply_agent_config_overrides():
     assert cfg["search_windows"] == [{"year": 2026, "months": [9, 10, 11, 12]}]
 
 
+def test_apply_agent_config_rejects_narrow_travel_window():
+    """Degenerované okno (užší než min_nights + 2) se přeskočí
+    (ochrána proti fallbacku v _plan_scan_dates)."""
+    cfg = apply_agent_config({"price_threshold_eur": 550}, {
+        **AGENT,
+        "travelWindow": {"from": "2026-09-01", "to": "2026-09-05"},  # jen 4 dny
+        "stayLength": {"minNights": 7, "maxNights": 21},
+    })
+    # search_windows se neuloží, protože travelWindow je příliš úzké
+    assert "search_windows" not in cfg or not cfg.get("search_windows")
+
+
+def test_apply_agent_config_rejects_inverted_travel_window():
+    """Okno s to < from se přeskočí."""
+    cfg = apply_agent_config({"price_threshold_eur": 550}, {
+        **AGENT,
+        "travelWindow": {"from": "2026-12-31", "to": "2026-09-01"},  # inverzní
+        "stayLength": {"minNights": 7, "maxNights": 21},
+    })
+    assert "search_windows" not in cfg or not cfg.get("search_windows")
+
+
 def test_settings_toggles_default_true():
     s = Settings()
     assert s.source_enabled("duffel") and s.rss_enabled("jacks")

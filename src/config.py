@@ -123,6 +123,40 @@ def _enabled_airport_codes(airports: list[dict]) -> list[str]:
     return [a["code"] for a in enabled]
 
 
+def _validate_travel_window(window: dict, stay_config: dict | None) -> bool:
+    """Ověří, že travelWindow je dostatečně velké pro plánování scanu.
+    Ochrána proti degenerovaným oknům, která by spustila fallback v _plan_scan_dates.
+    Vrací True pokud je okno validní."""
+    try:
+        from datetime import date as _date
+        d_from = _date.fromisoformat(window.get("from", ""))
+        d_to = _date.fromisoformat(window.get("to", ""))
+    except (KeyError, ValueError, TypeError):
+        logger.warning("travelWindow: chybí nebo neplatné formáty from/to (ISO 8601)")
+        return False
+
+    if d_to <= d_from:
+        logger.warning("travelWindow: to (%s) musí být po from (%s)", d_to, d_from)
+        return False
+
+    # Ověř, že okno je dostatečně velké pro min. pobytu + odlet/návrat
+    min_nights = 7  # výchozí hodnota
+    if stay_config and isinstance(stay_config, dict):
+        min_nights = stay_config.get("minNights", 7)
+
+    min_window_days = min_nights + 2  # odlet + pobyty + návrat
+    actual_days = (d_to - d_from).days
+    if actual_days < min_window_days:
+        logger.warning(
+            "travelWindow: příliš úzké (%d dní) pro min. %d nocí; "
+            "potřeba aspoň %d dní (od-pobyty-návrat)",
+            actual_days, min_nights, min_window_days
+        )
+        return False
+
+    return True
+
+
 def _travel_window_to_search_windows(window: dict) -> list[dict]:
     """Převod travelWindow {from, to} (ISO data) na search_windows
     [{year, months}]. Okno přes přelom roku se ořízne na první rok (scanner
@@ -164,9 +198,17 @@ def apply_agent_config(routes_config: dict, agent: dict) -> dict:
         routes_config["stay_length"] = {
             "min_nights": stay["minNights"], "max_nights": stay["maxNights"],
         }
-    windows = _travel_window_to_search_windows(agent.get("travelWindow", {}))
-    if windows:
-        routes_config["search_windows"] = windows
+    # Validuj travelWindow před zpracováním
+    travel_window = agent.get("travelWindow", {})
+    if travel_window and not _validate_travel_window(travel_window, stay):
+        logger.error(
+            "config/agent.json: travelWindow je nevalidní; "
+            "přeskakuji převod na search_windows"
+        )
+    else:
+        windows = _travel_window_to_search_windows(travel_window)
+        if windows:
+            routes_config["search_windows"] = windows
     # Doplň lidská jména letišť pro notifikace/exporty.
     for a in agent.get("europeAirports", []) + agent.get("japanAirports", []):
         if a.get("code") and a.get("name"):
