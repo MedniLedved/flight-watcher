@@ -37,6 +37,7 @@ from typing import Optional
 import requests
 
 from . import FlightResult
+from .fx import FxRates
 from .google_flights import google_flights_url
 from .http_utils import make_api_session
 
@@ -80,12 +81,17 @@ class FlightLabsSource:
     name = "flightlabs"
 
     def __init__(self, access_key: str, session: Optional[requests.Session] = None,
-                 max_polls: int = _MAX_POLLS, poll_delay: float = _POLL_DELAY):
+                 max_polls: int = _MAX_POLLS, poll_delay: float = _POLL_DELAY,
+                 fx: Optional[FxRates] = None):
         self.access_key = access_key
         self.session = session or make_api_session()
         self.max_polls = max_polls
         self.poll_delay = poll_delay
         self.request_count = 0
+        # retrieveFlights vrací ceny v USD (ověřeno živě – param currency/market/
+        # countryCode se nectí). Historie ukládá vždy EUR → převádíme denním
+        # kurzem ECB (stejně jako Duffel); bez kurzu nabídku raději zahodíme.
+        self.fx = fx or FxRates()
         # Circuit breaker stav (per instance = per scan běh).
         self._consecutive_429 = 0
         self.rate_limited = False
@@ -293,9 +299,17 @@ class FlightLabsSource:
                          route_name: str,
                          pair_price=None) -> Optional[FlightResult]:
         # Cena: přednostně z páru (celková zpáteční), jinak z outbound legu.
-        price = self._parse_price(pair_price if pair_price is not None
-                                  else out_leg.get("price"))
+        raw_price = self._parse_price(pair_price if pair_price is not None
+                                      else out_leg.get("price"))
+        if raw_price is None:
+            return None
+        # Měna z odpovědi (typicky USD) → převod na EUR denním kurzem ECB.
+        # Bez kurzu nabídku zahodíme (nikdy neukládat cizí měnu jako EUR).
+        currency = (out_leg.get("currency") or in_leg.get("currency") or "EUR")
+        price = self.fx.to_eur(raw_price, str(currency).upper())
         if price is None:
+            logger.warning("FlightLabs %s→%s: chybí kurz %s→EUR, nabídku "
+                           "přeskakuji", origin, destination, currency)
             return None
         depart_dt = self._parse_dt(out_leg.get("departure"))
         return_dt = self._parse_dt(in_leg.get("departure"))

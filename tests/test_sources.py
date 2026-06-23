@@ -1309,6 +1309,37 @@ def test_flightlabs_results_from_response_prefers_pairs():
     assert [r.price for r in out] == [1057.0, 1290.0]
 
 
+_FLIGHTLABS_PAIRS_USD = {
+    "pairs": [
+        {"price": "1176",
+         "outbound": {"price": "1176", "currency": "USD",
+                      "origin": {"code": "MUC"}, "destination": {"code": "NRT"},
+                      "departure": "2026-11-13T08:40:00", "flightNumber": "QR240"},
+         "inbound": {"price": "1176", "currency": "USD",
+                     "origin": {"code": "NRT"}, "destination": {"code": "MUC"},
+                     "departure": "2026-11-27T12:00:00", "flightNumber": "QR79"}},
+    ],
+}
+
+
+def test_flightlabs_converts_usd_price_to_eur():
+    """retrieveFlights vrací USD → cena se převede na EUR (kurz ECB) a uloží
+    jako currency=EUR. (_FakeFx definován výše u Duffel testů.)"""
+    from src.sources.flightlabs import FlightLabsSource
+    src = FlightLabsSource(access_key="x", fx=_FakeFx(rates={"USD": 1.12}))
+    out = src._parse_pairs(_FLIGHTLABS_PAIRS_USD["pairs"], "MUC", "NRT", "Test")
+    assert len(out) == 1
+    assert out[0].currency == "EUR"
+    assert out[0].price == round(1176 / 1.12, 2)  # = 1050.0
+
+
+def test_flightlabs_skips_offer_when_no_fx_rate():
+    """Když kurz cizí měny není, nabídka se zahodí (nikdy USD jako EUR)."""
+    from src.sources.flightlabs import FlightLabsSource
+    src = FlightLabsSource(access_key="x", fx=_FakeFx(rates=None))
+    assert src._parse_pairs(_FLIGHTLABS_PAIRS_USD["pairs"], "MUC", "NRT", "T") == []
+
+
 def test_flightlabs_submit_sends_documented_params():
     """submit() musí poslat originIATACode/destinationIATACode + mode=roundtrip,
     sortBy=best, group_by_roundtrip=true (oficiální Flight Prices kontrakt)."""
