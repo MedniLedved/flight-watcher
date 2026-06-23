@@ -139,7 +139,7 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
           {history && history.length > 0 && (
             <PriceHistoryChart history={history} stats={stats} />
           )}
-          {history && history.length === 0 && (
+          {(!history || history.length === 0) && (
             <p className="py-4 text-sm text-muted-foreground">Žádná data v historii.</p>
           )}
         </CardContent>
@@ -179,7 +179,7 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                 {relatedOffers.map((o) => {
                   const stops = stopsLabel(o.stopsOut, o.stopsIn);
                   return (
-                  <Fragment key={o.routeKey + o.source + (o.departDate ?? "") + (o.returnDate ?? "") + o.price}>
+                  <Fragment key={`${o.routeKey}--${o.source}--${o.departDate ?? ""}--${o.returnDate ?? ""}--${o.price}`}>
                   <TableRow className={(o.flags?.staleDays ?? 0) > 0 ? "opacity-60" : undefined}>
                     <TableCell>{fmtDate(o.departDate)}</TableCell>
                     <TableCell>{fmtDate(o.returnDate)}</TableCell>
@@ -287,10 +287,11 @@ export function RouteDetailView({ routeKey, stats, relatedOffers, onBack }: Prop
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {altOptions.map((opt, i) => {
+                {altOptions.map((opt) => {
                   const stops = stopsLabel(opt.stopsOut, opt.stopsIn);
+                  const optKey = `${[...opt.airlines].sort().join(",")}|${opt.stopsOut}|${opt.stopsIn}`;
                   return (
-                    <TableRow key={i}>
+                    <TableRow key={optKey}>
                       <TableCell>
                         {opt.airlines.length ? airlineNames(opt.airlines) : "—"}
                       </TableCell>

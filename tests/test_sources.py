@@ -983,7 +983,7 @@ class _FakeFx:
         if result is not None:
             return result
         if hardcoded and currency in hardcoded:
-            return round(amount * hardcoded[currency], 2)
+            return round(amount / hardcoded[currency], 2)
         return None
 
 
@@ -1347,13 +1347,13 @@ def test_flightlabs_converts_usd_price_to_eur():
 
 
 def test_flightlabs_uses_hardcoded_fallback_when_no_fx_rate():
-    """Bez ECB kurzu nabídka se NEzahodí – použije se hardcoded fallback 0.88."""
+    """Bez ECB kurzu nabídka se NEzahodí – použije se hardcoded fallback 1.09 (USD/EUR, ECB konvence)."""
     from src.sources.flightlabs import FlightLabsSource
     src = FlightLabsSource(access_key="x", fx=_FakeFx(rates=None))
     out = src._parse_pairs(_FLIGHTLABS_PAIRS_USD["pairs"], "MUC", "NRT", "T")
     assert len(out) == 1
     assert out[0].currency == "EUR"
-    assert out[0].price == round(1176 * 0.88, 2)  # hardcoded fallback USD→EUR
+    assert out[0].price == round(1176 / 1.09, 2)  # hardcoded fallback USD→EUR (ECB konvence: dělíme)
 
 
 def test_flightlabs_submit_sends_documented_params():
