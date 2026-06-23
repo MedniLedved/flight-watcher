@@ -8,40 +8,34 @@
         "observations": 22
       },
       {
-        "code": "FMM",
-        "dealRatePct": 100.0,
-        "medianEur": 535.0,
-        "observations": 2
-      },
-      {
         "code": "ROM",
         "dealRatePct": 100.0,
         "medianEur": 563.5,
         "observations": 2
       },
       {
-        "code": "MUC",
-        "dealRatePct": 69.6,
-        "medianEur": 564.0,
-        "observations": 92
-      },
-      {
-        "code": "PRG",
-        "dealRatePct": 69.2,
-        "medianEur": 557.0,
-        "observations": 26
+        "code": "FMM",
+        "dealRatePct": 66.7,
+        "medianEur": 535.0,
+        "observations": 3
       },
       {
         "code": "VIE",
-        "dealRatePct": 68.8,
-        "medianEur": 547.0,
-        "observations": 128
+        "dealRatePct": 63.3,
+        "medianEur": 555.0,
+        "observations": 139
       },
       {
         "code": "BUD",
         "dealRatePct": 61.1,
         "medianEur": 557.5,
         "observations": 36
+      },
+      {
+        "code": "MUC",
+        "dealRatePct": 59.8,
+        "medianEur": 589.0,
+        "observations": 107
       },
       {
         "code": "FRA",
@@ -54,6 +48,12 @@
         "dealRatePct": 54.5,
         "medianEur": 505.0,
         "observations": 11
+      },
+      {
+        "code": "PRG",
+        "dealRatePct": 51.4,
+        "medianEur": 557.0,
+        "observations": 35
       },
       {
         "code": "NUE",
@@ -89,27 +89,27 @@
       },
       {
         "code": "KIX",
-        "dealRatePct": 13.0,
-        "medianEur": 1064.5,
-        "observations": 46
-      },
-      {
-        "code": "NGO",
-        "dealRatePct": 11.1,
-        "medianEur": 1031.0,
-        "observations": 9
+        "dealRatePct": 10.2,
+        "medianEur": 1072.0,
+        "observations": 59
       },
       {
         "code": "HND",
-        "dealRatePct": 8.9,
-        "medianEur": 1060.0,
-        "observations": 45
+        "dealRatePct": 7.7,
+        "medianEur": 1061.0,
+        "observations": 52
+      },
+      {
+        "code": "NGO",
+        "dealRatePct": 7.1,
+        "medianEur": 1083.0,
+        "observations": 14
       },
       {
         "code": "NRT",
-        "dealRatePct": 5.6,
-        "medianEur": 1020.5,
-        "observations": 36
+        "dealRatePct": 6.4,
+        "medianEur": 1017.0,
+        "observations": 47
       },
       {
         "code": "ITM",
@@ -120,16 +120,6 @@
     ]
   },
   "cheapestDepartureDow": [
-    {
-      "dow": "SO",
-      "dealRatePct": 70.6,
-      "medianEur": 505.0
-    },
-    {
-      "dow": "PÁ",
-      "dealRatePct": 70.0,
-      "medianEur": 585.0
-    },
     {
       "dow": "ST",
       "dealRatePct": 63.2,
@@ -154,18 +144,28 @@
       "dow": "ÚT",
       "dealRatePct": 49.3,
       "medianEur": 660.0
+    },
+    {
+      "dow": "SO",
+      "dealRatePct": 48.0,
+      "medianEur": 885.5
+    },
+    {
+      "dow": "PÁ",
+      "dealRatePct": 35.0,
+      "medianEur": 988.5
     }
   ],
   "cheapestArrivalDow": [
     {
       "dow": "NE",
       "dealRatePct": 0.0,
-      "medianEur": 977.0
+      "medianEur": 1008.5
     },
     {
       "dow": "PO",
       "dealRatePct": 0.0,
-      "medianEur": 982.5
+      "medianEur": 1019.5
     },
     {
       "dow": "ÚT",
@@ -190,7 +190,7 @@
     {
       "dow": "ČT",
       "dealRatePct": 0.0,
-      "medianEur": 1352.0
+      "medianEur": 1327.5
     }
   ]
 }
