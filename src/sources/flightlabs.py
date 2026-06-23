@@ -90,7 +90,7 @@ class FlightLabsSource:
         self.request_count = 0
         # retrieveFlights vrací ceny v USD (ověřeno živě – param currency/market/
         # countryCode se nectí). Historie ukládá vždy EUR → převádíme denním
-        # kurzem ECB (stejně jako Duffel); bez kurzu nabídku raději zahodíme.
+        # kurzem ECB; při výpadku ECB fallback na poslední známý kurz, pak 0,88.
         self.fx = fx or FxRates()
         # Circuit breaker stav (per instance = per scan běh).
         self._consecutive_429 = 0
@@ -304,12 +304,15 @@ class FlightLabsSource:
         if raw_price is None:
             return None
         # Měna z odpovědi (typicky USD) → převod na EUR denním kurzem ECB.
-        # Bez kurzu nabídku zahodíme (nikdy neukládat cizí měnu jako EUR).
-        currency = (out_leg.get("currency") or in_leg.get("currency") or "EUR")
-        price = self.fx.to_eur(raw_price, str(currency).upper())
+        # API vždy vrací USD (ignoruje currency/market/countryCode params).
+        # Při nedostupném ECB kurzu: zkus poslední známý, pak hardcoded 0.88.
+        currency = str(out_leg.get("currency") or in_leg.get("currency") or "EUR").upper()
+        price = self.fx.to_eur_with_fallback(raw_price, currency,
+                                             hardcoded={"USD": 0.88})
         if price is None:
-            logger.warning("FlightLabs %s→%s: chybí kurz %s→EUR, nabídku "
-                           "přeskakuji", origin, destination, currency)
+            logger.warning("FlightLabs %s→%s: kurz %s→EUR nedostupný ani "
+                           "jako fallback – nabídku přeskakuji",
+                           origin, destination, currency)
             return None
         depart_dt = self._parse_dt(out_leg.get("departure"))
         return_dt = self._parse_dt(in_leg.get("departure"))
