@@ -62,6 +62,22 @@ def purge_longterm_records(records: list[dict], sources: set[str],
     return kept, len(records) - len(kept)
 
 
+def purge_one_way_longterm_records(records: list[dict], route_key: str
+                                   ) -> tuple[list[dict], int]:
+    """Filtr dlouhodobé řady: u roundtrip/openjaw trasy odstraní záznamy bez
+    ``returnDate`` (one-way pollution). Pole je camelCase – formát dlouhodobých
+    řad (na rozdíl od snake_case ``return_date`` v price_history.json). Řady,
+    které nejsou roundtrip/openjaw, nechá beze změny.
+
+    Vrací (ponechané záznamy, počet odstraněných).
+    """
+    kind = route_key.split("-")[-1]
+    if kind not in ("roundtrip", "openjaw"):
+        return records, 0
+    kept = [r for r in records if r.get("returnDate")]
+    return kept, len(records) - len(kept)
+
+
 def _min_price(records: list[dict]) -> Optional[float]:
     prices = [float(r["price"]) for r in records if r.get("price") is not None]
     return min(prices) if prices else None
@@ -83,10 +99,45 @@ def purge_history(sources: list[str] | set[str],
         }
     """
     sources = set(sources)
+    return _purge(
+        apply,
+        ph_remove=lambda h: h.purge_sources(sources, before=before),
+        longterm_filter=lambda recs, key: purge_longterm_records(
+            recs, sources, before),
+        price_history_path=price_history_path,
+        longterm_dir=longterm_dir,
+    )
+
+
+def purge_one_way(apply: bool = False,
+                  price_history_path: Path | str = PRICE_HISTORY_PATH,
+                  longterm_dir: Path | str = LONGTERM_DIR) -> dict[str, Any]:
+    """Odstraní one-way pollution (roundtrip/openjaw záznamy bez návratového
+    data) z OBOU úložišť. Bez ``apply`` jen dry-run. Stejný tvar souhrnu jako
+    ``purge_history``. Remediace pro guard v ``scripts/validate-data.sh``."""
+    return _purge(
+        apply,
+        ph_remove=lambda h: h.purge_one_way(),
+        longterm_filter=lambda recs, key: purge_one_way_longterm_records(
+            recs, key),
+        price_history_path=price_history_path,
+        longterm_dir=longterm_dir,
+    )
+
+
+def _purge(apply: bool, ph_remove, longterm_filter,
+           price_history_path: Path | str = PRICE_HISTORY_PATH,
+           longterm_dir: Path | str = LONGTERM_DIR) -> dict[str, Any]:
+    """Sdílené jádro purge nad oběma úložišti.
+
+    ``ph_remove(history) -> {route_key: počet}`` odstraní záznamy z
+    price_history.json; ``longterm_filter(records, route_key) -> (kept, n)``
+    filtruje dlouhodobou řadu. all_time_min se přepočítá z průniku obou úložišť.
+    """
     history = PriceHistory(price_history_path)
     summary: dict[str, Any] = {
         "applied": apply,
-        "price_history": history.purge_sources(sources, before=before),
+        "price_history": ph_remove(history),
         "longterm": {},
     }
 
@@ -103,7 +154,7 @@ def purge_history(sources: list[str] | set[str],
                 continue
             if not isinstance(records, list):
                 continue
-            kept, n_removed = purge_longterm_records(records, sources, before)
+            kept, n_removed = longterm_filter(records, path.stem)
             if n_removed:
                 summary["longterm"][path.stem] = n_removed
                 if apply:
@@ -161,16 +212,26 @@ def main(argv: Optional[list[str]] = None) -> None:
         description="Selektivně odstraní záznamy daných zdrojů z historie cen "
                     "(syntetická data z test režimů). Výchozí je dry-run.",
     )
-    parser.add_argument("--sources", nargs="+", required=True,
+    parser.add_argument("--sources", nargs="+", default=None,
                         metavar="ZDROJ",
                         help="zdroje k odstranění (např. duffel amadeus)")
+    parser.add_argument("--one-way", action="store_true", dest="one_way",
+                        help="odstraní one-way pollution: roundtrip/openjaw "
+                             "záznamy bez návratového data (viz validate-data.sh)")
     parser.add_argument("--before", type=date.fromisoformat, default=None,
                         metavar="YYYY-MM-DD",
-                        help="jen záznamy s datem pozorování PŘED tímto dnem")
+                        help="jen záznamy s datem pozorování PŘED tímto dnem "
+                             "(platí jen pro --sources)")
     parser.add_argument("--apply", action="store_true",
                         help="skutečně zapsat změny (jinak jen dry-run výpis)")
     args = parser.parse_args(argv)
-    summary = purge_history(args.sources, before=args.before, apply=args.apply)
+    if args.one_way:
+        summary = purge_one_way(apply=args.apply)
+    elif args.sources:
+        summary = purge_history(args.sources, before=args.before,
+                                apply=args.apply)
+    else:
+        parser.error("zadej --sources ZDROJ… nebo --one-way")
     print(_format_summary(summary))
 
 

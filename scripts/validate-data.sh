@@ -75,4 +75,51 @@ if [ "$BAD_RT" -gt 0 ]; then
 fi
 echo "  ✓ Žádná one-way pollution v latest.json"
 
+# 5. One-way pollution guard v dlouhodobých řadách (history/) a price_history.json.
+#    Stejná regrese jako [4], ale na KANONICKÝCH datech, ze kterých se počítají
+#    statistiky (airport_stats → insights.json). latest.json one-way zahazuje, ale
+#    historie ho dřív obsahovala (travelpayouts bez return_date uložený pod klíč
+#    "-roundtrip" → ~2× nižší cena zkreslila deal-rate per letiště). Kontrola [4]
+#    sama tento typ chyby v historii NEODCHYTÍ, proto je tady navíc.
+#    Pole: history/*.json používá camelCase `returnDate`, price_history.json
+#    snake_case `return_date`. Roundtrip/openjaw se pozná z názvu řady / route_key.
+bad_hist=0
+if [ -d "$DATA_DIR/history" ]; then
+  while IFS= read -r -d '' jf; do
+    base="$(basename "$jf" .json)"
+    case "$base" in
+      *-roundtrip|*-openjaw)
+        bad=$(jq '[.[] | select(.returnDate == null)] | length' "$jf")
+        if [ "$bad" -gt 0 ]; then
+          echo "  ❌ history/$base.json: $bad záznamů bez returnDate (one-way pollution)"
+          bad_hist=$((bad_hist + bad))
+        fi
+        ;;
+    esac
+  done < <(find "$DATA_DIR/history" -name '*.json' -print0)
+fi
+if [ "$bad_hist" -gt 0 ]; then
+  exit 1
+fi
+echo "  ✓ Žádná one-way pollution v history/"
+
+# price_history.json je jen v root data/ (ne ve web/public/data) → guard s [ -f ].
+if [ -f "$DATA_DIR/price_history.json" ]; then
+  bad_ph=$(jq '[ to_entries[]
+                 | select(.key != "_meta" and (.key | test("-(roundtrip|openjaw)$")))
+                 | .value.history // []
+                 | .[]
+                 | select(.return_date == null) ] | length' \
+              "$DATA_DIR/price_history.json")
+  if [ "$bad_ph" -gt 0 ]; then
+    echo "  ❌ price_history.json: $bad_ph roundtrip/openjaw záznamů bez return_date (one-way pollution)"
+    jq -r 'to_entries[]
+           | select(.key != "_meta" and (.key | test("-(roundtrip|openjaw)$")))
+           | select([.value.history // [] | .[] | select(.return_date == null)] | length > 0)
+           | "    \(.key)"' "$DATA_DIR/price_history.json" | sort -u
+    exit 1
+  fi
+  echo "  ✓ Žádná one-way pollution v price_history.json"
+fi
+
 echo "== Datová validace OK =="

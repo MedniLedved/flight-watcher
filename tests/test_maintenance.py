@@ -10,7 +10,12 @@ import json
 from datetime import date
 
 from src.history import PriceHistory
-from src.maintenance import purge_history, purge_longterm_records
+from src.maintenance import (
+    purge_history,
+    purge_longterm_records,
+    purge_one_way,
+    purge_one_way_longterm_records,
+)
 
 
 def _seed_history(path):
@@ -67,6 +72,59 @@ def test_purge_longterm_records_filters_by_source():
     kept, n_removed = purge_longterm_records(records, {"duffel"})
     assert n_removed == 2
     assert [r["source"] for r in kept] == ["skyscrapper"]
+
+
+def test_purge_one_way_longterm_records_drops_only_oneway_on_rt():
+    # camelCase returnDate (formát dlouhodobých řad).
+    records = [
+        {"date": "2026-06-01", "price": 650, "source": "duffel"},          # one-way
+        {"date": "2026-06-02", "price": 880, "source": "googleflights",
+         "returnDate": "2026-09-14"},                                       # zpáteční
+    ]
+    kept, n = purge_one_way_longterm_records(records, "MUC-KIX-roundtrip")
+    assert n == 1
+    assert [r["price"] for r in kept] == [880]
+
+
+def test_purge_one_way_longterm_records_ignores_nonroundtrip_series():
+    # Řada, která není roundtrip/openjaw, se nesmí dotknout (žádný kontrakt na
+    # returnDate) – byť by chybělo.
+    records = [{"date": "2026-06-01", "price": 300, "source": "rss"}]
+    kept, n = purge_one_way_longterm_records(records, "PRG-TYO-oneway")
+    assert n == 0
+    assert kept == records
+
+
+def test_purge_one_way_removes_pollution_keeps_legit_roundtrip(tmp_path):
+    ph_path = tmp_path / "price_history.json"
+    h = PriceHistory(ph_path)
+    # Stejný zdroj (duffel) vrátil one-way (bez return_date) i legitimní
+    # zpáteční – purge podle zdroje by smazal oboje, one-way purge jen one-way.
+    h.record("MUC-KIX-roundtrip", 650, "duffel", on_date=date(2026, 6, 1))
+    h.record("MUC-KIX-roundtrip", 880, "duffel", on_date=date(2026, 6, 2),
+             depart_date=date(2026, 9, 1), return_date=date(2026, 9, 14))
+    h.save()
+    lt_dir = tmp_path / "history"
+    lt_dir.mkdir()
+    (lt_dir / "MUC-KIX-roundtrip.json").write_text(json.dumps([
+        {"date": "2026-05-10", "price": 640, "source": "duffel"},          # one-way
+        {"date": "2026-05-11", "price": 870, "source": "googleflights",
+         "returnDate": "2026-09-14"},                                       # zpáteční
+    ]), encoding="utf-8")
+
+    summary = purge_one_way(apply=True, price_history_path=ph_path,
+                            longterm_dir=lt_dir)
+    assert summary["price_history"]["MUC-KIX-roundtrip"] == 1
+    assert summary["longterm"]["MUC-KIX-roundtrip"] == 1
+
+    data = json.loads(ph_path.read_text(encoding="utf-8"))
+    entry = data["MUC-KIX-roundtrip"]
+    # Zůstal jen zpáteční záznam; all_time_min přepočtený z průniku obou
+    # úložišť (min z 880 a 870 = 870), ne z one-way 640/650.
+    assert [r["price"] for r in entry["history"]] == [880]
+    assert entry["all_time_min"] == 870
+    lt = json.loads((lt_dir / "MUC-KIX-roundtrip.json").read_text("utf-8"))
+    assert [r["price"] for r in lt] == [870]
 
 
 def test_purge_history_dry_run_does_not_write(tmp_path):

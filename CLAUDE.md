@@ -110,6 +110,16 @@ Před tím, než označíš opravu za hotovou, projdi tyto otázky:
   nejlevnější historický záznam pro trasy bez živého výsledku — one-way záznamy (bez
   `returnDate`) přebily reálné zpáteční. Opraveno: `require_return=True` pro roundtrip/openjaw.
   Test: `tests/test_exporter.py::test_stale_fill_skips_one_way_pollution`.
+- **One-way pollution v KANONICKÉ historii zkreslila statistiky letišť:** `validate-data.sh [4]`
+  hlídal jen `latest.json`, ale `insights.json` (deal-rate per letiště) se počítá z
+  `price_history.json` a `stats.json` z `data/history/*`. Jednosměrné záznamy (travelpayouts/
+  aviasales, dřív i Duffel) uložené pod klíč `-roundtrip` bez `return_date` (~2× nižší cena)
+  proto skrytě zkreslily ranking — letiště živená city-kódovou one-way pollution (TYO, OSA,
+  MIL, ROM) vyšla na ~100 % dealů, reálná letiště (FCO, MXP) nejhůř. Opraveno: `validate-data.sh [5]`
+  hlídá one-way i v `history/*` (camelCase `returnDate`) a `price_history.json` (snake_case
+  `return_date`); remediace `python -m src.maintenance --one-way [--apply]` (cílí jen one-way,
+  zachová legitimní zpáteční záznamy stejného zdroje). Testy:
+  `tests/test_maintenance.py::test_purge_one_way_*`.
 
 **Datové zdroje (API):**
 - **Mrtvý endpoint maskovaný jako „0 nabídek":** FlightLabs `/retrieve-cheapest-flights`

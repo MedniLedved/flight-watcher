@@ -167,9 +167,8 @@ class PriceHistory:
         přepisuje minimem z dlouhodobé řady data/history/{route_key}.json.
         """
         sources = set(sources)
-        removed: dict[str, int] = {}
 
-        def _purge_hit(h: dict) -> bool:
+        def _purge_hit(key: str, h: dict) -> bool:
             if h.get("source") not in sources:
                 return False
             if before is not None:
@@ -178,9 +177,36 @@ class PriceHistory:
                     return False
             return True
 
+        return self._purge_records(_purge_hit)
+
+    def purge_one_way(self) -> dict[str, int]:
+        """Odstraní z roundtrip/openjaw tras záznamy bez ``return_date``
+        (one-way pollution) a přepočítá odvozené hodnoty trasy.
+
+        Regrese: zdroj (travelpayouts/aviasales, dřív i Duffel) občas vrátil
+        JEDNOSMĚRNOU cenu, která se uložila pod klíč '...-roundtrip' s prázdným
+        return_date → ~2× nižší cena zkreslila zpáteční data a deal-rate per
+        letiště (insights.json). Odstraňuje cíleně jen one-way záznamy, takže
+        legitimní zpáteční záznamy stejného zdroje zůstanou. Vrací
+        {route_key: počet odstraněných}.
+        """
+        def _one_way_hit(key: str, h: dict) -> bool:
+            kind = key.split("-")[-1]
+            if kind not in ("roundtrip", "openjaw"):
+                return False
+            return not h.get("return_date")
+
+        return self._purge_records(_one_way_hit)
+
+    def _purge_records(self, hit) -> dict[str, int]:
+        """Společné jádro purge: ``hit(route_key, record) -> bool`` určuje, které
+        záznamy odstranit. Přepočítá all_time_min / last_seen / last_price ze
+        zbývajících záznamů, smaže alert razítka zasažených tras a trasu bez
+        zbývajících záznamů odstraní celou. Vrací {route_key: počet odstraněných}."""
+        removed: dict[str, int] = {}
         for key, entry in list(self.routes()):
             history = entry.get("history", [])
-            kept = [h for h in history if not _purge_hit(h)]
+            kept = [h for h in history if not hit(key, h)]
             n_removed = len(history) - len(kept)
             if not n_removed:
                 continue
