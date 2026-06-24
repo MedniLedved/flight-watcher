@@ -86,6 +86,12 @@ class SecretFlyingSource:
             logger.error("Secret Flying feed se nepodařilo stáhnout: %s", exc)
             raise RuntimeError("Secret Flying feed nedostupný") from exc
 
+        logger.info("Secret Flying: HTTP %d, Content-Type: %s, délka: %d B | začátek: %.150s",
+                    resp.status_code,
+                    resp.headers.get("Content-Type", "?"),
+                    len(resp.content),
+                    resp.text[:150].replace("\n", " "))
+
         feed = feedparser.parse(resp.content)
         if getattr(feed, "bozo", 0) and not feed.entries:
             logger.error("Secret Flying feed se nepodařilo načíst: %s",

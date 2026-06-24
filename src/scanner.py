@@ -621,6 +621,8 @@ class Scanner:
         today = date.today()
         keep: list[dict] = []
         collected = 0
+        still_processing = 0  # počet jobů, které stále vrátily 202
+        empty_200 = 0         # počet jobů, které vrátily 200 ale 0 výsledků
         for job in pending:
             submitted = job.get("submitted")
             try:
@@ -644,13 +646,19 @@ class Scanner:
             if results:
                 survivors += results
                 collected += 1
+            elif done:
+                empty_200 += 1   # HTTP 200 ale prázdná odpověď
             if not done:
+                still_processing += 1
                 keep.append(job)  # job pořád ‚processing'
 
         self._flightlabs_pending_survivors = keep
         self._flightlabs_collected_count = collected
-        logger.info("FlightLabs collect: %d pending → %d hotových, %d zůstává",
-                    len(pending), collected, len(keep))
+        logger.info(
+            "FlightLabs collect: %d pending → %d s výsledky, %d×202 (processing), "
+            "%d×200-prázdné, %d zůstává v pendingu",
+            len(pending), collected, still_processing, empty_200, len(keep),
+        )
         return survivors
 
     def _skyscrapper_has_budget(self) -> bool:

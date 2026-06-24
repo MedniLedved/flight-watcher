@@ -84,7 +84,19 @@ class TravelpayoutsSource:
             )
             raise
 
-        payload = resp.json()
+        _status = getattr(resp, "status_code", "?")
+        _body = getattr(resp, "text", "")
+        if self.request_count <= 2:
+            logger.info("Travelpayouts DIAG %s→%s: HTTP %s | %.200s",
+                        origin, destination, _status, _body)
+        try:
+            payload = resp.json()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Travelpayouts %s→%s: HTTP %s, nelze parsovat JSON (%s) | %.200s",
+                origin, destination, _status, exc, _body,
+            )
+            return []
         results: list[FlightResult] = []
         for item in payload.get("data", []):
             parsed = self._parse_item(

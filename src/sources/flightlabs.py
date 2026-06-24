@@ -178,12 +178,18 @@ class FlightLabsSource:
         except requests.RequestException:
             return [], True  # síťová/tvrdá chyba → zahoď
         if resp.status_code == 202:
+            logger.debug("FlightLabs collect %s→%s: 202 processing | %.120s",
+                         origin, destination, resp.text)
             return [], False
         if resp.status_code >= 400:
-            logger.warning("FlightLabs collect %s→%s: HTTP %d → zahazuji job",
-                           origin, destination, resp.status_code)
+            logger.warning("FlightLabs collect %s→%s: HTTP %d → zahazuji job | %.120s",
+                           origin, destination, resp.status_code, resp.text)
             return [], True
-        return self._results_from_response(resp, origin, destination, route_name), True
+        results = self._results_from_response(resp, origin, destination, route_name)
+        if not results:
+            logger.info("FlightLabs collect %s→%s: 200 OK, 0 výsledků | %.200s",
+                        origin, destination, resp.text)
+        return results, True
 
     # -- HTTP --------------------------------------------------------------
     def _request(self, params: dict, origin: str,
