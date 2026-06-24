@@ -85,24 +85,20 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
   const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? SWIMLANE_MAX_EUR;
   const minNights = agentConfig?.stayLength?.minNights ?? FALLBACK_NIGHTS;
 
-  // Filtruj na EFEKTIVNÍ cenu (vč. dopravy, dle toggle) — stejná sémantika jako
-  // tabulka „Aktuální nejlepší nabídky" a jako cena zobrazená na baru. Filtr na
-  // surovou cenu by ukázal deal, který je po připočtení dopravy nad prahem
-  // (a tedy chybí v tabulce) — např. MXP s feeder letem. returnDate zůstává
-  // volitelné (RSS/travelpayouts ho nevrací) — vyžadujeme jen departDate.
+  // Filtruj na SUROVOU cenu letenky (bez dopravy) — dealMaxEur z configu je práh
+  // pro cenu letenky, stejně jako v alertovacím systému. Doprava se zobrazuje
+  // vizuálně na barech (efektivní cena), ale nesmí ovlivnit filtr, protože by
+  // způsobila prázdný swimlane (transport přidá 50–270 EUR a vyřadí vše).
+  // returnDate je volitelné (RSS/travelpayouts ho nevrací) — vyžadujeme jen departDate.
   const lanes = useMemo(
     () =>
       offers
-        .filter(
-          (o) =>
-            o.departDate &&
-            effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination) <= dealMax,
-        )
+        .filter((o) => o.departDate && o.price <= dealMax)
         .sort((a, b) => a.departDate!.localeCompare(b.departDate!)),
-    [offers, dealMax, agentConfig, includeTransport],
+    [offers, dealMax],
   );
   const undated = offers.filter((o) => !o.departDate).length;
-  const overBudget = offers.filter((o) => o.departDate).length - lanes.length;
+  const overBudget = offers.filter((o) => o.departDate && o.price > dealMax).length;
 
   // Časový rozsah: start = začátek prvního měsíce s odletem,
   // end = konec posledního měsíce (max z návratů a sledovaného období z configu).
