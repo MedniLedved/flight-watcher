@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 import {
   applyFilters,
-  EMPTY_FILTERS,
   FilterBar,
   type OfferFilters,
 } from "@/components/FilterBar";
@@ -25,6 +24,10 @@ interface Props {
   error: string | null;
   onSelectRoute: (routeKey: string) => void;
   onFilteredOffersChange?: (offers: LatestFile) => void;
+  filters: OfferFilters;
+  onFiltersChange: (f: OfferFilters) => void;
+  includeTransport: boolean;
+  onToggleTransport: (v: boolean) => void;
 }
 
 function SummaryBar({
@@ -71,14 +74,7 @@ function SummaryBar({
   );
 }
 
-export function HomePage({ latest, stats, agentConfig, loading, error, onSelectRoute, onFilteredOffersChange }: Props) {
-  const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
-  const [includeTransport, setIncludeTransport] = useState(true);
-
-  const handleToggleTransport = (v: boolean) => {
-    setIncludeTransport(v);
-  };
-
+export function HomePage({ latest, stats, agentConfig, loading, error, onSelectRoute, onFilteredOffersChange, filters, onFiltersChange, includeTransport, onToggleTransport }: Props) {
   const offers = useMemo(() => latest ?? [], [latest]);
   const visible = useMemo(
     () => applyFilters(offers, filters, agentConfig, includeTransport),
@@ -118,9 +114,9 @@ export function HomePage({ latest, stats, agentConfig, loading, error, onSelectR
       <FilterBar
         offers={offers}
         filters={filters}
-        onChange={setFilters}
+        onChange={onFiltersChange}
         includeTransport={includeTransport}
-        onToggleTransport={handleToggleTransport}
+        onToggleTransport={onToggleTransport}
       />
       <Card>
         <CardHeader>

@@ -4,6 +4,8 @@ import { airlineNames, airlineName } from "@/lib/airlines";
 import { Button } from "@/components/ui/button";
 import { DealButton } from "@/components/DealButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { parseNum } from "@/components/FilterBar";
 import { priceColor } from "@/lib/colors";
 import { effectivePrice, fmtDuration, getTransport } from "@/lib/transport";
 import { cn } from "@/lib/utils";
@@ -75,30 +77,30 @@ interface Props {
   latest: LatestFile | null;
   agentConfig: AgentConfig | null;
   onSelectRoute: (routeKey: string) => void;
+  priceMax: string;
+  onPriceMaxChange: (v: string) => void;
+  includeTransport: boolean;
+  onToggleTransport: (v: boolean) => void;
 }
 
-export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
+export function SwimlanesView({ latest, agentConfig, onSelectRoute, priceMax, onPriceMaxChange, includeTransport, onToggleTransport }: Props) {
   const [selected, setSelected] = useState<LatestOffer | null>(null);
-  const [includeTransport, setIncludeTransport] = useState(true);
 
   const offers = latest ?? [];
-  const dealMax = agentConfig?.alertThresholds?.dealMaxEur ?? SWIMLANE_MAX_EUR;
+  const priceMaxNum = parseNum(priceMax) ?? SWIMLANE_MAX_EUR;
   const minNights = agentConfig?.stayLength?.minNights ?? FALLBACK_NIGHTS;
 
-  // Filtruj na SUROVOU cenu letenky (bez dopravy) — dealMaxEur z configu je práh
-  // pro cenu letenky, stejně jako v alertovacím systému. Doprava se zobrazuje
-  // vizuálně na barech (efektivní cena), ale nesmí ovlivnit filtr, protože by
-  // způsobila prázdný swimlane (transport přidá 50–270 EUR a vyřadí vše).
+  // Filtruj na EFEKTIVNÍ cenu (dle toggle) oproti uživatelskému prahu priceMax.
   // returnDate je volitelné (RSS/travelpayouts ho nevrací) — vyžadujeme jen departDate.
   const lanes = useMemo(
     () =>
       offers
-        .filter((o) => o.departDate && o.price <= dealMax)
+        .filter((o) => o.departDate && effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination) <= priceMaxNum)
         .sort((a, b) => a.departDate!.localeCompare(b.departDate!)),
-    [offers, dealMax],
+    [offers, priceMaxNum, agentConfig, includeTransport],
   );
   const undated = offers.filter((o) => !o.departDate).length;
-  const overBudget = offers.filter((o) => o.departDate && o.price > dealMax).length;
+  const overBudget = offers.filter((o) => o.departDate && effectivePrice(o.price, o.origin, agentConfig, includeTransport, o.returnDestination) > priceMaxNum).length;
 
   // Časový rozsah: start = začátek prvního měsíce s odletem,
   // end = konec posledního měsíce (max z návratů a sledovaného období z configu).
@@ -177,13 +179,57 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
           <div>
             <CardTitle>Časová osa nabídek</CardTitle>
             <CardDescription>
-              {lanes.length} deal{lanes.length === 1 ? "" : "ů"} pod {dealMax} €{includeTransport ? " vč. dopravy" : ""} seřazených podle odletu
+              {lanes.length} deal{lanes.length === 1 ? "" : "ů"} pod {priceMaxNum} €{includeTransport ? " vč. dopravy" : ""} seřazených podle odletu
               {undated > 0 ? ` · ${undated} bez termínu skryto` : ""}
               {overBudget > 0 ? ` · ${overBudget} nad limitem skryto` : ""}
               {" · "}Kliknutím na bar zobrazíš detail nabídky.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Max. cena (EUR){includeTransport ? " vč. dopravy" : ""}
+              </label>
+              <div className="flex items-center gap-0.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-7 px-0 text-base"
+                  onClick={() => {
+                    const v = parseNum(priceMax);
+                    if (v != null) onPriceMaxChange(v <= 50 ? "0" : String(v - 50));
+                  }}
+                >−</Button>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  className="w-24"
+                  value={priceMax}
+                  onChange={(e) => onPriceMaxChange(e.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-7 px-0 text-base"
+                  onClick={() => {
+                    const v = parseNum(priceMax);
+                    if (v != null) onPriceMaxChange(String(v + 50));
+                  }}
+                >+</Button>
+              </div>
+            </div>
+            <button
+              onClick={() => onToggleTransport(!includeTransport)}
+              className={cn(
+                "flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors",
+                includeTransport
+                  ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-300"
+                  : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Train className="h-4 w-4 shrink-0" />
+              + doprava
+            </button>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="tabular-nums">{Math.round(minPrice)} €</span>
               <div className="flex h-3 w-20 overflow-hidden rounded">
@@ -203,18 +249,6 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute }: Props) {
               </div>
               <span className="tabular-nums">{Math.round(maxPrice)} €</span>
             </div>
-            <button
-              onClick={() => setIncludeTransport((v) => !v)}
-              className={cn(
-                "flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors",
-                includeTransport
-                  ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-300"
-                  : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <Train className="h-4 w-4 shrink-0" />
-              + doprava
-            </button>
           </div>
         </CardHeader>
         <CardContent>

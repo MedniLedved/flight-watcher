@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { FlightMap } from "@/components/FlightMap";
+import { EMPTY_FILTERS, type OfferFilters } from "@/components/FilterBar";
 import { RouteDetailView } from "@/components/RouteDetailView";
 import { SettingsPage } from "@/components/SettingsPage";
 import { SwimlanesView } from "@/components/SwimlanesView";
@@ -24,6 +25,8 @@ export default function App() {
   const { latest, stats, agentConfig, routes, insights, loading, error } = useDataLoader();
   const [localConfig, setLocalConfig] = useState<AgentConfig | null>(null);
   const [filteredOffers, setFilteredOffers] = useState<LatestFile | null>(null);
+  const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
+  const [includeTransport, setIncludeTransport] = useState(true);
 
   useEffect(() => {
     if (agentConfig && !localConfig) setLocalConfig(cloneConfig(agentConfig));
@@ -106,6 +109,10 @@ export default function App() {
             error={error}
             onSelectRoute={setSelectedRoute}
             onFilteredOffersChange={setFilteredOffers}
+            filters={filters}
+            onFiltersChange={setFilters}
+            includeTransport={includeTransport}
+            onToggleTransport={setIncludeTransport}
           />
           <FlightMap
             routes={routes}
@@ -124,6 +131,10 @@ export default function App() {
           latest={latest}
           agentConfig={agentConfig}
           onSelectRoute={setSelectedRoute}
+          priceMax={filters.priceMax}
+          onPriceMaxChange={(v) => setFilters((f) => ({ ...f, priceMax: v }))}
+          includeTransport={includeTransport}
+          onToggleTransport={setIncludeTransport}
         />
       )}
 

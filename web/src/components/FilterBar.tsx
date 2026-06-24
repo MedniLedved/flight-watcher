@@ -27,12 +27,12 @@ export interface OfferFilters {
 export const EMPTY_FILTERS: OfferFilters = {
   origin: ALL,
   destination: ALL,
-  priceMax: "900",
+  priceMax: "950",
   nightsMin: "",
   nightsMax: "",
 };
 
-function parseNum(raw: string): number | null {
+export function parseNum(raw: string): number | null {
   if (raw.trim() === "") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
