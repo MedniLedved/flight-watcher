@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -123,34 +124,47 @@ def _enabled_airport_codes(airports: list[dict]) -> list[str]:
     return [a["code"] for a in enabled]
 
 
-def _validate_travel_window(window: dict, stay_config: dict | None) -> bool:
-    """Ověří, že travelWindow je dostatečně velké pro plánování scanu.
-    Ochrána proti degenerovaným oknům, která by spustila fallback v _plan_scan_dates.
-    Vrací True pokud je okno validní."""
+_SCANNER_DEFAULT_MIN_NIGHTS = 12  # musí odpovídat stay.get("min_nights", 12) v _plan_scan_dates
+
+
+def _validate_travel_window(window: dict, stay_config: dict | None,
+                            today: date | None = None) -> bool:
+    """Ověří, že travelWindow poskytuje skenovatelné termíny v budoucnosti.
+
+    Tři podmínky (odpovídají logice _plan_scan_dates ve scanner.py):
+    1. from/to jsou platná ISO data
+    2. to > from  (to == from je také neplatné — span by byl 0)
+    3. Efektivní okno od zítřka do d_to má aspoň min_nights dní.
+       Scanner počítá start = max(d_from, today+1), takže okno plně v minulosti
+       dá effective_days < 0 → zachytí se tady, ne až fallbackem.
+
+    min_nights default = _SCANNER_DEFAULT_MIN_NIGHTS — musí odpovídat
+    hodnotě v _plan_scan_dates (scanner.py), aby se oba shodly.
+    """
+    today = today or date.today()
     try:
-        from datetime import date as _date
-        d_from = _date.fromisoformat(window.get("from", ""))
-        d_to = _date.fromisoformat(window.get("to", ""))
+        d_from = date.fromisoformat(window.get("from", ""))
+        d_to = date.fromisoformat(window.get("to", ""))
     except (KeyError, ValueError, TypeError):
         logger.warning("travelWindow: chybí nebo neplatné formáty from/to (ISO 8601)")
         return False
 
     if d_to <= d_from:
-        logger.warning("travelWindow: to (%s) musí být po from (%s)", d_to, d_from)
+        logger.warning("travelWindow: to (%s) musí být striktně po from (%s)", d_to, d_from)
         return False
 
-    # Ověř, že okno je dostatečně velké pro min. pobytu + odlet/návrat
-    min_nights = 7  # výchozí hodnota
+    # Efektivní start = max(d_from, zítra) — přesně jako scanner.py:_plan_scan_dates
+    min_nights = _SCANNER_DEFAULT_MIN_NIGHTS
     if stay_config and isinstance(stay_config, dict):
-        min_nights = stay_config.get("minNights", 7)
+        min_nights = stay_config.get("minNights", _SCANNER_DEFAULT_MIN_NIGHTS)
 
-    min_window_days = min_nights + 2  # odlet + pobyty + návrat
-    actual_days = (d_to - d_from).days
-    if actual_days < min_window_days:
+    effective_start = max(d_from, today + timedelta(days=1))
+    effective_days = (d_to - effective_start).days
+    if effective_days < min_nights:
         logger.warning(
-            "travelWindow: příliš úzké (%d dní) pro min. %d nocí; "
-            "potřeba aspoň %d dní (od-pobyty-návrat)",
-            actual_days, min_nights, min_window_days
+            "travelWindow: efektivní okno od zítřka (%s → %s) má jen %d dní, "
+            "potřeba aspoň %d (min_nights); okno v minulosti nebo příliš úzké",
+            effective_start, d_to, effective_days, min_nights,
         )
         return False
 

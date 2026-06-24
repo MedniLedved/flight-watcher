@@ -274,26 +274,61 @@ def test_apply_agent_config_overrides():
     assert cfg["search_windows"] == [{"year": 2026, "months": [9, 10, 11, 12]}]
 
 
+def test_apply_agent_config_rejects_window_in_past():
+    """Okno celé v minulosti se přeskočí — efektivní start (zítra) leží za d_to.
+    Původní fix (commit 16cc365) toto nezachytával, protože kontroloval jen
+    absolutní šířku (d_to - d_from), ne efektivní (d_to - max(d_from, today+1)).
+    """
+    from src.config import _validate_travel_window
+    from datetime import date as _date, timedelta as _td
+    today = _date(2026, 6, 24)
+    # Okno skončilo před 3 měsíci — absolutní šířka 60 dní (prošla by starým testem),
+    # ale efektivní okno = 0 dní.
+    assert not _validate_travel_window(
+        {"from": "2026-01-01", "to": "2026-03-31"},
+        {"minNights": 12, "maxNights": 21},
+        today=today,
+    )
+
+
 def test_apply_agent_config_rejects_narrow_travel_window():
-    """Degenerované okno (užší než min_nights + 2) se přeskočí
-    (ochrána proti fallbacku v _plan_scan_dates)."""
-    cfg = apply_agent_config({"price_threshold_eur": 550}, {
-        **AGENT,
-        "travelWindow": {"from": "2026-09-01", "to": "2026-09-05"},  # jen 4 dny
-        "stayLength": {"minNights": 7, "maxNights": 21},
-    })
-    # search_windows se neuloží, protože travelWindow je příliš úzké
-    assert "search_windows" not in cfg or not cfg.get("search_windows")
+    """Okno příliš úzké pro min_nights (efektivní, od zítřka) se přeskočí."""
+    from src.config import _validate_travel_window
+    from datetime import date as _date
+    today = _date(2026, 6, 24)
+    # Okno začíná zítra, trvá jen 5 dní — méně než min_nights=12
+    assert not _validate_travel_window(
+        {"from": "2026-06-25", "to": "2026-06-30"},
+        {"minNights": 12, "maxNights": 21},
+        today=today,
+    )
 
 
-def test_apply_agent_config_rejects_inverted_travel_window():
-    """Okno s to < from se přeskočí."""
-    cfg = apply_agent_config({"price_threshold_eur": 550}, {
-        **AGENT,
-        "travelWindow": {"from": "2026-12-31", "to": "2026-09-01"},  # inverzní
-        "stayLength": {"minNights": 7, "maxNights": 21},
-    })
-    assert "search_windows" not in cfg or not cfg.get("search_windows")
+def test_apply_agent_config_accepts_exact_min_nights_window():
+    """Okno přesně min_nights dní od zítřka je ještě platné (hraniční případ).
+    Původní fix chybně vyžadoval min_nights+2, takže toto okno odmítal.
+    """
+    from src.config import _validate_travel_window
+    from datetime import date as _date, timedelta as _td
+    today = _date(2026, 6, 24)
+    d_from = today + _td(days=1)
+    d_to = d_from + _td(days=12)  # přesně min_nights=12
+    assert _validate_travel_window(
+        {"from": str(d_from), "to": str(d_to)},
+        {"minNights": 12, "maxNights": 21},
+        today=today,
+    )
+
+
+def test_apply_agent_config_rejects_equal_from_to():
+    """Okno s from == to (nulová šířka) se přeskočí — nový guard to == from.
+    Starý kód kontroloval jen d_to < d_from (striktní), d_to == d_from prošel."""
+    from src.config import _validate_travel_window
+    from datetime import date as _date
+    assert not _validate_travel_window(
+        {"from": "2026-09-01", "to": "2026-09-01"},
+        {"minNights": 12, "maxNights": 21},
+    )
 
 
 def test_settings_toggles_default_true():
