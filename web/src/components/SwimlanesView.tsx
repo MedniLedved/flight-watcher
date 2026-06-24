@@ -153,16 +153,6 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute, priceMax, on
   const minPrice = effPrices.length ? Math.min(...effPrices) : 0;
   const maxPrice = effPrices.length ? Math.max(...effPrices) : 0;
 
-  if (lanes.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          Žádné nabídky s konkrétním termínem odletu a návratu.
-        </CardContent>
-      </Card>
-    );
-  }
-
   const selectedTransport = selected ? getTransport(selected.origin, agentConfig) : null;
   const selectedReturnTransport =
     selected?.type === "openjaw" && selected.returnDestination
@@ -175,87 +165,96 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute, priceMax, on
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
-          <div>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div className="min-w-0">
             <CardTitle>Časová osa nabídek</CardTitle>
             <CardDescription>
-              {lanes.length} deal{lanes.length === 1 ? "" : "ů"} pod {priceMaxNum} €{includeTransport ? " vč. dopravy" : ""} seřazených podle odletu
-              {undated > 0 ? ` · ${undated} bez termínu skryto` : ""}
-              {overBudget > 0 ? ` · ${overBudget} nad limitem skryto` : ""}
-              {" · "}Kliknutím na bar zobrazíš detail nabídky.
+              {lanes.length > 0
+                ? <>{lanes.length} deal{lanes.length === 1 ? "" : "ů"} pod {priceMaxNum} €{includeTransport ? " vč. dopravy" : ""} seřazených podle odletu
+                  {undated > 0 ? ` · ${undated} bez termínu skryto` : ""}
+                  {overBudget > 0 ? ` · ${overBudget} nad limitem skryto` : ""}
+                  {" · "}Kliknutím na bar zobrazíš detail nabídky.</>
+                : <>Žádné nabídky pod {priceMaxNum} €{includeTransport ? " vč. dopravy" : ""}.
+                  {undated > 0 ? ` ${undated} bez termínu skryto.` : ""}
+                  {overBudget > 0 ? ` ${overBudget} nad limitem.` : ""}</>
+              }
             </CardDescription>
           </div>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                Max. cena (EUR){includeTransport ? " vč. dopravy" : ""}
-              </label>
-              <div className="flex items-center gap-0.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 w-7 px-0 text-base"
-                  onClick={() => {
-                    const v = parseNum(priceMax);
-                    if (v != null) onPriceMaxChange(v <= 50 ? "0" : String(v - 50));
-                  }}
-                >−</Button>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  className="w-24"
-                  value={priceMax}
-                  onChange={(e) => onPriceMaxChange(e.target.value)}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 w-7 px-0 text-base"
-                  onClick={() => {
-                    const v = parseNum(priceMax);
-                    if (v != null) onPriceMaxChange(String(v + 50));
-                  }}
-                >+</Button>
-              </div>
+          {/* Filtr — kompaktní, jednořádkový, neseskočí při delším labelu */}
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="whitespace-nowrap text-xs text-muted-foreground">
+              Max{includeTransport ? " vč. dop." : ""} €
+            </span>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-7 px-0 text-base"
+                onClick={() => {
+                  const v = parseNum(priceMax);
+                  if (v != null) onPriceMaxChange(v <= 50 ? "0" : String(v - 50));
+                }}
+              >−</Button>
+              <Input
+                type="number"
+                inputMode="numeric"
+                className="h-8 w-20 text-center"
+                value={priceMax}
+                onChange={(e) => onPriceMaxChange(e.target.value)}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-7 px-0 text-base"
+                onClick={() => {
+                  const v = parseNum(priceMax);
+                  if (v != null) onPriceMaxChange(String(v + 50));
+                }}
+              >+</Button>
             </div>
             <button
               onClick={() => onToggleTransport(!includeTransport)}
               className={cn(
-                "flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors",
+                "flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
                 includeTransport
                   ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-300"
                   : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              <Train className="h-4 w-4 shrink-0" />
-              + doprava
+              <Train className="h-3.5 w-3.5 shrink-0" />
+              doprava
             </button>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="tabular-nums">{Math.round(minPrice)} €</span>
-              <div className="flex h-3 w-20 overflow-hidden rounded">
-                {Array.from({ length: 16 }, (_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1"
-                    style={{
-                      background: priceColor(
-                        minPrice + (i / 15) * (maxPrice - minPrice),
-                        minPrice,
-                        maxPrice,
-                      ),
-                    }}
-                  />
-                ))}
-              </div>
-              <span className="tabular-nums">{Math.round(maxPrice)} €</span>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {lanes.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Žádné nabídky nevyhovují filtru — zkus zvýšit limit nebo vypnout dopravu.
+            </p>
+          ) : (
           <div className="flex">
             {/* Levý sloupec s popisky tras — fixní, nescrolluje */}
             <div className="w-44 shrink-0 pr-3">
-              <div className="h-7" />
+              {/* Legenda barev nad grafem */}
+              <div className="flex h-7 items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="tabular-nums">{Math.round(minPrice)} €</span>
+                <div className="flex h-2.5 w-14 overflow-hidden rounded">
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="flex-1"
+                      style={{
+                        background: priceColor(
+                          minPrice + (i / 11) * (maxPrice - minPrice),
+                          minPrice,
+                          maxPrice,
+                        ),
+                      }}
+                    />
+                  ))}
+                </div>
+                <span className="tabular-nums">{Math.round(maxPrice)} €</span>
+              </div>
               {lanes.map((o) => (
                 <div
                   key={offerKey(o)}
@@ -349,10 +348,11 @@ export function SwimlanesView({ latest, agentConfig, onSelectRoute, priceMax, on
               </div>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
 
-      {selected && (
+      {selected && lanes.length > 0 && (
         <div className="rounded-lg border bg-muted/40 p-4 text-sm">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="font-semibold">
