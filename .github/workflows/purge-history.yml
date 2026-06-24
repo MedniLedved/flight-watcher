@@ -11,11 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: 'Zdroje k odstranění (mezerou oddělené)'
-        required: true
+        description: 'Zdroje k odstranění (mezerou oddělené; ignorováno při one_way)'
+        required: false
         default: 'duffel amadeus'
+      one_way:
+        description: 'Odstranit one-way pollution (roundtrip/openjaw bez return_date) místo zdrojů'
+        type: boolean
+        default: false
       before:
-        description: 'Jen záznamy před datem (YYYY-MM-DD; prázdné = všechny)'
+        description: 'Jen záznamy před datem (YYYY-MM-DD; prázdné = všechny; platí jen pro sources)'
         required: false
         default: ''
       apply:
@@ -52,9 +56,13 @@ jobs:
       # src.maintenance používá jen stdlib – žádné pip install není potřeba.
       - name: Run purge
         run: |
-          ARGS="--sources ${{ inputs.sources }}"
-          if [ -n "${{ inputs.before }}" ]; then
-            ARGS="$ARGS --before ${{ inputs.before }}"
+          if [ "${{ inputs.one_way }}" = "true" ]; then
+            ARGS="--one-way"
+          else
+            ARGS="--sources ${{ inputs.sources }}"
+            if [ -n "${{ inputs.before }}" ]; then
+              ARGS="$ARGS --before ${{ inputs.before }}"
+            fi
           fi
           if [ "${{ inputs.apply }}" = "true" ]; then
             ARGS="$ARGS --apply"
