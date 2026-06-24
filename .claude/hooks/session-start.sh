@@ -11,13 +11,16 @@ fi
 echo "=== flight-watcher: session start ==="
 echo ""
 
-# Python závislosti
-# --use-pep517: některé staré sdisty (sgmllib3k přes feedparser) se na systémovém
-# Debian setuptools rozbijí ('install_layout'); PEP 517 build je staví v izolaci.
+# Python závislosti — přeskočí install pokud jsou balíčky už k dispozici
+# (--use-pep517: sgmllib3k přes feedparser se na systémovém Debian setuptools
+#  rozbije na 'install_layout'; PEP 517 build ho staví v izolaci).
 echo "[1/2] Python dependencies..."
-pip install -r requirements.txt -q --disable-pip-version-check --use-pep517
-pip install pytest -q --disable-pip-version-check
-echo "  ✓ pip OK"
+if python3 -c "import requests, feedparser, yaml, dotenv, lxml, bs4, pytest" 2>/dev/null; then
+  echo "  ✓ pip already satisfied"
+else
+  pip install -r requirements.txt pytest -q --disable-pip-version-check --use-pep517
+  echo "  ✓ pip OK"
+fi
 
 # Node závislosti
 echo "[2/2] Node dependencies..."
