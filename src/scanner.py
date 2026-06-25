@@ -68,6 +68,9 @@ FLIGHTLABS_RESET_DAY = 19
 # _flightlabs_collect_pending): zaseknutý job by jinak věčně pálil kvótu a
 # případný pozdní výsledek by byl zastaralý (date = den pozorování).
 FLIGHTLABS_PENDING_EXPIRY_DAYS = 2
+# Maximální počet FlightLabs requestů na jeden scan (collect + submit dohromady).
+# Každý scan = 1× denně → tato konstanta = denní limit.
+FLIGHTLABS_MAX_REQ_PER_RUN = 6
 
 
 class _BudgetExhausted(Exception):
@@ -599,7 +602,10 @@ class Scanner:
         # provizorní hard-cap nahrazen řádným rozpočtem: zbytek kvóty rozpočítaný
         # na dny do příštího resetu (19.), ať se placená kvóta 4000/období
         # využije rovnoměrně a nevyplýtvá hned po resetu.
-        per_run = _spread_budget(remaining, _flightlabs_next_reset().isoformat())
+        per_run = min(
+            _spread_budget(remaining, _flightlabs_next_reset().isoformat()),
+            FLIGHTLABS_MAX_REQ_PER_RUN,
+        )
         return self.flightlabs.request_count < per_run
 
     def _flightlabs_collect_pending(self) -> list[FlightResult]:
