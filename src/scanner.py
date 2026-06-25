@@ -67,7 +67,7 @@ FLIGHTLABS_RESET_DAY = 19
 # Po kolika dnech zahodit nedokončený FlightLabs async job (viz CLAUDE.md /
 # _flightlabs_collect_pending): zaseknutý job by jinak věčně pálil kvótu a
 # případný pozdní výsledek by byl zastaralý (date = den pozorování).
-FLIGHTLABS_PENDING_EXPIRY_DAYS = 3
+FLIGHTLABS_PENDING_EXPIRY_DAYS = 2
 
 
 class _BudgetExhausted(Exception):
