@@ -25,6 +25,28 @@
     }
   },
   {
+    "routeKey": "AMS-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "AMS",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Amsterdam",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 52.3105,
+        "lon": 4.7683
+      },
+      "destination": {
+        "lat": 35.5494,
+        "lon": 139.7798
+      },
+      "returnOrigin": null
+    }
+  },
+  {
     "routeKey": "AMS-ITM-HND-openjaw",
     "type": "openjaw",
     "origin": "AMS",
@@ -50,6 +72,28 @@
     }
   },
   {
+    "routeKey": "AMS-ITM-roundtrip",
+    "type": "roundtrip",
+    "origin": "AMS",
+    "destination": "ITM",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Amsterdam",
+    "destinationName": "Osaka",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 52.3105,
+        "lon": 4.7683
+      },
+      "destination": {
+        "lat": 34.7855,
+        "lon": 135.4382
+      },
+      "returnOrigin": null
+    }
+  },
+  {
     "routeKey": "AMS-KIX-HND-openjaw",
     "type": "openjaw",
     "origin": "AMS",
@@ -72,6 +116,28 @@
         "lat": 35.5494,
         "lon": 139.7798
       }
+    }
+  },
+  {
+    "routeKey": "AMS-KIX-roundtrip",
+    "type": "roundtrip",
+    "origin": "AMS",
+    "destination": "KIX",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Amsterdam",
+    "destinationName": "Osaka",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 52.3105,
+        "lon": 4.7683
+      },
+      "destination": {
+        "lat": 34.4347,
+        "lon": 135.2441
+      },
+      "returnOrigin": null
     }
   },
   {
@@ -122,6 +188,28 @@
         "lat": 34.4347,
         "lon": 135.2441
       }
+    }
+  },
+  {
+    "routeKey": "AMS-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "AMS",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Amsterdam",
+    "destinationName": "Tokio",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 52.3105,
+        "lon": 4.7683
+      },
+      "destination": {
+        "lat": 35.7647,
+        "lon": 140.3863
+      },
+      "returnOrigin": null
     }
   },
   {
@@ -343,6 +431,28 @@
       "destination": {
         "lat": 35.5494,
         "lon": 139.7798
+      },
+      "returnOrigin": null
+    }
+  },
+  {
+    "routeKey": "FRA-ITM-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "ITM",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "originName": "Frankfurt",
+    "destinationName": "Osaka",
+    "returnOriginName": null,
+    "coords": {
+      "origin": {
+        "lat": 50.0379,
+        "lon": 8.5622
+      },
+      "destination": {
+        "lat": 34.7855,
+        "lon": 135.4382
       },
       "returnOrigin": null
     }
