@@ -15,7 +15,7 @@
       "Emirates"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -27,16 +27,6 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 974.0,
-        "airlines": [
-          "Qatar Airways"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 1,
-        "stopsIn": null
-      },
-      {
         "price": 976.0,
         "airlines": [
           "Cathay Pacific, JAL"
@@ -47,7 +37,17 @@
         "stopsIn": null
       },
       {
-        "price": 976.0,
+        "price": 1010.0,
+        "airlines": [
+          "China Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1011.0,
         "airlines": [
           "Cathay Pacific"
         ],
@@ -59,8 +59,74 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -353.0,
+      "priceDeltaEur": -277.0,
       "pctChange7d": -2.8,
+      "isBigDrop": true,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 890.0,
+    "source": "googleflights",
+    "departDate": "2026-11-04",
+    "returnDate": "2026-11-25",
+    "nights": 21,
+    "airlines": [
+      "Emirates"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1003.0,
+        "airlines": [
+          "Qatar Airways"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1031.0,
+        "airlines": [
+          "Emirates"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1052.0,
+        "airlines": [
+          "Qatar Airways"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -214.0,
+      "pctChange7d": -7.4,
       "isBigDrop": true,
       "staleDays": null
     }
@@ -81,7 +147,7 @@
       "Qatar Airways"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -135,8 +201,74 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -268.0,
+      "priceDeltaEur": -269.0,
       "pctChange7d": 13.1,
+      "isBigDrop": true,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1002.0,
+    "source": "googleflights",
+    "departDate": "2026-11-04",
+    "returnDate": "2026-11-25",
+    "nights": 21,
+    "airlines": [
+      "Qatar Airways"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1002.0,
+        "airlines": [
+          "Qatar Airways, JAL"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1004.0,
+        "airlines": [
+          "Qatar Airways"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1087.0,
+        "airlines": [
+          "Emirates"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -225.0,
+      "pctChange7d": 14.6,
       "isBigDrop": true,
       "staleDays": null
     }
@@ -157,7 +289,7 @@
       "China Airlines"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -169,7 +301,7 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1032.0,
+        "price": 1061.0,
         "airlines": [
           "Korean Air"
         ],
@@ -179,9 +311,9 @@
         "stopsIn": null
       },
       {
-        "price": 1054.0,
+        "price": 1073.0,
         "airlines": [
-          "KLM"
+          "Cathay Pacific"
         ],
         "source": "googleflights",
         "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
@@ -191,8 +323,8 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -256.0,
-      "pctChange7d": 1.1,
+      "priceDeltaEur": -291.0,
+      "pctChange7d": 2.9,
       "isBigDrop": true,
       "staleDays": null
     }
@@ -213,7 +345,7 @@
       "THAI"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -224,6 +356,16 @@
     "stopsIn": null,
     "scannedPrice": null,
     "alternatives": [
+      {
+        "price": 1272.0,
+        "airlines": [
+          "Qatar Airways, SriLankan"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
       {
         "price": 1333.0,
         "airlines": [
@@ -235,17 +377,7 @@
         "stopsIn": null
       },
       {
-        "price": 1408.0,
-        "airlines": [
-          "Qatar Airways, SriLankan"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1541.0,
+        "price": 1457.0,
         "airlines": [
           "Qatar Airways"
         ],
@@ -257,105 +389,29 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -160.0,
+      "priceDeltaEur": -84.0,
       "pctChange7d": 18.7,
       "isBigDrop": false,
       "staleDays": null
     }
   },
   {
-    "routeKey": "NUE-NRT-roundtrip",
+    "routeKey": "MUC-HND-roundtrip",
     "type": "roundtrip",
-    "origin": "NUE",
-    "destination": "NRT",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 1099.0,
-    "source": "googleflights",
-    "departDate": "2026-11-04",
-    "returnDate": "2026-11-25",
-    "nights": 21,
-    "airlines": [
-      "Lufthansa, Qatar Airways"
-    ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "stopsOut": 2,
-    "stopsIn": null,
-    "scannedPrice": null,
-    "alternatives": [
-      {
-        "price": 1124.0,
-        "airlines": [
-          "Lufthansa, Emirates"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1148.0,
-        "airlines": [
-          "Lufthansa, Qatar Airways"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1149.0,
-        "airlines": [
-          "Lufthansa, Emirates"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1182.0,
-        "airlines": [
-          "Air France, KLM"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTExLTI1agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      }
-    ],
-    "flags": {
-      "isNewLow": true,
-      "priceDeltaEur": -243.0,
-      "pctChange7d": -18.1,
-      "isBigDrop": true,
-      "staleDays": null
-    }
-  },
-  {
-    "routeKey": "NUE-HND-roundtrip",
-    "type": "roundtrip",
-    "origin": "NUE",
+    "origin": "MUC",
     "destination": "HND",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1102.0,
+    "price": 1088.0,
     "source": "googleflights",
-    "departDate": "2026-11-04",
-    "returnDate": "2026-11-25",
-    "nights": 21,
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
     "airlines": [
-      "Lufthansa, Qatar Airways"
+      "Emirates, JAL"
     ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -367,51 +423,127 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1102.0,
+        "price": 1227.0,
         "airlines": [
-          "Lufthansa, Qatar Airways, JAL"
+          "THAI"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1265.0,
+        "airlines": [
+          "Gulf Air, Philippine Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
         "stopsOut": 2,
         "stopsIn": null
       },
       {
-        "price": 1123.0,
+        "price": 1340.0,
         "airlines": [
-          "Air France"
+          "Emirates"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTExLTI1agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
         "stopsOut": 1,
         "stopsIn": null
       }
     ],
     "flags": {
-      "isNewLow": true,
-      "priceDeltaEur": -560.0,
-      "pctChange7d": -18.8,
-      "isBigDrop": true,
+      "isNewLow": false,
+      "priceDeltaEur": -139.0,
+      "pctChange7d": 24.5,
+      "isBigDrop": false,
       "staleDays": null
     }
   },
   {
-    "routeKey": "FRA-KIX-roundtrip",
+    "routeKey": "MUC-NRT-roundtrip",
     "type": "roundtrip",
-    "origin": "FRA",
+    "origin": "MUC",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1088.0,
+    "source": "googleflights",
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
+    "airlines": [
+      "Emirates, JAL"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 2,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1104.0,
+        "airlines": [
+          "Emirates, Jetstar"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1257.0,
+        "airlines": [
+          "THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1387.0,
+        "airlines": [
+          "LOT"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -16.0,
+      "pctChange7d": 13.2,
+      "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-KIX-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
     "destination": "KIX",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1103.0,
+    "price": 1094.0,
     "source": "googleflights",
-    "departDate": "2026-10-19",
-    "returnDate": "2026-11-11",
-    "nights": 23,
+    "departDate": "2026-11-04",
+    "returnDate": "2026-11-25",
+    "nights": 21,
     "airlines": [
-      "Cathay Pacific"
+      "Finnair"
     ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTExagUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -423,20 +555,50 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1154.0,
+        "price": 1145.0,
         "airlines": [
-          "China Airlines"
+          "Finnair"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTExagUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
         "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1197.0,
+        "airlines": [
+          "Finnair"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1230.0,
+        "airlines": [
+          "THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1267.0,
+        "airlines": [
+          "Air France, KLM"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTI1agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
         "stopsIn": null
       }
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -166.0,
-      "pctChange7d": 10.1,
+      "priceDeltaEur": -179.0,
+      "pctChange7d": 7.8,
       "isBigDrop": false,
       "staleDays": null
     }
@@ -457,7 +619,7 @@
       "Cathay Pacific"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA05HTxoaEgoyMDI2LTEwLTE4agUSA05HT3IFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -501,29 +663,29 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -665.0,
-      "pctChange7d": 16.6,
-      "isBigDrop": true,
+      "priceDeltaEur": 0.0,
+      "pctChange7d": 18.5,
+      "isBigDrop": false,
       "staleDays": null
     }
   },
   {
-    "routeKey": "FRA-NRT-roundtrip",
+    "routeKey": "MUC-KIX-roundtrip",
     "type": "roundtrip",
-    "origin": "FRA",
-    "destination": "NRT",
+    "origin": "MUC",
+    "destination": "KIX",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1151.0,
+    "price": 1158.0,
     "source": "googleflights",
-    "departDate": "2026-10-19",
-    "returnDate": "2026-11-11",
-    "nights": 23,
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
     "airlines": [
-      "China Airlines"
+      "Emirates"
     ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTExagUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -535,41 +697,137 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1238.0,
+        "price": 1294.0,
         "airlines": [
-          "Asiana Airlines"
+          "Gulf Air, Philippine Airlines"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTExagUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1299.0,
+        "airlines": [
+          "Gulf Air, Philippine Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1348.0,
+        "airlines": [
+          "THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1355.0,
+        "airlines": [
+          "Emirates"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
         "stopsOut": 1,
         "stopsIn": null
       }
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -76.0,
-      "pctChange7d": 28.0,
+      "priceDeltaEur": -115.0,
+      "pctChange7d": 14.1,
       "isBigDrop": false,
       "staleDays": null
     }
   },
   {
-    "routeKey": "FRA-HND-roundtrip",
+    "routeKey": "FRA-KIX-roundtrip",
     "type": "roundtrip",
     "origin": "FRA",
-    "destination": "HND",
+    "destination": "KIX",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1196.0,
+    "price": 1160.0,
     "source": "googleflights",
-    "departDate": "2026-10-19",
-    "returnDate": "2026-11-11",
-    "nights": 23,
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
     "airlines": [
-      "Oman Air, THAI"
+      "Emirates"
     ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTExagUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1233.0,
+        "airlines": [
+          "Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1244.0,
+        "airlines": [
+          "Emirates"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1327.0,
+        "airlines": [
+          "China Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTExLTA0agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -144.0,
+      "pctChange7d": 17.9,
+      "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1211.0,
+    "source": "googleflights",
+    "departDate": "2026-10-01",
+    "returnDate": "2026-10-18",
+    "nights": 17,
+    "airlines": [
+      "Emirates, JAL"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -581,51 +839,173 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1211.0,
+        "price": 1255.0,
         "airlines": [
-          "China Airlines"
+          "Qatar Airways, SriLankan"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTExagUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 1,
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
         "stopsIn": null
       },
       {
-        "price": 1245.0,
+        "price": 1257.0,
         "airlines": [
           "THAI"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTExagUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 1,
-        "stopsIn": null
-      },
-      {
-        "price": 1267.0,
-        "airlines": [
-          "China Airlines"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTExagUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 1,
-        "stopsIn": null
-      },
-      {
-        "price": 1328.0,
-        "airlines": [
-          "Turkish Airlines, ANA"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMTlqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTExagUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
         "stopsOut": 1,
         "stopsIn": null
       }
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": -48.0,
-      "pctChange7d": 38.6,
+      "priceDeltaEur": 107.0,
+      "pctChange7d": 26.0,
       "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1227.0,
+    "source": "googleflights",
+    "departDate": "2026-10-01",
+    "returnDate": "2026-10-18",
+    "nights": 17,
+    "airlines": [
+      "THAI"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1255.0,
+        "airlines": [
+          "Gulf Air, Philippine Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1445.0,
+        "airlines": [
+          "Oman Air, THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1525.0,
+        "airlines": [
+          "EVA Air"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1594.0,
+        "airlines": [
+          "Cathay Pacific, JAL"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": 0.0,
+      "pctChange7d": 40.4,
+      "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-NGO-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "NGO",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1234.0,
+    "source": "googleflights",
+    "departDate": "2026-10-01",
+    "returnDate": "2026-10-18",
+    "nights": 17,
+    "airlines": [
+      "Cathay Pacific"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTEwLTE4agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1359.0,
+        "airlines": [
+          "Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTEwLTE4agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1373.0,
+        "airlines": [
+          "Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTEwLTE4agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1401.0,
+        "airlines": [
+          "Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTEwLTE4agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -743.0,
+      "pctChange7d": -19.0,
+      "isBigDrop": true,
       "staleDays": null
     }
   },
@@ -645,7 +1025,7 @@
       "THAI"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -657,7 +1037,7 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1543.0,
+        "price": 1553.0,
         "airlines": [
           "Gulf Air, Philippine Airlines"
         ],
@@ -677,9 +1057,19 @@
         "stopsIn": null
       },
       {
-        "price": 1649.0,
+        "price": 1731.0,
         "airlines": [
           "Air France"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1755.0,
+        "airlines": [
+          "China Airlines"
         ],
         "source": "googleflights",
         "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
@@ -689,8 +1079,206 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": 1.0,
+      "priceDeltaEur": 0.0,
       "pctChange7d": 44.3,
+      "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "FRA-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1245.0,
+    "source": "googleflights",
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
+    "airlines": [
+      "THAI"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1333.0,
+        "airlines": [
+          "Emirates"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1446.0,
+        "airlines": [
+          "Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA0hORBoaEgoyMDI2LTExLTA0agUSA0hORHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": 0.0,
+      "pctChange7d": 44.3,
+      "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "FRA-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1245.0,
+    "source": "googleflights",
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
+    "airlines": [
+      "THAI"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1389.0,
+        "airlines": [
+          "THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1426.0,
+        "airlines": [
+          "Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1426.0,
+        "airlines": [
+          "Cathay Pacific, JAL"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05SVBoaEgoyMDI2LTExLTA0agUSA05SVHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": 94.0,
+      "pctChange7d": 38.5,
+      "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "FRA-NGO-roundtrip",
+    "type": "roundtrip",
+    "origin": "FRA",
+    "destination": "NGO",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1266.0,
+    "source": "googleflights",
+    "departDate": "2026-10-18",
+    "returnDate": "2026-11-04",
+    "nights": 17,
+    "airlines": [
+      "Cathay Pacific"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05HTxoaEgoyMDI2LTExLTA0agUSA05HT3IFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1292.0,
+        "airlines": [
+          "Qatar Airways, Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05HTxoaEgoyMDI2LTExLTA0agUSA05HT3IFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1306.0,
+        "airlines": [
+          "Qatar Airways, THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05HTxoaEgoyMDI2LTExLTA0agUSA05HT3IFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1345.0,
+        "airlines": [
+          "Etihad, Asiana Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05HTxoaEgoyMDI2LTExLTA0agUSA05HT3IFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1356.0,
+        "airlines": [
+          "Etihad, STARLUX Airlines"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMThqBRIDRlJBcgUSA05HTxoaEgoyMDI2LTExLTA0agUSA05HT3IFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": 120.0,
+      "pctChange7d": 30.9,
       "isBigDrop": false,
       "staleDays": null
     }
@@ -702,7 +1290,7 @@
     "destination": "KIX",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1304.0,
+    "price": 1273.0,
     "source": "googleflights",
     "departDate": "2026-10-01",
     "returnDate": "2026-10-18",
@@ -711,7 +1299,7 @@
       "THAI"
     ],
     "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -722,6 +1310,16 @@
     "stopsIn": null,
     "scannedPrice": null,
     "alternatives": [
+      {
+        "price": 1387.0,
+        "airlines": [
+          "THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
       {
         "price": 1411.0,
         "airlines": [
@@ -743,9 +1341,9 @@
         "stopsIn": null
       },
       {
-        "price": 1451.0,
+        "price": 1454.0,
         "airlines": [
-          "KLM"
+          "Finnair"
         ],
         "source": "googleflights",
         "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDRlJBcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNGUkFAAUgBmAEB&hl=en&curr=EUR",
@@ -755,105 +1353,29 @@
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": 35.0,
-      "pctChange7d": 30.1,
+      "priceDeltaEur": -31.0,
+      "pctChange7d": 29.4,
       "isBigDrop": false,
       "staleDays": null
     }
   },
   {
-    "routeKey": "NUE-HND-roundtrip",
+    "routeKey": "MUC-KIX-roundtrip",
     "type": "roundtrip",
-    "origin": "NUE",
-    "destination": "HND",
+    "origin": "MUC",
+    "destination": "KIX",
     "returnOrigin": null,
     "returnDestination": null,
-    "price": 1476.0,
+    "price": 1310.0,
     "source": "googleflights",
     "departDate": "2026-10-01",
     "returnDate": "2026-10-18",
     "nights": 17,
     "airlines": [
-      "Air France"
+      "Gulf Air, Philippine Airlines"
     ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "stopsOut": 1,
-    "stopsIn": null,
-    "scannedPrice": null,
-    "alternatives": [
-      {
-        "price": 1665.0,
-        "airlines": [
-          "Lufthansa, Qatar Airways"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1668.0,
-        "airlines": [
-          "KLM, JAL"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1765.0,
-        "airlines": [
-          "Lufthansa, ANA"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
-        "stopsIn": null
-      },
-      {
-        "price": 1810.0,
-        "airlines": [
-          "Air France"
-        ],
-        "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA0hORBoaEgoyMDI2LTEwLTE4agUSA0hORHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 1,
-        "stopsIn": null
-      }
-    ],
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": -186.0,
-      "pctChange7d": 8.8,
-      "isBigDrop": false,
-      "staleDays": null
-    }
-  },
-  {
-    "routeKey": "NUE-NRT-roundtrip",
-    "type": "roundtrip",
-    "origin": "NUE",
-    "destination": "NRT",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 1606.0,
-    "source": "googleflights",
-    "departDate": "2026-10-01",
-    "returnDate": "2026-10-18",
-    "nights": 17,
-    "airlines": [
-      "Lufthansa, THAI"
-    ],
-    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-    "observedDate": "2026-07-25",
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
     "segments": {
       "out": [],
       "in": []
@@ -865,41 +1387,147 @@
     "scannedPrice": null,
     "alternatives": [
       {
-        "price": 1679.0,
+        "price": 1311.0,
         "airlines": [
-          "Air France, KLM"
+          "THAI"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
         "stopsIn": null
       },
       {
-        "price": 1760.0,
+        "price": 1321.0,
         "airlines": [
-          "Lufthansa, Qatar Airways"
+          "EVA Air"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
-        "stopsOut": 2,
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
         "stopsIn": null
       },
       {
-        "price": 1767.0,
+        "price": 1375.0,
         "airlines": [
-          "Lufthansa, China Airlines"
+          "Finnair"
         ],
         "source": "googleflights",
-        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTlVFcgUSA05SVBoaEgoyMDI2LTEwLTE4agUSA05SVHIFEgNOVUVAAUgBmAEB&hl=en&curr=EUR",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1456.0,
+        "airlines": [
+          "THAI"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1467.0,
+        "airlines": [
+          "Lufthansa, Cathay Pacific"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTAtMDFqBRIDTVVDcgUSA0tJWBoaEgoyMDI2LTEwLTE4agUSA0tJWHIFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
         "stopsOut": 2,
         "stopsIn": null
       }
     ],
     "flags": {
       "isNewLow": false,
-      "priceDeltaEur": 264.0,
-      "pctChange7d": 19.7,
+      "priceDeltaEur": 37.0,
+      "pctChange7d": 29.1,
       "isBigDrop": false,
+      "staleDays": null
+    }
+  },
+  {
+    "routeKey": "MUC-NGO-roundtrip",
+    "type": "roundtrip",
+    "origin": "MUC",
+    "destination": "NGO",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1437.0,
+    "source": "googleflights",
+    "departDate": "2026-11-04",
+    "returnDate": "2026-11-25",
+    "nights": 21,
+    "airlines": [
+      "Lufthansa, ANA"
+    ],
+    "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTExLTI1agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+    "observedDate": "2026-07-26",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": 1,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [
+      {
+        "price": 1440.0,
+        "airlines": [
+          "Lufthansa, ANA"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTExLTI1agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1517.0,
+        "airlines": [
+          "ANA"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTExLTI1agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1610.0,
+        "airlines": [
+          "ANA"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTExLTI1agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 1,
+        "stopsIn": null
+      },
+      {
+        "price": 1681.0,
+        "airlines": [
+          "Lufthansa, ANA"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTExLTI1agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      },
+      {
+        "price": 1867.0,
+        "airlines": [
+          "Finnair, JAL"
+        ],
+        "source": "googleflights",
+        "dealUrl": "https://www.google.com/travel/flights/search?tfs=GhoSCjIwMjYtMTEtMDRqBRIDTVVDcgUSA05HTxoaEgoyMDI2LTExLTI1agUSA05HT3IFEgNNVUNAAUgBmAEB&hl=en&curr=EUR",
+        "stopsOut": 2,
+        "stopsIn": null
+      }
+    ],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": -540.0,
+      "pctChange7d": -5.6,
+      "isBigDrop": true,
       "staleDays": null
     }
   },
@@ -933,7 +1561,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 42
+      "staleDays": 43
     }
   },
   {
@@ -966,7 +1594,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -999,7 +1627,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1032,7 +1660,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1065,7 +1693,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 33
+      "staleDays": 34
     }
   },
   {
@@ -1098,7 +1726,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 20
+      "staleDays": 21
     }
   },
   {
@@ -1131,7 +1759,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1164,7 +1792,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1197,7 +1825,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1230,40 +1858,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
-    }
-  },
-  {
-    "routeKey": "MUC-NRT-roundtrip",
-    "type": "roundtrip",
-    "origin": "MUC",
-    "destination": "NRT",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 890.0,
-    "source": "googleflights",
-    "departDate": "2026-11-03",
-    "returnDate": "2026-11-25",
-    "nights": 22,
-    "airlines": [],
-    "dealUrl": null,
-    "observedDate": "2026-07-24",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "stopsOut": null,
-    "stopsIn": null,
-    "scannedPrice": null,
-    "alternatives": [],
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": null,
-      "pctChange7d": -7.4,
-      "isBigDrop": false,
-      "staleDays": 1
+      "staleDays": 44
     }
   },
   {
@@ -1296,7 +1891,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1329,7 +1924,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1362,7 +1957,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1395,7 +1990,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 20
+      "staleDays": 21
     }
   },
   {
@@ -1428,7 +2023,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 20
+      "staleDays": 21
     }
   },
   {
@@ -1461,7 +2056,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1494,73 +2089,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
-    }
-  },
-  {
-    "routeKey": "MUC-HND-roundtrip",
-    "type": "roundtrip",
-    "origin": "MUC",
-    "destination": "HND",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 949.0,
-    "source": "googleflights",
-    "departDate": "2026-11-03",
-    "returnDate": "2026-11-25",
-    "nights": 22,
-    "airlines": [],
-    "dealUrl": null,
-    "observedDate": "2026-07-24",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "stopsOut": null,
-    "stopsIn": null,
-    "scannedPrice": null,
-    "alternatives": [],
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": null,
-      "pctChange7d": 8.6,
-      "isBigDrop": false,
-      "staleDays": 1
-    }
-  },
-  {
-    "routeKey": "MUC-KIX-roundtrip",
-    "type": "roundtrip",
-    "origin": "MUC",
-    "destination": "KIX",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 957.0,
-    "source": "googleflights",
-    "departDate": "2026-11-03",
-    "returnDate": "2026-11-25",
-    "nights": 22,
-    "airlines": [],
-    "dealUrl": null,
-    "observedDate": "2026-07-24",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "stopsOut": null,
-    "stopsIn": null,
-    "scannedPrice": null,
-    "alternatives": [],
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": null,
-      "pctChange7d": -5.7,
-      "isBigDrop": false,
-      "staleDays": 1
+      "staleDays": 44
     }
   },
   {
@@ -1593,7 +2122,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 42
+      "staleDays": 43
     }
   },
   {
@@ -1626,7 +2155,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1659,7 +2188,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 42
+      "staleDays": 43
     }
   },
   {
@@ -1692,40 +2221,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
-    }
-  },
-  {
-    "routeKey": "MUC-NGO-roundtrip",
-    "type": "roundtrip",
-    "origin": "MUC",
-    "destination": "NGO",
-    "returnOrigin": null,
-    "returnDestination": null,
-    "price": 1014.0,
-    "source": "googleflights",
-    "departDate": "2026-11-03",
-    "returnDate": "2026-11-25",
-    "nights": 22,
-    "airlines": [],
-    "dealUrl": null,
-    "observedDate": "2026-07-24",
-    "segments": {
-      "out": [],
-      "in": []
-    },
-    "durationOutMin": null,
-    "durationInMin": null,
-    "stopsOut": null,
-    "stopsIn": null,
-    "scannedPrice": null,
-    "alternatives": [],
-    "flags": {
-      "isNewLow": false,
-      "priceDeltaEur": null,
-      "pctChange7d": -33.4,
-      "isBigDrop": false,
-      "staleDays": 1
+      "staleDays": 32
     }
   },
   {
@@ -1758,7 +2254,40 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
+    }
+  },
+  {
+    "routeKey": "NUE-NRT-roundtrip",
+    "type": "roundtrip",
+    "origin": "NUE",
+    "destination": "NRT",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1099.0,
+    "source": "googleflights",
+    "departDate": "2026-11-04",
+    "returnDate": "2026-11-25",
+    "nights": 21,
+    "airlines": [],
+    "dealUrl": null,
+    "observedDate": "2026-07-25",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": null,
+      "pctChange7d": -18.1,
+      "isBigDrop": false,
+      "staleDays": 1
     }
   },
   {
@@ -1791,7 +2320,40 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 33
+      "staleDays": 34
+    }
+  },
+  {
+    "routeKey": "NUE-HND-roundtrip",
+    "type": "roundtrip",
+    "origin": "NUE",
+    "destination": "HND",
+    "returnOrigin": null,
+    "returnDestination": null,
+    "price": 1102.0,
+    "source": "googleflights",
+    "departDate": "2026-11-04",
+    "returnDate": "2026-11-25",
+    "nights": 21,
+    "airlines": [],
+    "dealUrl": null,
+    "observedDate": "2026-07-25",
+    "segments": {
+      "out": [],
+      "in": []
+    },
+    "durationOutMin": null,
+    "durationInMin": null,
+    "stopsOut": null,
+    "stopsIn": null,
+    "scannedPrice": null,
+    "alternatives": [],
+    "flags": {
+      "isNewLow": false,
+      "priceDeltaEur": null,
+      "pctChange7d": -18.8,
+      "isBigDrop": false,
+      "staleDays": 1
     }
   },
   {
@@ -1824,7 +2386,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -1857,7 +2419,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -1890,7 +2452,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -1923,7 +2485,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 33
+      "staleDays": 34
     }
   },
   {
@@ -1956,7 +2518,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -1989,7 +2551,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2022,7 +2584,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -2055,7 +2617,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -2088,7 +2650,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2121,7 +2683,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 20
+      "staleDays": 21
     }
   },
   {
@@ -2154,7 +2716,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -2187,7 +2749,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 33
+      "staleDays": 34
     }
   },
   {
@@ -2220,7 +2782,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2253,7 +2815,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 20
+      "staleDays": 21
     }
   },
   {
@@ -2286,7 +2848,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2319,7 +2881,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2352,7 +2914,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 32
+      "staleDays": 33
     }
   },
   {
@@ -2385,7 +2947,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2418,7 +2980,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   },
   {
@@ -2451,7 +3013,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 31
+      "staleDays": 32
     }
   },
   {
@@ -2484,7 +3046,7 @@
       "priceDeltaEur": null,
       "pctChange7d": 0.0,
       "isBigDrop": false,
-      "staleDays": 43
+      "staleDays": 44
     }
   }
 ]
