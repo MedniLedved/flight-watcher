@@ -207,15 +207,15 @@
     "allTimeMin": 755.0,
     "min90d": 653.68,
     "max90d": 1388.0,
-    "avg90d": 1054.4,
-    "trend30d": -4.0,
+    "avg90d": 1053.7,
+    "trend30d": 2.6,
     "biggestDrop": {
       "from": 1186.0,
       "to": 885.0,
       "date": "2026-07-02"
     },
     "lastPrice": 1180.0,
-    "currentVsAvgPct": 11.9
+    "currentVsAvgPct": 12.0
   },
   "FRA-ITM-roundtrip": {
     "allTimeMin": 1161.0,
@@ -235,36 +235,36 @@
     "allTimeMin": 880.0,
     "min90d": 661.63,
     "max90d": 1507.0,
-    "avg90d": 1085.3,
-    "trend30d": -14.7,
+    "avg90d": 1084.2,
+    "trend30d": -13.0,
     "biggestDrop": {
       "from": 1286.0,
       "to": 939.0,
       "date": "2026-06-27"
     },
     "lastPrice": 1140.0,
-    "currentVsAvgPct": 5.0
+    "currentVsAvgPct": 5.1
   },
   "FRA-NGO-roundtrip": {
     "allTimeMin": 941.0,
     "min90d": 657.75,
     "max90d": 2104.0,
-    "avg90d": 1265.4,
-    "trend30d": 0.7,
+    "avg90d": 1265.6,
+    "trend30d": 10.2,
     "biggestDrop": {
       "from": 2029.0,
       "to": 1147.0,
       "date": "2026-07-30"
     },
-    "lastPrice": 1193.0,
-    "currentVsAvgPct": -5.7
+    "lastPrice": 1499.0,
+    "currentVsAvgPct": 18.4
   },
   "FRA-NRT-roundtrip": {
     "allTimeMin": 749.0,
     "min90d": 658.1,
     "max90d": 1388.0,
-    "avg90d": 1022.0,
-    "trend30d": 5.4,
+    "avg90d": 1021.7,
+    "trend30d": 9.7,
     "biggestDrop": {
       "from": 1032.0,
       "to": 907.0,
@@ -278,7 +278,7 @@
     "min90d": 652.64,
     "max90d": 1284.0,
     "avg90d": 1086.0,
-    "trend30d": 13.4,
+    "trend30d": 0.7,
     "biggestDrop": {
       "from": 1239.0,
       "to": 894.0,
@@ -302,7 +302,7 @@
     "min90d": 652.79,
     "max90d": 1475.0,
     "avg90d": 1124.9,
-    "trend30d": 7.2,
+    "trend30d": 2.6,
     "biggestDrop": {
       "from": 1216.0,
       "to": 937.0,
@@ -326,7 +326,7 @@
     "min90d": 653.4,
     "max90d": 1977.0,
     "avg90d": 1433.4,
-    "trend30d": -19.9,
+    "trend30d": 2.3,
     "biggestDrop": {
       "from": 1787.0,
       "to": 1223.0,
@@ -340,7 +340,7 @@
     "min90d": 661.53,
     "max90d": 1302.0,
     "avg90d": 1053.4,
-    "trend30d": 3.5,
+    "trend30d": 7.3,
     "biggestDrop": {
       "from": 1227.0,
       "to": 990.0,
@@ -469,15 +469,15 @@
     "allTimeMin": 1102.0,
     "min90d": 648.92,
     "max90d": 1662.0,
-    "avg90d": 987.9,
+    "avg90d": 1092.9,
     "trend30d": null,
     "biggestDrop": {
       "from": 1357.0,
       "to": 1102.0,
       "date": "2026-07-25"
     },
-    "lastPrice": 1476.0,
-    "currentVsAvgPct": 49.4
+    "lastPrice": 1503.0,
+    "currentVsAvgPct": 37.5
   },
   "NUE-ITM-HND-openjaw": {
     "allTimeMin": 1368.0,
@@ -528,18 +528,18 @@
     "currentVsAvgPct": 65.4
   },
   "NUE-NRT-roundtrip": {
-    "allTimeMin": 1099.0,
+    "allTimeMin": 915.0,
     "min90d": 650.32,
     "max90d": 1606.0,
-    "avg90d": 921.0,
+    "avg90d": 998.3,
     "trend30d": null,
     "biggestDrop": {
       "from": 1342.0,
       "to": 1099.0,
       "date": "2026-07-25"
     },
-    "lastPrice": 1606.0,
-    "currentVsAvgPct": 74.4
+    "lastPrice": 1450.0,
+    "currentVsAvgPct": 45.2
   },
   "PRG-HND-roundtrip": {
     "allTimeMin": 1027.0,
@@ -672,5 +672,29 @@
     },
     "lastPrice": 1117.0,
     "currentVsAvgPct": 10.3
+  },
+  "NUE-KIX-roundtrip": {
+    "allTimeMin": 1177.0,
+    "min90d": 642.77,
+    "max90d": 1572.0,
+    "avg90d": 924.5,
+    "trend30d": null,
+    "biggestDrop": null,
+    "lastPrice": 1572.0,
+    "currentVsAvgPct": 70.0
+  },
+  "NUE-NGO-roundtrip": {
+    "allTimeMin": 1246.0,
+    "min90d": 643.61,
+    "max90d": 1570.0,
+    "avg90d": 960.2,
+    "trend30d": null,
+    "biggestDrop": {
+      "from": 656.59,
+      "to": 643.61,
+      "date": "2026-06-10"
+    },
+    "lastPrice": 1570.0,
+    "currentVsAvgPct": 63.5
   }
 }
