@@ -207,8 +207,8 @@
     "allTimeMin": 755.0,
     "min90d": 653.68,
     "max90d": 1388.0,
-    "avg90d": 1053.1,
-    "trend30d": 0.3,
+    "avg90d": 1053.2,
+    "trend30d": -10.0,
     "biggestDrop": {
       "from": 1186.0,
       "to": 885.0,
@@ -235,50 +235,50 @@
     "allTimeMin": 880.0,
     "min90d": 661.63,
     "max90d": 1507.0,
-    "avg90d": 1084.7,
-    "trend30d": 1.7,
+    "avg90d": 1084.2,
+    "trend30d": -14.9,
     "biggestDrop": {
       "from": 1286.0,
       "to": 939.0,
       "date": "2026-06-27"
     },
-    "lastPrice": 1232.0,
-    "currentVsAvgPct": 13.6
+    "lastPrice": 1227.0,
+    "currentVsAvgPct": 13.2
   },
   "FRA-NGO-roundtrip": {
     "allTimeMin": 941.0,
     "min90d": 657.75,
     "max90d": 2104.0,
-    "avg90d": 1266.1,
-    "trend30d": -13.7,
+    "avg90d": 1263.1,
+    "trend30d": -15.9,
     "biggestDrop": {
       "from": 2029.0,
       "to": 1147.0,
       "date": "2026-07-30"
     },
-    "lastPrice": 1736.0,
-    "currentVsAvgPct": 37.1
+    "lastPrice": 1126.0,
+    "currentVsAvgPct": -10.9
   },
   "FRA-NRT-roundtrip": {
     "allTimeMin": 749.0,
     "min90d": 658.1,
     "max90d": 1388.0,
     "avg90d": 1022.0,
-    "trend30d": 9.6,
+    "trend30d": 0.0,
     "biggestDrop": {
       "from": 1032.0,
       "to": 907.0,
       "date": "2026-08-12"
     },
-    "lastPrice": 1229.0,
-    "currentVsAvgPct": 20.3
+    "lastPrice": 1237.0,
+    "currentVsAvgPct": 21.0
   },
   "MUC-HND-roundtrip": {
     "allTimeMin": 866.0,
     "min90d": 652.64,
     "max90d": 1284.0,
     "avg90d": 1086.5,
-    "trend30d": 3.3,
+    "trend30d": 4.3,
     "biggestDrop": {
       "from": 1239.0,
       "to": 894.0,
@@ -302,7 +302,7 @@
     "min90d": 652.79,
     "max90d": 1475.0,
     "avg90d": 1125.8,
-    "trend30d": 14.9,
+    "trend30d": 0.8,
     "biggestDrop": {
       "from": 1216.0,
       "to": 937.0,
@@ -326,7 +326,7 @@
     "min90d": 653.4,
     "max90d": 1977.0,
     "avg90d": 1436.0,
-    "trend30d": 3.7,
+    "trend30d": 7.5,
     "biggestDrop": {
       "from": 1787.0,
       "to": 1223.0,
@@ -340,7 +340,7 @@
     "min90d": 661.53,
     "max90d": 1302.0,
     "avg90d": 1052.1,
-    "trend30d": -1.0,
+    "trend30d": 1.1,
     "biggestDrop": {
       "from": 1227.0,
       "to": 990.0,
@@ -566,32 +566,32 @@
     "currentVsAvgPct": 45.2
   },
   "PRG-HND-roundtrip": {
-    "allTimeMin": 1027.0,
+    "allTimeMin": 918.0,
     "min90d": 644.99,
-    "max90d": 1229.0,
-    "avg90d": 873.8,
+    "max90d": 1276.0,
+    "avg90d": 941.7,
     "trend30d": null,
     "biggestDrop": {
-      "from": 1204.0,
-      "to": 1027.0,
-      "date": "2026-06-21"
+      "from": 1101.0,
+      "to": 918.0,
+      "date": "2026-09-03"
     },
-    "lastPrice": 1101.0,
-    "currentVsAvgPct": 26.0
+    "lastPrice": 1276.0,
+    "currentVsAvgPct": 35.5
   },
   "PRG-KIX-roundtrip": {
-    "allTimeMin": 1133.0,
+    "allTimeMin": 921.0,
     "min90d": 627.26,
     "max90d": 1512.0,
-    "avg90d": 923.1,
+    "avg90d": 922.9,
     "trend30d": null,
     "biggestDrop": {
-      "from": 1251.0,
-      "to": 1133.0,
-      "date": "2026-06-22"
+      "from": 1133.0,
+      "to": 921.0,
+      "date": "2026-09-03"
     },
-    "lastPrice": 1180.0,
-    "currentVsAvgPct": 27.8
+    "lastPrice": 921.0,
+    "currentVsAvgPct": -0.2
   },
   "PRG-NGO-KIX-openjaw": {
     "allTimeMin": 982.0,
@@ -608,28 +608,32 @@
     "currentVsAvgPct": 38.4
   },
   "PRG-NGO-roundtrip": {
-    "allTimeMin": 1203.0,
+    "allTimeMin": 1050.0,
     "min90d": 629.55,
-    "max90d": 1477.0,
-    "avg90d": 897.6,
+    "max90d": 1793.0,
+    "avg90d": 1018.4,
     "trend30d": null,
-    "biggestDrop": null,
-    "lastPrice": 1477.0,
-    "currentVsAvgPct": 64.5
+    "biggestDrop": {
+      "from": 1203.0,
+      "to": 1050.0,
+      "date": "2026-09-03"
+    },
+    "lastPrice": 1793.0,
+    "currentVsAvgPct": 76.1
   },
   "PRG-NRT-roundtrip": {
     "allTimeMin": 838.0,
     "min90d": 639.05,
     "max90d": 1538.0,
-    "avg90d": 892.5,
+    "avg90d": 929.6,
     "trend30d": null,
     "biggestDrop": {
       "from": 1538.0,
       "to": 1069.0,
       "date": "2026-06-21"
     },
-    "lastPrice": 1167.0,
-    "currentVsAvgPct": 30.8
+    "lastPrice": 1211.0,
+    "currentVsAvgPct": 30.3
   },
   "VIE-HND-roundtrip": {
     "allTimeMin": 840.0,
