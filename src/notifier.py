@@ -115,12 +115,13 @@ class TelegramNotifier:
 
     # -- 1. Alert na nízkou cenu -----------------------------------------
     def send_price_alert(self, flight: FlightResult,
-                         delta: Optional[float] = None) -> bool:
+                         delta: Optional[float] = None,
+                         previous_min: Optional[float] = None) -> bool:
         e = html.escape
         out_from = f"{airport_name(flight.origin)} ({flight.origin})"
         out_to = f"{airport_name(flight.destination)} ({flight.destination})"
         lines = [
-            "✈️ <b>NOVÁ NÍZKÁ CENA – Japonsko</b>",
+            "🏆 <b>NOVÉ ABSOLUTNÍ MINIMUM – Japonsko</b>",
             "",
             f"🛫 {e(out_from)} → {e(out_to)}",
         ]
@@ -143,6 +144,9 @@ class TelegramNotifier:
             arrow = "↓" if delta < 0 else "↑"
             price_line += f" ({arrow} o {abs(delta):.0f} od posledního scanu)"
         lines.append(price_line)
+        if previous_min is not None:
+            lines.append(f"📉 Dosavadní minimum: {previous_min:.0f} "
+                         f"{flight.currency} (o {previous_min - flight.price:.0f} méně)")
 
         source_label = {
             "googleflights": "Google Flights", "duffel": "Duffel",

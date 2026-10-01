@@ -114,3 +114,53 @@ def test_amadeus_usage_counter(tmp_path):
     h.add_amadeus_usage(10, month)
     h.add_amadeus_usage(5, month)
     assert h.amadeus_usage(month) == 15
+
+
+def _scanner_for_alerts(tmp_path, sent):
+    from src.history import PriceHistory
+    from src.scanner import Scanner
+    s = Scanner.__new__(Scanner)
+    s.history = PriceHistory(tmp_path / "h.json")
+
+    class _Settings:
+        def telegram_alert_enabled(self, kind):
+            return True
+
+    class _Notifier:
+        def send_price_alert(self, flight, delta=None, previous_min=None):
+            sent.append((flight.route_key(), flight.price, previous_min))
+            return True
+
+    s.settings = _Settings()
+    s.notifier = _Notifier()
+    return s
+
+
+def _rt(origin, dest, price, ret=True):
+    return FlightResult(
+        origin=origin, destination=dest, price=price, currency="EUR",
+        depart_date=date(2026, 10, 1),
+        return_date=date(2026, 10, 15) if ret else None,
+        source="duffel",
+    )
+
+
+def test_alert_only_on_global_absolute_low(tmp_path):
+    sent = []
+    s = _scanner_for_alerts(tmp_path, sent)
+    s.history.record("FCO-KIX-roundtrip", 660, "duffel")
+    s.history.record("MUC-NRT-roundtrip", 900, "duffel")
+    # Nové minimum TRASY (MUC 800 < 900), ale ne absolutní → žádný alert.
+    s._process_flights([_rt("MUC", "NRT", 800)])
+    assert sent == []
+    # Absolutní minimum → právě jeden alert (ten nejlevnější).
+    s._process_flights([_rt("MUC", "NRT", 650), _rt("FRA", "HND", 640)])
+    assert sent == [("FRA-HND-roundtrip", 640, 660)]
+
+
+def test_alert_ignores_one_way_pollution(tmp_path):
+    sent = []
+    s = _scanner_for_alerts(tmp_path, sent)
+    s.history.record("FCO-KIX-roundtrip", 660, "duffel")
+    s._process_flights([_rt("FCO", "KIX", 330, ret=False)])
+    assert sent == []

@@ -1119,30 +1119,39 @@ class Scanner:
         logger.info("=== Scan dokončen ===")
 
     def _process_flights(self, flights: list[FlightResult]) -> None:
-        per_origin = self.settings.deal_thresholds_by_origin()
-        base = self.settings.price_threshold_eur
+        """Zapíše výsledky do historie a pošle Telegram alert JEN tehdy, když
+        nejlevnější nabídka scanu překoná absolutní minimum přes všechny trasy
+        (`global_all_time_min` před scanem). Max. 1 alert na scan."""
+        # Baseline MUSÍ vzniknout před record() – ten all_time_min přepisuje.
+        baseline = self.history.global_all_time_min()
+        best: Optional[FlightResult] = None
         for f in flights:
-            key = f.route_key()
-            threshold = per_origin.get(f.origin or "", base)
-            # Alert jen pod prahem – dražší výsledky se pouze zaznamenají
-            # do historie (pro statistiky letišť a trendy).
-            below_threshold = f.price < threshold
-            delta = self.history.price_delta(key, f.price)
-
-            should_send = below_threshold and self.history.should_alert(
-                key, f.price
-            )
             # on_date NEvyplňujeme → výchozí dnešek (datum pozorování). Datum
             # letu se ukládá zvlášť přes depart_date/return_date. Díky tomu
             # funguje recency decay v coverage_weights i 90denní prořezávání.
-            self.history.record(key, f.price, f.source,
+            self.history.record(f.route_key(), f.price, f.source,
                                 depart_date=f.depart_date,
                                 return_date=f.return_date)
+            # Ochrana proti one-way pollution: zpáteční/open-jaw nabídka bez
+            # return_date je ve skutečnosti jednosměrná (~2× levnější) a nesmí
+            # vyhlásit falešné absolutní minimum.
+            if f.return_date is None:
+                continue
+            if best is None or f.price < best.price:
+                best = f
 
-            if should_send and self.settings.telegram_alert_enabled("priceAlert"):
-                if self.notifier.send_price_alert(f, delta=delta):
-                    self.history.mark_alerted(key, f.price)
-                    logger.info("Alert odeslán: %s %.0f EUR", key, f.price)
+        if best is None or (baseline is not None and best.price >= baseline):
+            return
+        if not self.settings.telegram_alert_enabled("priceAlert"):
+            return
+        key = best.route_key()
+        if not self.history.should_alert(key, best.price):
+            return
+        if self.notifier.send_price_alert(best, previous_min=baseline):
+            self.history.mark_alerted(key, best.price)
+            logger.info("Alert (nové absolutní minimum) odeslán: %s %.0f EUR "
+                        "(předchozí %s)", key, best.price,
+                        f"{baseline:.0f}" if baseline is not None else "–")
 
     def _process_deals(self, deals: list[DealResult]) -> None:
         if not self.settings.telegram_alert_enabled("dealAlert"):

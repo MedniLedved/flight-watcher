@@ -79,6 +79,16 @@ class PriceHistory:
         atm = self.all_time_min(route_key)
         return atm is None or price < atm
 
+    def global_all_time_min(self) -> Optional[float]:
+        """Absolutní minimum přes VŠECHNY trasy (min z all_time_min).
+        None, pokud historie zatím žádnou cenu nemá."""
+        mins = [
+            v.get("all_time_min") for k, v in self.data.items()
+            if k != META_KEY and isinstance(v, dict)
+            and v.get("all_time_min") is not None
+        ]
+        return min(mins) if mins else None
+
     def price_delta(self, route_key: str, price: float) -> Optional[float]:
         """Rozdíl oproti poslední zaznamenané ceně (záporné = zlevnění)."""
         last = self.last_price(route_key)

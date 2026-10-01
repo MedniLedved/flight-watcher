@@ -712,11 +712,11 @@ export function SettingsPage({ agentConfig, loading, error, onConfigChange }: Pr
         <CardHeader>
           <CardTitle>Telegram alerty</CardTitle>
           <CardDescription>
-            Telegram zůstává jen alertovací kanál (nové minimum, velký pokles, deal).
+            Cenový alert se posílá jen při novém absolutním minimu (nejnižší cena přes všechny trasy). Deal alerty (RSS) a denní souhrn lze zapnout zvlášť.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Toggle label="Cenový alert" checked={config.telegramAlerts.priceAlert} onChange={(v) => update((d) => (d.telegramAlerts.priceAlert = v))} />
+          <Toggle label="Nové absolutní minimum" checked={config.telegramAlerts.priceAlert} onChange={(v) => update((d) => (d.telegramAlerts.priceAlert = v))} />
           <Toggle label="Deal alert" checked={config.telegramAlerts.dealAlert} onChange={(v) => update((d) => (d.telegramAlerts.dealAlert = v))} />
           <Toggle label="Denní souhrn" checked={config.telegramAlerts.dailySummary} onChange={(v) => update((d) => (d.telegramAlerts.dailySummary = v))} />
         </CardContent>
